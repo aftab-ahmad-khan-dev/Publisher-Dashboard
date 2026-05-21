@@ -1,0 +1,35 @@
+import { Router } from 'express'
+import { startLinkedInAuth, handleLinkedInCallback } from '../lib/linkedinOAuth.js'
+
+const router = Router()
+const WEB_URL = process.env.WEB_URL?.trim() || 'http://localhost:5173'
+
+router.get('/auth/linkedin', async (req, res, next) => {
+  try {
+    const url = await startLinkedInAuth(req.workspaceId)
+    res.redirect(url)
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/auth/linkedin/callback', async (req, res) => {
+  const { code, state, error, error_description: desc } = req.query
+  const redirect = (params) => {
+    const q = new URLSearchParams(params).toString()
+    res.redirect(`${WEB_URL}/api-config?${q}`)
+  }
+
+  if (error) {
+    return redirect({ linkedin: 'error', message: desc || error })
+  }
+
+  try {
+    await handleLinkedInCallback(code, state)
+    redirect({ linkedin: 'connected' })
+  } catch (err) {
+    redirect({ linkedin: 'error', message: err.message })
+  }
+})
+
+export default router

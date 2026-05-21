@@ -1,0 +1,17 @@
+{
+  "name": "publisher-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "install:all": "npm install --prefix web.publisher.com && npm install --prefix api.publisher.com",
+    "dev:web": "npm run dev --prefix web.publisher.com",
+    "dev:api": "npm run dev --prefix api.publisher.com",
+    "build:web": "npm run build --prefix web.publisher.com",
+    "build:api": "node -e \"console.log('API: no compile step')\"",
+    "build": "npm run build:web",
+    "start:api": "npm run start --prefix api.publisher.com"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

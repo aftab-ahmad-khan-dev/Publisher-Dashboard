@@ -1,0 +1,105 @@
+import { useMemo } from 'react'
+import {
+  parseDatetimeLocal,
+  setDateOnDatetimeLocal,
+  setTimeOnDatetimeLocal,
+  formatScheduleDisplay,
+  DEFAULT_SCHEDULE_HOUR,
+} from '../lib/scheduleUtils'
+
+const TIME_OPTIONS = [
+  { label: '12:00 PM', hour: 12, minute: 0 },
+  { label: '9:00 AM', hour: 9, minute: 0 },
+  { label: '10:00 AM', hour: 10, minute: 0 },
+  { label: '11:00 AM', hour: 11, minute: 0 },
+  { label: '1:00 PM', hour: 13, minute: 0 },
+  { label: '2:00 PM', hour: 14, minute: 0 },
+  { label: '3:00 PM', hour: 15, minute: 0 },
+  { label: '4:00 PM', hour: 16, minute: 0 },
+  { label: '5:00 PM', hour: 17, minute: 0 },
+  { label: '6:00 PM', hour: 18, minute: 0 },
+]
+
+export default function DateTimePicker({ value, onChange, minDate, hint, timezone }) {
+  const parsed = parseDatetimeLocal(value)
+  const dateValue = value?.split('T')[0] || ''
+  const timeKey = parsed
+    ? `${parsed.getHours()}:${parsed.getMinutes()}`
+    : `${DEFAULT_SCHEDULE_HOUR}:0`
+
+  const minDateOnly = minDate?.split('T')[0]
+
+  const displayLabel = useMemo(
+    () => (value ? formatScheduleDisplay(value, { timezone, showRelative: true }) : ''),
+    [value, timezone],
+  )
+
+  const handleDateChange = (e) => {
+    const next = setDateOnDatetimeLocal(value || minDate, e.target.value)
+    onChange(next)
+  }
+
+  const handleTimeChange = (e) => {
+    const [hour, minute] = e.target.value.split(':').map(Number)
+    const base = value || minDate
+    onChange(setTimeOnDatetimeLocal(base, hour, minute))
+  }
+
+  return (
+    <div className="space-y-2">
+      <label className="field-label">Date & time</label>
+      <div className="datetime-picker group">
+        <div className="relative flex-1">
+          <input
+            type="date"
+            value={dateValue}
+            min={minDateOnly}
+            onChange={handleDateChange}
+            className="datetime-input peer w-full"
+          />
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 peer-focus:text-violet-400">
+            <CalendarIcon />
+          </span>
+        </div>
+        <div className="relative w-[140px] shrink-0">
+          <select
+            value={timeKey}
+            onChange={handleTimeChange}
+            className="datetime-input w-full appearance-none pr-8"
+          >
+            {TIME_OPTIONS.map((t) => (
+              <option key={t.label} value={`${t.hour}:${t.minute}`} className="bg-[#12151f]">
+                {t.label}
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+            <ClockIcon />
+          </span>
+        </div>
+      </div>
+      {(hint || displayLabel) && (
+        <p className="flex items-center gap-1.5 text-xs text-violet-300/80">
+          <span className="inline-block h-1 w-1 rounded-full bg-violet-400" />
+          {hint || displayLabel}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function CalendarIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  )
+}
+
+function ClockIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  )
+}

@@ -1,0 +1,101 @@
+/** Map API config (secrets stripped) into form state */
+export function configFromServer(server) {
+  if (!server) return null
+  return {
+    meta: {
+      appId: server.meta?.appId || '',
+      appSecret: '',
+      pageToken: '',
+      connected: server.meta?.connected,
+      hasAppSecret: server.meta?.hasAppSecret,
+      hasPageToken: server.meta?.hasPageToken,
+    },
+    linkedin: {
+      clientId: server.linkedin?.clientId || '',
+      clientSecret: '',
+      orgUrn: server.linkedin?.orgUrn || '',
+      accessToken: '',
+      connected: server.linkedin?.connected,
+      publishReady: server.linkedin?.publishReady,
+      hasClientSecret: server.linkedin?.hasClientSecret,
+      hasAccessToken: server.linkedin?.hasAccessToken,
+      tokenExpiresAt: server.linkedin?.tokenExpiresAt || null,
+    },
+    webhookUrl: server.webhookUrl || '',
+    notificationsEnabled: server.notificationsEnabled ?? true,
+  }
+}
+
+export function linkedinPayloadForSave(linkedin) {
+  const out = {
+    clientId: linkedin.clientId?.trim(),
+    orgUrn: linkedin.orgUrn?.trim(),
+  }
+  if (linkedin.clientSecret?.trim()) out.clientSecret = linkedin.clientSecret.trim()
+  if (linkedin.accessToken?.trim()) out.accessToken = linkedin.accessToken.trim()
+  return out
+}
+
+export function metaPayloadForSave(meta) {
+  const out = { appId: meta.appId?.trim() || '' }
+  if (meta.appSecret?.trim()) out.appSecret = meta.appSecret.trim()
+  if (meta.pageToken?.trim()) out.pageToken = meta.pageToken.trim()
+  return out
+}
+
+const API_CONFIG_KEY = 'pulse_api_config'
+
+/** Full config previously saved in localStorage (may include secrets). */
+export function readLocalStoredConfig() {
+  try {
+    const raw = localStorage.getItem(API_CONFIG_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    localStorage.removeItem(API_CONFIG_KEY)
+  }
+  return null
+}
+
+export function needsMetaMigration(serverConfig, localConfig) {
+  if (!localConfig?.meta) return false
+  const localHasSecrets =
+    Boolean(localConfig.meta.appSecret?.trim()) ||
+    Boolean(localConfig.meta.pageToken?.trim())
+  if (!localHasSecrets) return false
+
+  const serverHasSecrets =
+    serverConfig?.meta?.hasAppSecret || serverConfig?.meta?.hasPageToken
+  if (!serverHasSecrets) return true
+
+  // Server has secrets in DB but lost app id — restore from local
+  if (!serverConfig?.meta?.appId?.trim() && localConfig.meta.appId?.trim()) return true
+
+  return false
+}
+
+export function needsLinkedInMigration(serverConfig, localConfig) {
+  if (!localConfig?.linkedin) return false
+  const serverHasSecrets =
+    serverConfig?.linkedin?.hasClientSecret || serverConfig?.linkedin?.hasAccessToken
+  const localHasSecrets =
+    Boolean(localConfig.linkedin.clientSecret?.trim()) ||
+    Boolean(localConfig.linkedin.accessToken?.trim())
+  return !serverHasSecrets && localHasSecrets
+}
+
+export function metaMigrationPayload(serverConfig, localConfig) {
+  return {
+    appId: localConfig.meta.appId?.trim() || serverConfig?.meta?.appId || '',
+    appSecret: localConfig.meta.appSecret?.trim() || '',
+    pageToken: localConfig.meta.pageToken?.trim() || '',
+  }
+}
+
+export function linkedInMigrationPayload(serverConfig, localConfig) {
+  return {
+    clientId: localConfig.linkedin.clientId?.trim() || serverConfig?.linkedin?.clientId || '',
+    clientSecret: localConfig.linkedin.clientSecret?.trim() || '',
+    orgUrn: localConfig.linkedin.orgUrn?.trim() || serverConfig?.linkedin?.orgUrn || '',
+    accessToken: localConfig.linkedin.accessToken?.trim() || '',
+  }
+}
