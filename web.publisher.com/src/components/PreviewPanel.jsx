@@ -1,6 +1,8 @@
 import InstagramPreview from './InstagramPreview'
 import FacebookPreview from './FacebookPreview'
 import LinkedInPreview from './LinkedInPreview'
+import RedditPreview from './RedditPreview'
+import QuoraPreview from './QuoraPreview'
 
 function getHashtagString(hashtags, platform) {
   return hashtags
@@ -12,7 +14,7 @@ function getHashtagString(hashtags, platform) {
 export default function PreviewPanel({ state, compact = false }) {
   const previewKey = [
     state.body,
-    state.hashtags.map((h) => `${h.tag}-${h.platforms.instagram}-${h.platforms.facebook}-${h.platforms.linkedin}`).join(','),
+    state.hashtags.map((h) => `${h.tag}-${Object.entries(h.platforms).map(([k, v]) => `${k}:${v}`).join('-')}`).join(','),
     state.imagePreviewUrl,
     state.cropHint,
     JSON.stringify(state.imageVisibility),
@@ -58,6 +60,10 @@ export default function PreviewPanel({ state, compact = false }) {
         cropHint={state.cropHint}
         compact={compact}
       />
+
+      <RedditPreview enabled={state.platforms.reddit} body={state.body} />
+
+      <QuoraPreview enabled={state.platforms.quora} body={state.body} />
     </div>
   )
 }

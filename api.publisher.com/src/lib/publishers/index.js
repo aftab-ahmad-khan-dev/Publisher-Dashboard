@@ -1,14 +1,16 @@
 import { canPublishLinkedIn, buildPostText } from '../platforms.js'
 import { publishToFacebook, publishToInstagram } from './meta.js'
 import { publishToLinkedIn } from './linkedin.js'
+import { publishToReddit } from './reddit.js'
+import { publishToQuora } from './quora.js'
 
 export async function publishToAllPlatforms({ platforms, postState, config }) {
-  const text = buildPostText(postState)
   const results = []
   const errors = []
 
   for (const platform of platforms) {
     try {
+      const text = buildPostText(postState, platform)
       if (platform === 'facebook') {
         results.push(
           await publishToFacebook({ message: text, pageToken: config.meta.pageToken }),
@@ -30,6 +32,10 @@ export async function publishToAllPlatforms({ platforms, postState, config }) {
             accessToken: config.linkedin.accessToken,
           }),
         )
+      } else if (platform === 'reddit') {
+        results.push(await publishToReddit({ text, postState, reddit: config.reddit }))
+      } else if (platform === 'quora') {
+        results.push(await publishToQuora({ text, quora: config.quora, postState }))
       }
     } catch (err) {
       errors.push({ platform, error: err.message })

@@ -12,6 +12,9 @@ import { mergeApiConfigWithEnv } from '../lib/envConfig'
 import {
   testMetaConnection,
   testLinkedInConnection,
+  testRedditConnection,
+  testQuoraConnection,
+  testGmailConnection,
   publishToPlatforms,
   scheduleToPlatforms,
   isLivePublishing,
@@ -23,21 +26,32 @@ import {
   saveConfigRemote,
   saveLinkedInRemote,
   saveMetaRemote,
+  saveRedditRemote,
+  saveQuoraRemote,
+  saveGmailRemote,
   saveDraftRemote,
   deleteDraftRemote,
   deleteScheduledRemote,
+  scheduleBulkRemote,
   subscribeRealtime,
 } from '../lib/backendApi'
+import { compressImageFile, computeScheduleDate } from '../lib/bulkParse'
 import {
   configFromServer,
   linkedinPayloadForSave,
   metaPayloadForSave,
+  redditPayloadForSave,
+  quoraPayloadForSave,
+  gmailPayloadForSave,
   readLocalStoredConfig,
   needsMetaMigration,
   needsLinkedInMigration,
   metaMigrationPayload,
   linkedInMigrationPayload,
 } from '../lib/configUtils'
+import { validateCommunityPublish } from '../lib/contentPolicy'
+import { sanitizePostState, sanitizePublishedText } from '../lib/contentSanitize'
+import { showToast } from '../lib/toast'
 import { useAuth } from './AuthContext'
 
 const API_CONFIG_KEY = STORAGE_KEYS.apiConfig
@@ -50,6 +64,22 @@ const DEFAULT_API_CONFIG = {
     orgUrn: '',
     accessToken: '',
     connected: false,
+  },
+  reddit: {
+    clientId: '',
+    clientSecret: '',
+    refreshToken: '',
+    subreddit: '',
+    userAgent: 'PulsePublisher/1.0',
+    connected: false,
+  },
+  quora: { profileUrl: '', defaultTopic: '', connected: false },
+  gmail: {
+    clientId: '',
+    clientSecret: '',
+    fromEmail: '',
+    connected: false,
+    sendReady: false,
   },
   webhookUrl: '',
   notificationsEnabled: true,
@@ -80,15 +110,7 @@ export function AppDataProvider({ children }) {
   const [published, setPublished] = useState([])
   const [apiConfig, setApiConfig] = useState(loadApiConfigLocal)
   const [publishStatus, setPublishStatus] = useState('idle')
-  const [toast, setToast] = useState(null)
   const [syncing, setSyncing] = useState(false)
-
-  const dismissToast = useCallback(() => setToast(null), [])
-
-  const showToast = useCallback((message, type = 'success') => {
-    setToast({ message, type })
-    setTimeout(() => setToast(null), 4500)
-  }, [])
 
   const applyConfigResponse = useCallback((serverConfig) => {
     const fromServer = configFromServer(serverConfig) || serverConfig
@@ -245,16 +267,82 @@ export function AppDataProvider({ children }) {
     [live, applyConfigResponse, showToast],
   )
 
+  const saveRedditConfig = useCallback(
+    async (reddit) => {
+      if (!live) {
+        setApiConfig((c) => withDerivedConnectionFlags({ ...c, reddit: { ...c.reddit, ...reddit } }))
+        return { ok: true }
+      }
+      try {
+        const res = await saveRedditRemote(redditPayloadForSave(reddit))
+        applyConfigResponse(res.config)
+        return res
+      } catch (err) {
+        showToast(err.message, 'error')
+        throw err
+      }
+    },
+    [live, applyConfigResponse, showToast],
+  )
+
+  const saveQuoraConfig = useCallback(
+    async (quora) => {
+      if (!live) {
+        setApiConfig((c) => withDerivedConnectionFlags({ ...c, quora: { ...c.quora, ...quora } }))
+        return { ok: true }
+      }
+      try {
+        const res = await saveQuoraRemote(quoraPayloadForSave(quora))
+        applyConfigResponse(res.config)
+        return res
+      } catch (err) {
+        showToast(err.message, 'error')
+        throw err
+      }
+    },
+    [live, applyConfigResponse, showToast],
+  )
+
+  const saveGmailConfig = useCallback(
+    async (gmail) => {
+      if (!live) {
+        setApiConfig((c) => withDerivedConnectionFlags({ ...c, gmail: { ...c.gmail, ...gmail } }))
+        return { ok: true }
+      }
+      try {
+        const res = await saveGmailRemote(gmailPayloadForSave(gmail))
+        applyConfigResponse(res.config)
+        return res
+      } catch (err) {
+        showToast(err.message, 'error')
+        throw err
+      }
+    },
+    [live, applyConfigResponse, showToast],
+  )
+
   const testPlatformConnection = useCallback(
     async (platform, config) => {
       const result =
         platform === 'meta'
           ? await testMetaConnection(config.meta)
-          : await testLinkedInConnection(config.linkedin)
+          : platform === 'reddit'
+            ? await testRedditConnection(config.reddit)
+            : platform === 'quora'
+              ? await testQuoraConnection(config.quora)
+              : platform === 'gmail'
+                ? await testGmailConnection(config.gmail)
+                : await testLinkedInConnection(config.linkedin)
 
       if (result.ok) {
         if (platform === 'linkedin') {
           await saveLinkedInConfig(config.linkedin)
+        } else if (platform === 'reddit') {
+          await saveRedditConfig(config.reddit)
+        } else if (platform === 'quora') {
+          await saveQuoraConfig(config.quora)
+        } else if (platform === 'gmail') {
+          await saveGmailConfig(config.gmail)
         } else {
           await saveMetaConfig(config.meta)
         }
@@ -268,7 +356,15 @@ export function AppDataProvider({ children }) {
       }
       return result
     },
-    [saveLinkedInConfig, saveMetaConfig, refreshFromServer, showToast],
+    [
+      saveLinkedInConfig,
+      saveMetaConfig,
+      saveRedditConfig,
+      saveQuoraConfig,
+      saveGmailConfig,
+      refreshFromServer,
+      showToast,
+    ],
   )
 
   const pushNotification = useCallback(
@@ -292,7 +388,8 @@ export function AppDataProvider({ children }) {
   }, [pushNotification])
 
   const publishNow = useCallback(
-    async (postState) => {
+    async (rawState) => {
+      const postState = sanitizePostState(rawState)
       const enabled = Object.entries(postState.platforms)
         .filter(([, on]) => on)
         .map(([p]) => p)
@@ -303,6 +400,12 @@ export function AppDataProvider({ children }) {
       }
       if (!postState.body.trim()) {
         showToast('Write something before publishing.', 'error')
+        return
+      }
+
+      const communityCheck = validateCommunityPublish(postState.body, enabled)
+      if (!communityCheck.ok) {
+        showToast(communityCheck.error, 'error')
         return
       }
 
@@ -341,16 +444,28 @@ export function AppDataProvider({ children }) {
         platforms: enabled,
       })
 
+      const quoraResult = result.platformResults?.find?.((r) => r.platform === 'quora' && r.copyText)
+      if (quoraResult?.copyText) {
+        try {
+          await navigator.clipboard.writeText(quoraResult.copyText)
+          showToast('Quora answer copied — paste it on Quora manually', 'success')
+        } catch {
+          showToast('Published — copy Quora answer from platform results', 'success')
+        }
+      } else {
+        showToast(`Published to ${platformNames}`)
+      }
+
       await refreshFromServer()
       setPublishStatus('success')
-      showToast(`Published to ${platformNames}`)
       setTimeout(() => setPublishStatus('idle'), 2500)
     },
     [apiConfig, showToast, refreshFromServer],
   )
 
   const schedulePost = useCallback(
-    async (postState) => {
+    async (rawState) => {
+      const postState = sanitizePostState(rawState)
       const enabled = Object.entries(postState.platforms)
         .filter(([, on]) => on)
         .map(([p]) => p)
@@ -367,6 +482,13 @@ export function AppDataProvider({ children }) {
         showToast('Pick a date and time to schedule.', 'error')
         return { ok: false }
       }
+
+      const communityCheck = validateCommunityPublish(postState.body, enabled)
+      if (!communityCheck.ok) {
+        showToast(communityCheck.error, 'error')
+        return { ok: false }
+      }
+
       const scheduled = parseDatetimeLocal(postState.scheduledAt)
       if (!scheduled || scheduled <= new Date()) {
         showToast('Scheduled time must be in the future.', 'error')
@@ -409,6 +531,99 @@ export function AppDataProvider({ children }) {
       return { ok: true }
     },
     [apiConfig, showToast, queue, refreshFromServer],
+  )
+
+  const scheduleBulkPosts = useCallback(
+    async ({ posts, platforms, startDate, timezone }) => {
+      if (!posts?.length) {
+        showToast('No posts to schedule.', 'error')
+        return { ok: false }
+      }
+      if (!platforms?.length) {
+        showToast('Enable at least one platform.', 'error')
+        return { ok: false }
+      }
+
+      setPublishStatus('loading')
+
+      if (platforms.some((p) => p === 'reddit' || p === 'quora')) {
+        for (const post of posts) {
+          const check = validateCommunityPublish(post.body, platforms)
+          if (!check.ok) {
+            showToast(`Post ${post.postNum || post.dayNum}: ${check.error}`, 'error')
+            setPublishStatus('idle')
+            return { ok: false }
+          }
+        }
+      }
+
+      const payloadPosts = []
+      for (const post of posts) {
+        let imageDataUrl = null
+        if (post.imageFile) {
+          try {
+            imageDataUrl = await compressImageFile(post.imageFile)
+          } catch {
+            showToast(`Could not process image for ${post.title}`, 'error')
+          }
+        }
+        payloadPosts.push({
+          postNum: post.postNum,
+          dayNum: post.dayNum,
+          title: post.title,
+          body: sanitizePublishedText(post.body),
+          imageDataUrl,
+          imageMeta: post.imageFile
+            ? { name: post.imageFile.name, type: post.imageFile.type }
+            : null,
+        })
+      }
+
+      if (live) {
+        try {
+          const result = await scheduleBulkRemote({
+            posts: payloadPosts,
+            platforms,
+            startDate,
+            timezone,
+          })
+          await refreshFromServer()
+          setPublishStatus('success')
+          showToast(`Scheduled ${result.count} posts — noon each day`)
+          setTimeout(() => setPublishStatus('idle'), 2500)
+          return { ok: true, count: result.count }
+        } catch (err) {
+          setPublishStatus('idle')
+          const msg = err.message?.includes('503') || err.message?.includes('Database')
+            ? 'Database unavailable — check API terminal and MongoDB connection.'
+            : err.message
+          showToast(msg, 'error')
+          return { ok: false }
+        }
+      }
+
+      const items = payloadPosts.map((post) => {
+        const scheduled = computeScheduleDate(startDate, post.dayNum)
+        return {
+          id: crypto.randomUUID(),
+          body: post.body,
+          platforms,
+          scheduledAt: scheduled.toISOString(),
+          timezone,
+          status: 'scheduled',
+          bulkTitle: post.title,
+          imagePreview: post.imageDataUrl,
+        }
+      })
+      const nextQueue = [...items, ...queue]
+      setQueue(nextQueue)
+      localStorage.setItem(STORAGE_KEYS.scheduledQueue, JSON.stringify(nextQueue))
+      setPublishStatus('success')
+      showToast(`Saved ${items.length} posts locally (demo mode)`, 'error')
+      setTimeout(() => setPublishStatus('idle'), 2500)
+      return { ok: true, count: items.length }
+    },
+    [live, queue, showToast, refreshFromServer],
   )
 
   const cancelScheduled = useCallback(
@@ -497,15 +712,18 @@ export function AppDataProvider({ children }) {
         published,
         apiConfig,
         publishStatus,
-        toast,
         syncing,
-        dismissToast,
+        showToast,
         saveApiConfig,
         saveLinkedInConfig,
         saveMetaConfig,
+        saveRedditConfig,
+        saveQuoraConfig,
+        saveGmailConfig,
         testPlatformConnection,
         publishNow,
         schedulePost,
+        scheduleBulkPosts,
         cancelScheduled,
         saveDraft,
         deleteDraft,

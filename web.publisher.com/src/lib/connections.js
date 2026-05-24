@@ -23,16 +23,42 @@ export function isLinkedInPublishReady(linkedin) {
   return isLinkedInConfigured(linkedin) && (linkedin?.publishReady || linkedin?.hasAccessToken)
 }
 
+export function isRedditConfigured(reddit) {
+  const hasSecrets = reddit?.hasClientSecret && reddit?.hasRefreshToken
+  const filled =
+    Boolean(reddit?.clientId?.trim()) &&
+    Boolean(reddit?.clientSecret?.trim()) &&
+    Boolean(reddit?.refreshToken?.trim()) &&
+    Boolean(reddit?.subreddit?.trim())
+  return filled || (Boolean(reddit?.clientId?.trim()) && Boolean(reddit?.subreddit?.trim()) && hasSecrets)
+}
+
+export function isQuoraConfigured(quora) {
+  return Boolean(quora?.profileUrl?.trim())
+}
+
+export function isGmailConfigured(gmail) {
+  return Boolean(gmail?.sendReady || gmail?.connected || gmail?.hasRefreshToken)
+}
+
 export function getConnectionSummary(apiConfig) {
   const metaReady = isMetaConfigured(apiConfig?.meta)
   const linkedInReady = isLinkedInConfigured(apiConfig?.linkedin)
   const linkedInPublish = isLinkedInPublishReady(apiConfig?.linkedin)
-  const connectedCount = [metaReady, linkedInReady].filter(Boolean).length
+  const redditReady = isRedditConfigured(apiConfig?.reddit)
+  const quoraReady = isQuoraConfigured(apiConfig?.quora)
+  const gmailReady = isGmailConfigured(apiConfig?.gmail)
+  const connectedCount = [metaReady, linkedInReady, redditReady, quoraReady, gmailReady].filter(
+    Boolean,
+  ).length
 
   return {
     metaReady,
     linkedInReady,
     linkedInPublish,
+    redditReady,
+    quoraReady,
+    gmailReady,
     connectedCount,
     anyConnected: connectedCount > 0,
     allConnected: metaReady && linkedInPublish,
@@ -50,6 +76,19 @@ export function withDerivedConnectionFlags(config) {
       ...config.linkedin,
       connected: isLinkedInConfigured(config.linkedin),
       publishReady: isLinkedInPublishReady(config.linkedin),
+    },
+    reddit: {
+      ...config.reddit,
+      connected: isRedditConfigured(config.reddit),
+    },
+    quora: {
+      ...config.quora,
+      connected: isQuoraConfigured(config.quora),
+    },
+    gmail: {
+      ...config.gmail,
+      connected: isGmailConfigured(config.gmail),
+      sendReady: isGmailConfigured(config.gmail),
     },
   }
 }

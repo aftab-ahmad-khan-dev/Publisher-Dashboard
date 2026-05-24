@@ -1,3 +1,5 @@
+import { DEFAULT_PLATFORMS, DEFAULT_IMAGE_VISIBILITY } from './constants'
+
 export function draftTitleFromBody(body) {
   const trimmed = body.trim()
   if (!trimmed) return 'Untitled draft'
@@ -50,17 +52,9 @@ export function draftToComposerState(draft) {
     imagePreviewUrl: null,
     imageType: null,
     cropHint: draft.cropHint || 'square',
-    imageVisibility: draft.imageVisibility || {
-      instagram: true,
-      facebook: true,
-      linkedin: true,
-    },
+    imageVisibility: draft.imageVisibility || { ...DEFAULT_IMAGE_VISIBILITY },
     hashtags: draft.hashtags || [],
-    platforms: draft.platforms || {
-      instagram: true,
-      facebook: true,
-      linkedin: true,
-    },
+    platforms: draft.platforms || { ...DEFAULT_PLATFORMS },
     publishMode: draft.publishMode || 'now',
     scheduledAt: draft.scheduledAt || '',
     timezone: draft.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',

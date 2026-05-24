@@ -1,10 +1,14 @@
 import { useState, useRef } from 'react'
+import { PLATFORM_META, PLATFORM_ORDER } from '../lib/constants'
 
-const PLATFORM_TOGGLES = [
-  { key: 'instagram', label: 'IG', active: 'bg-gradient-to-r from-[#E1306C] to-[#F77737] text-white' },
-  { key: 'facebook', label: 'FB', active: 'bg-[#1877F2] text-white' },
-  { key: 'linkedin', label: 'LI', active: 'bg-[#0A66C2] text-white' },
-]
+const PLATFORM_TOGGLES = PLATFORM_ORDER.map((key) => ({
+  key,
+  label: PLATFORM_META[key].short,
+  active:
+    key === 'instagram'
+      ? 'bg-gradient-to-r from-[#E1306C] to-[#F77737] text-white'
+      : `${PLATFORM_META[key].color} text-white`,
+}))
 
 export default function HashtagManager({
   hashtags,
@@ -29,11 +33,9 @@ export default function HashtagManager({
     }
   }
 
-  const summary = [
-    hashtagCounts.instagram > 0 && `${hashtagCounts.instagram} on Instagram`,
-    hashtagCounts.facebook > 0 && `${hashtagCounts.facebook} on Facebook`,
-    hashtagCounts.linkedin > 0 && `${hashtagCounts.linkedin} on LinkedIn`,
-  ]
+  const summary = PLATFORM_ORDER.map(
+    (key) => hashtagCounts[key] > 0 && `${hashtagCounts[key]} on ${PLATFORM_META[key].label}`,
+  )
     .filter(Boolean)
     .join(' · ')
 
@@ -41,6 +43,7 @@ export default function HashtagManager({
     <div className="space-y-3">
       <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
         Hashtags
+        <span className="ml-1 font-normal normal-case text-slate-600">(skipped on Reddit & Quora)</span>
       </label>
 
       <div className="flex gap-2">

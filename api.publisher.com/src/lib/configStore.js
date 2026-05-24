@@ -1,5 +1,13 @@
 import { ApiConfig } from '../models/ApiConfig.js'
-import { isMetaConfigured, isLinkedInConfigured, canPublishLinkedIn } from './platforms.js'
+import {
+  isMetaConfigured,
+  isLinkedInConfigured,
+  canPublishLinkedIn,
+  isRedditConfigured,
+  isQuoraConfigured,
+  isGmailConfigured,
+  canSendGmail,
+} from './platforms.js'
 
 const DEFAULT_CONFIG = {
   meta: { appId: '', appSecret: '', pageToken: '', connected: false },
@@ -13,12 +21,37 @@ const DEFAULT_CONFIG = {
     connected: false,
     publishReady: false,
   },
+  reddit: {
+    clientId: '',
+    clientSecret: '',
+    refreshToken: '',
+    subreddit: '',
+    userAgent: 'PulsePublisher/1.0',
+    connected: false,
+  },
+  quora: {
+    profileUrl: '',
+    defaultTopic: '',
+    connected: false,
+  },
+  gmail: {
+    clientId: '',
+    clientSecret: '',
+    accessToken: '',
+    refreshToken: '',
+    tokenExpiresAt: null,
+    fromEmail: '',
+    connected: false,
+    sendReady: false,
+  },
   webhookUrl: '',
   notificationsEnabled: true,
 }
 
 const META_SECRET_FIELDS = ['appSecret', 'pageToken']
 const LINKEDIN_SECRET_FIELDS = ['clientSecret', 'accessToken', 'refreshToken']
+const REDDIT_SECRET_FIELDS = ['clientSecret', 'refreshToken']
+const GMAIL_SECRET_FIELDS = ['clientSecret', 'accessToken', 'refreshToken']
 
 export function withDerivedFlags(config) {
   const linkedinReady = isLinkedInConfigured(config.linkedin)
@@ -32,6 +65,19 @@ export function withDerivedFlags(config) {
       ...config.linkedin,
       connected: linkedinReady,
       publishReady: canPublishLinkedIn(config.linkedin),
+    },
+    reddit: {
+      ...config.reddit,
+      connected: isRedditConfigured(config.reddit),
+    },
+    quora: {
+      ...config.quora,
+      connected: isQuoraConfigured(config.quora),
+    },
+    gmail: {
+      ...config.gmail,
+      connected: isGmailConfigured(config.gmail),
+      sendReady: canSendGmail(config.gmail),
     },
   }
 }
@@ -68,6 +114,25 @@ export function envDefaults() {
       tokenExpiresAt: null,
     },
     webhookUrl: process.env.WEBHOOK_URL?.trim() || '',
+    reddit: {
+      clientId: process.env.REDDIT_CLIENT_ID?.trim() || '',
+      clientSecret: process.env.REDDIT_CLIENT_SECRET?.trim() || '',
+      refreshToken: process.env.REDDIT_REFRESH_TOKEN?.trim() || '',
+      subreddit: process.env.REDDIT_SUBREDDIT?.trim() || '',
+      userAgent: process.env.REDDIT_USER_AGENT?.trim() || 'PulsePublisher/1.0',
+    },
+    quora: {
+      profileUrl: process.env.QUORA_PROFILE_URL?.trim() || '',
+      defaultTopic: process.env.QUORA_DEFAULT_TOPIC?.trim() || '',
+    },
+    gmail: {
+      clientId: process.env.GMAIL_CLIENT_ID?.trim() || '',
+      clientSecret: process.env.GMAIL_CLIENT_SECRET?.trim() || '',
+      accessToken: process.env.GMAIL_ACCESS_TOKEN?.trim() || '',
+      refreshToken: process.env.GMAIL_REFRESH_TOKEN?.trim() || '',
+      tokenExpiresAt: null,
+      fromEmail: process.env.GMAIL_FROM_EMAIL?.trim() || '',
+    },
   }
 }
 
@@ -76,6 +141,9 @@ function docToConfig(doc) {
   return {
     meta: doc.meta || DEFAULT_CONFIG.meta,
     linkedin: doc.linkedin || DEFAULT_CONFIG.linkedin,
+    reddit: doc.reddit || DEFAULT_CONFIG.reddit,
+    quora: doc.quora || DEFAULT_CONFIG.quora,
+    gmail: doc.gmail || DEFAULT_CONFIG.gmail,
     webhookUrl: doc.webhookUrl ?? '',
     notificationsEnabled: doc.notificationsEnabled ?? true,
   }
@@ -96,6 +164,25 @@ function fillFromEnv(config) {
       accessToken: config.linkedin.accessToken || env.linkedin.accessToken,
       refreshToken: config.linkedin.refreshToken || env.linkedin.refreshToken,
       tokenExpiresAt: config.linkedin.tokenExpiresAt || null,
+    },
+    reddit: {
+      clientId: config.reddit?.clientId || env.reddit.clientId,
+      clientSecret: config.reddit?.clientSecret || env.reddit.clientSecret,
+      refreshToken: config.reddit?.refreshToken || env.reddit.refreshToken,
+      subreddit: config.reddit?.subreddit || env.reddit.subreddit,
+      userAgent: config.reddit?.userAgent || env.reddit.userAgent,
+    },
+    quora: {
+      profileUrl: config.quora?.profileUrl || env.quora.profileUrl,
+      defaultTopic: config.quora?.defaultTopic || env.quora.defaultTopic,
+    },
+    gmail: {
+      clientId: config.gmail?.clientId || env.gmail.clientId,
+      clientSecret: config.gmail?.clientSecret || env.gmail.clientSecret,
+      accessToken: config.gmail?.accessToken || env.gmail.accessToken,
+      refreshToken: config.gmail?.refreshToken || env.gmail.refreshToken,
+      tokenExpiresAt: config.gmail?.tokenExpiresAt || null,
+      fromEmail: config.gmail?.fromEmail || env.gmail.fromEmail,
     },
     webhookUrl: config.webhookUrl || env.webhookUrl,
     notificationsEnabled: config.notificationsEnabled,
@@ -119,6 +206,9 @@ export async function saveWorkspaceConfig(workspaceId, config) {
   const next = withDerivedFlags({
     meta: mergeSection(prev.meta, config.meta || {}, META_SECRET_FIELDS),
     linkedin: mergeSection(prev.linkedin, config.linkedin || {}, LINKEDIN_SECRET_FIELDS),
+    reddit: mergeSection(prev.reddit, config.reddit || {}, REDDIT_SECRET_FIELDS),
+    quora: { ...prev.quora, ...(config.quora || {}) },
+    gmail: mergeSection(prev.gmail, config.gmail || {}, GMAIL_SECRET_FIELDS),
     webhookUrl: config.webhookUrl ?? prev.webhookUrl,
     notificationsEnabled: config.notificationsEnabled ?? prev.notificationsEnabled,
   })
@@ -129,6 +219,9 @@ export async function saveWorkspaceConfig(workspaceId, config) {
       workspaceId,
       meta: next.meta,
       linkedin: next.linkedin,
+      reddit: next.reddit,
+      quora: next.quora,
+      gmail: next.gmail,
       webhookUrl: next.webhookUrl,
       notificationsEnabled: next.notificationsEnabled,
     },
@@ -154,8 +247,36 @@ export async function saveMetaConfig(workspaceId, metaPatch) {
   })
 }
 
+export async function saveRedditConfig(workspaceId, redditPatch) {
+  const prev = await getWorkspaceConfig(workspaceId)
+  return saveWorkspaceConfig(workspaceId, {
+    ...prev,
+    reddit: { ...prev.reddit, ...redditPatch },
+  })
+}
+
+export async function saveQuoraConfig(workspaceId, quoraPatch) {
+  const prev = await getWorkspaceConfig(workspaceId)
+  return saveWorkspaceConfig(workspaceId, {
+    ...prev,
+    quora: { ...prev.quora, ...quoraPatch },
+  })
+}
+
 export async function saveLinkedInTokens(workspaceId, tokens) {
   return saveLinkedInConfig(workspaceId, tokens)
+}
+
+export async function saveGmailConfig(workspaceId, gmailPatch) {
+  const prev = await getWorkspaceConfig(workspaceId)
+  return saveWorkspaceConfig(workspaceId, {
+    ...prev,
+    gmail: { ...prev.gmail, ...gmailPatch },
+  })
+}
+
+export async function saveGmailTokens(workspaceId, tokens) {
+  return saveGmailConfig(workspaceId, tokens)
 }
 
 export function resolveConfig(stored, bodyConfig) {
@@ -163,6 +284,9 @@ export function resolveConfig(stored, bodyConfig) {
   return withDerivedFlags({
     meta: mergeSection(stored.meta, bodyConfig.meta || {}, META_SECRET_FIELDS),
     linkedin: mergeSection(stored.linkedin, bodyConfig.linkedin || {}, LINKEDIN_SECRET_FIELDS),
+    reddit: mergeSection(stored.reddit, bodyConfig.reddit || {}, REDDIT_SECRET_FIELDS),
+    quora: { ...stored.quora, ...(bodyConfig.quora || {}) },
+    gmail: mergeSection(stored.gmail, bodyConfig.gmail || {}, GMAIL_SECRET_FIELDS),
     webhookUrl: bodyConfig.webhookUrl ?? stored.webhookUrl,
     notificationsEnabled: bodyConfig.notificationsEnabled ?? stored.notificationsEnabled,
   })
@@ -193,12 +317,43 @@ export function toClientConfig(config) {
       hasClientSecret: Boolean(config.linkedin.clientSecret?.trim()),
       hasAccessToken: Boolean(config.linkedin.accessToken?.trim()),
     },
+    reddit: {
+      clientId: config.reddit?.clientId || '',
+      clientSecret: '',
+      refreshToken: '',
+      subreddit: config.reddit?.subreddit || '',
+      userAgent: config.reddit?.userAgent || 'PulsePublisher/1.0',
+      connected: config.reddit?.connected,
+      hasClientSecret: Boolean(config.reddit?.clientSecret?.trim()),
+      hasRefreshToken: Boolean(config.reddit?.refreshToken?.trim()),
+    },
+    quora: {
+      profileUrl: config.quora?.profileUrl || '',
+      defaultTopic: config.quora?.defaultTopic || '',
+      connected: config.quora?.connected,
+    },
+    gmail: {
+      clientId: config.gmail?.clientId || '',
+      clientSecret: '',
+      fromEmail: config.gmail?.fromEmail || '',
+      connected: config.gmail?.connected,
+      sendReady: config.gmail?.sendReady,
+      hasClientSecret: Boolean(config.gmail?.clientSecret?.trim()),
+      hasRefreshToken: Boolean(config.gmail?.refreshToken?.trim()),
+      tokenExpiresAt: config.gmail?.tokenExpiresAt || null,
+    },
   }
 }
 
 export function stripPlaceholderSecrets(patch) {
   const clean = { ...patch }
-  for (const key of ['appSecret', 'pageToken', 'clientSecret', 'accessToken', 'refreshToken']) {
+  for (const key of [
+    'appSecret',
+    'pageToken',
+    'clientSecret',
+    'accessToken',
+    'refreshToken',
+  ]) {
     if (clean[key] === '••••••••' || clean[key] === '********') delete clean[key]
   }
   return clean

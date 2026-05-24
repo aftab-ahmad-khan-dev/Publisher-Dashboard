@@ -6,16 +6,24 @@ import {
   resolveConfig,
   saveLinkedInConfig,
   saveMetaConfig,
+  saveRedditConfig,
+  saveQuoraConfig,
 } from '../lib/configStore.js'
 import { refreshLinkedInTokenIfNeeded } from '../lib/linkedinOAuth.js'
 import {
   isMetaConfigured,
   isLinkedInConfigured,
   canPublishLinkedIn,
+  isRedditConfigured,
+  isQuoraConfigured,
   platformsFromState,
 } from '../lib/platforms.js'
+import { validateCommunityPublish } from '../lib/contentPolicy.js'
+import { sanitizePostState } from '../lib/contentSanitize.js'
 import { testMetaConnection } from '../lib/publishers/meta.js'
 import { testLinkedInConnection } from '../lib/publishers/linkedin.js'
+import { testRedditConnection } from '../lib/publishers/reddit.js'
+import { testQuoraConnection } from '../lib/publishers/quora.js'
 import { publishToAllPlatforms } from '../lib/publishers/index.js'
 import { broadcastEvent } from '../lib/events.js'
 
@@ -31,6 +39,40 @@ router.post('/connections/meta/test', async (req, res, next) => {
       return res.status(400).json({ ok: false, error: 'App ID, App Secret, and Page Access Token are required.' })
     }
     const result = await testMetaConnection(config.meta)
+    if (!result.ok) return res.status(400).json(result)
+    res.json({ ...result, saved: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/connections/reddit/test', async (req, res, next) => {
+  try {
+    if (req.body?.reddit) {
+      await saveRedditConfig(req.workspaceId, req.body.reddit)
+    }
+    const config = await getWorkspaceConfig(req.workspaceId)
+    if (!isRedditConfigured(config.reddit)) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Client ID, Client Secret, Refresh Token, and Subreddit are required.',
+      })
+    }
+    const result = await testRedditConnection(config.reddit)
+    if (!result.ok) return res.status(400).json(result)
+    res.json({ ...result, saved: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/connections/quora/test', async (req, res, next) => {
+  try {
+    if (req.body?.quora) {
+      await saveQuoraConfig(req.workspaceId, req.body.quora)
+    }
+    const config = await getWorkspaceConfig(req.workspaceId)
+    const result = await testQuoraConnection(config.quora)
     if (!result.ok) return res.status(400).json(result)
     res.json({ ...result, saved: true })
   } catch (err) {
@@ -61,7 +103,8 @@ router.post('/connections/linkedin/test', async (req, res, next) => {
 
 router.post('/publish', async (req, res, next) => {
   try {
-    const { postState, enabled, apiConfig: bodyConfig } = req.body || {}
+    const { postState: rawState, enabled, apiConfig: bodyConfig } = req.body || {}
+    const postState = sanitizePostState(rawState)
     const platforms = enabled || platformsFromState(postState)
 
     if (!platforms?.length) {
@@ -75,8 +118,15 @@ router.post('/publish', async (req, res, next) => {
     config = await refreshLinkedInTokenIfNeeded(req.workspaceId)
     config = resolveConfig(config, bodyConfig)
 
+    const communityCheck = validateCommunityPublish(postState.body, platforms)
+    if (!communityCheck.ok) {
+      return res.status(400).json({ ok: false, error: communityCheck.error, analysis: communityCheck.analysis })
+    }
+
     const needsMeta = platforms.some((p) => p === 'instagram' || p === 'facebook')
     const needsLinkedIn = platforms.includes('linkedin')
+    const needsReddit = platforms.includes('reddit')
+    const needsQuora = platforms.includes('quora')
 
     if (needsMeta && !isMetaConfigured(config.meta)) {
       return res.status(400).json({ ok: false, error: 'Meta is not configured in database.' })
@@ -86,6 +136,12 @@ router.post('/publish', async (req, res, next) => {
         ok: false,
         error: 'LinkedIn is not ready. Save credentials and connect via OAuth.',
       })
+    }
+    if (needsReddit && !isRedditConfigured(config.reddit)) {
+      return res.status(400).json({ ok: false, error: 'Reddit is not configured in database.' })
+    }
+    if (needsQuora && !isQuoraConfigured(config.quora)) {
+      return res.status(400).json({ ok: false, error: 'Quora profile URL is required in API Config.' })
     }
 
     const outcome = await publishToAllPlatforms({ platforms, postState, config })
@@ -128,7 +184,8 @@ router.post('/publish', async (req, res, next) => {
 
 router.post('/schedule', async (req, res, next) => {
   try {
-    const { postState, scheduledAt, enabled, apiConfig: bodyConfig, timezone } = req.body || {}
+    const { postState: rawState, scheduledAt, enabled, apiConfig: bodyConfig, timezone } = req.body || {}
+    const postState = sanitizePostState(rawState)
     const platforms = enabled || platformsFromState(postState)
 
     if (!platforms?.length) {
@@ -147,13 +204,26 @@ router.post('/schedule', async (req, res, next) => {
     config = await refreshLinkedInTokenIfNeeded(req.workspaceId)
     config = resolveConfig(config, bodyConfig)
 
+    const communityCheck = validateCommunityPublish(postState.body, platforms)
+    if (!communityCheck.ok) {
+      return res.status(400).json({ ok: false, error: communityCheck.error, analysis: communityCheck.analysis })
+    }
+
     const needsMeta = platforms.some((p) => p === 'instagram' || p === 'facebook')
     const needsLinkedIn = platforms.includes('linkedin')
+    const needsReddit = platforms.includes('reddit')
+    const needsQuora = platforms.includes('quora')
     if (needsMeta && !isMetaConfigured(config.meta)) {
       return res.status(400).json({ ok: false, error: 'Meta is not configured in database.' })
     }
     if (needsLinkedIn && !canPublishLinkedIn(config.linkedin)) {
       return res.status(400).json({ ok: false, error: 'LinkedIn is not ready for scheduled publish.' })
+    }
+    if (needsReddit && !isRedditConfigured(config.reddit)) {
+      return res.status(400).json({ ok: false, error: 'Reddit is not configured in database.' })
+    }
+    if (needsQuora && !isQuoraConfigured(config.quora)) {
+      return res.status(400).json({ ok: false, error: 'Quora profile URL is required in API Config.' })
     }
 
     const doc = await ScheduledPost.create({

@@ -9,6 +9,12 @@ const ICONS = {
   compose: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
   ),
+  bulk: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+  ),
+  email: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  ),
   drafts: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
   ),
@@ -30,7 +36,13 @@ const BADGE_COUNTS = {
 
 export default function Sidebar({ onNavigate }) {
   const app = useAppData()
-  const { metaReady, linkedInReady } = getConnectionSummary(app.apiConfig)
+  const { metaReady, linkedInReady, linkedInPublish } = getConnectionSummary(app.apiConfig)
+  const linkedInLabel = linkedInPublish ? 'Ready' : linkedInReady ? 'Connect' : 'Setup'
+  const linkedInClass = linkedInPublish
+    ? 'text-emerald-400'
+    : linkedInReady
+      ? 'text-amber-400'
+      : 'text-slate-600'
 
   return (
     <aside className="flex h-full max-h-dvh w-full flex-col overflow-hidden border-r border-white/[0.07] bg-[#08090f]/95 backdrop-blur-2xl lg:w-[272px]">
@@ -101,11 +113,14 @@ export default function Sidebar({ onNavigate }) {
           </div>
           <div className="mt-2 flex items-center justify-between gap-2">
             <PlatformIcon platform="linkedin" size="sm" />
-            <span
-              className={`text-[10px] font-semibold ${linkedInReady ? 'text-emerald-400' : 'text-slate-600'}`}
-            >
-              {linkedInReady ? 'Ready' : 'Setup'}
-            </span>
+            <span className={`text-[10px] font-semibold ${linkedInClass}`}>{linkedInLabel}</span>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <div className="flex -space-x-1">
+              <PlatformIcon platform="reddit" size="sm" className="relative z-10" />
+              <PlatformIcon platform="quora" size="sm" className="relative z-0" />
+            </div>
+            <span className="text-[10px] font-semibold text-slate-500">Community</span>
           </div>
         </div>
       </div>

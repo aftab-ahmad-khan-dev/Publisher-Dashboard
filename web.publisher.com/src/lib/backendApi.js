@@ -70,9 +70,46 @@ export async function saveMetaRemote(meta) {
   return apiFetch('/config/meta', { method: 'PUT', body: { meta } })
 }
 
+export async function saveRedditRemote(reddit) {
+  return apiFetch('/config/reddit', { method: 'PUT', body: { reddit } })
+}
+
+export async function saveQuoraRemote(quora) {
+  return apiFetch('/config/quora', { method: 'PUT', body: { quora } })
+}
+
 export function linkedInOAuthUrl() {
   if (!API_BASE) return null
   return `${API_BASE}/auth/linkedin?workspaceId=${encodeURIComponent(getWorkspaceId())}`
+}
+
+export function gmailOAuthUrl() {
+  if (!API_BASE) return null
+  return `${API_BASE}/auth/gmail?workspaceId=${encodeURIComponent(getWorkspaceId())}`
+}
+
+export async function saveGmailRemote(gmail) {
+  return apiFetch('/config/gmail', { method: 'PUT', body: { gmail } })
+}
+
+export async function listEmailCampaigns() {
+  return apiFetch('/email/campaigns')
+}
+
+export async function getEmailCampaign(id) {
+  return apiFetch(`/email/campaigns/${id}`)
+}
+
+export async function createEmailCampaign(payload) {
+  return apiFetch('/email/campaigns', { method: 'POST', body: payload })
+}
+
+export async function sendEmailCampaign(id) {
+  return apiFetch(`/email/campaigns/${id}/send`, { method: 'POST' })
+}
+
+export async function deleteEmailCampaign(id) {
+  return apiFetch(`/email/campaigns/${id}`, { method: 'DELETE' })
 }
 
 export async function saveDraftRemote(draft) {
@@ -85,4 +122,8 @@ export async function deleteDraftRemote(id) {
 
 export async function deleteScheduledRemote(id) {
   return apiFetch(`/scheduled/${id}`, { method: 'DELETE' })
+}
+
+export async function scheduleBulkRemote(payload) {
+  return apiFetch('/bulk/schedule', { method: 'POST', body: payload })
 }

@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react'
 import { draftToComposerState } from '../lib/draftUtils'
+import { DEFAULT_PLATFORMS, DEFAULT_IMAGE_VISIBILITY } from '../lib/constants'
 
 const DEFAULT_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 
@@ -9,17 +10,9 @@ const INITIAL_STATE = {
   imagePreviewUrl: null,
   imageType: null,
   cropHint: 'square',
-  imageVisibility: {
-    instagram: true,
-    facebook: true,
-    linkedin: true,
-  },
+  imageVisibility: { ...DEFAULT_IMAGE_VISIBILITY },
   hashtags: [],
-  platforms: {
-    instagram: true,
-    facebook: true,
-    linkedin: true,
-  },
+  platforms: { ...DEFAULT_PLATFORMS },
   publishMode: 'now',
   scheduledAt: '',
   timezone: DEFAULT_TIMEZONE,
@@ -29,6 +22,8 @@ export const PLATFORM_LIMITS = {
   instagram: 2200,
   facebook: 63206,
   linkedin: 3000,
+  reddit: 40000,
+  quora: 50000,
 }
 
 export const CROP_HINTS = [
@@ -110,7 +105,7 @@ export function usePostState() {
           {
             id: crypto.randomUUID(),
             tag,
-            platforms: { instagram: true, facebook: true, linkedin: true },
+            platforms: { ...DEFAULT_PLATFORMS },
           },
         ],
       }
@@ -155,11 +150,11 @@ export function usePostState() {
   }, [])
 
   const hashtagCounts = useMemo(() => {
-    const counts = { instagram: 0, facebook: 0, linkedin: 0 }
+    const counts = { instagram: 0, facebook: 0, linkedin: 0, reddit: 0, quora: 0 }
     state.hashtags.forEach((h) => {
-      if (h.platforms.instagram) counts.instagram++
-      if (h.platforms.facebook) counts.facebook++
-      if (h.platforms.linkedin) counts.linkedin++
+      Object.keys(counts).forEach((p) => {
+        if (h.platforms[p]) counts[p]++
+      })
     })
     return counts
   }, [state.hashtags])

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import { isDbReady } from '../db.js'
+import { isDbReady, getLastDbError } from '../db.js'
 import { ensureDbConnected } from './dbInit.js'
 
 const startedAt = Date.now()
@@ -35,6 +35,10 @@ export async function collectHealthStatus() {
   } catch (err) {
     dbError = err.message
   }
+  if (!dbConnected && !dbError) {
+    const last = getLastDbError()
+    if (last?.message) dbError = last.message
+  }
 
   const responseMs = Date.now() - t0
   const uptimeMs = Date.now() - startedAt
@@ -50,7 +54,7 @@ export async function collectHealthStatus() {
     title: 'Pulse Publisher API',
     tagline: healthy
       ? 'Backend infrastructure is healthy and performing optimally. All services are running smoothly.'
-      : 'Backend is running but the database connection needs attention. Check DATABASE in your environment.',
+      : 'Backend is running but MongoDB is unreachable. Check DATABASE in .env, Atlas IP allowlist, and network/DNS (queryTxt ETIMEOUT often means DNS or firewall).',
     db: {
       connected: dbConnected,
       name: dbName,

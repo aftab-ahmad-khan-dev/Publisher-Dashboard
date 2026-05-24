@@ -1,3 +1,6 @@
+import { buildTextForPlatform } from './contentPolicy.js'
+import { sanitizePublishedText } from './contentSanitize.js'
+
 export function isMetaConfigured(meta) {
   return Boolean(meta?.appId?.trim() && meta?.appSecret?.trim() && meta?.pageToken?.trim())
 }
@@ -14,13 +17,29 @@ export function canPublishLinkedIn(linkedin) {
   return isLinkedInConfigured(linkedin) && Boolean(linkedin?.accessToken?.trim())
 }
 
-export function buildPostText(postState) {
-  const body = postState?.body?.trim() || ''
+export { isRedditConfigured } from './publishers/reddit.js'
+export { isQuoraConfigured } from './publishers/quora.js'
+
+export function isGmailConfigured(gmail) {
+  return Boolean(
+    gmail?.clientId?.trim() &&
+      gmail?.clientSecret?.trim() &&
+      (gmail?.refreshToken?.trim() || gmail?.accessToken?.trim()),
+  )
+}
+
+export function canSendGmail(gmail) {
+  return isGmailConfigured(gmail) || Boolean(gmail?.refreshToken?.trim())
+}
+
+export function buildPostText(postState, platform) {
+  if (platform) return sanitizePublishedText(buildTextForPlatform(postState, platform))
+  const body = sanitizePublishedText(postState?.body?.trim() || '')
   const tags = (postState?.hashtags || [])
     .filter((h) => h.tag)
-    .map((h) => (h.tag.startsWith('#') ? h.tag : `#${h.tag}`))
+    .map((h) => sanitizePublishedText(h.tag.startsWith('#') ? h.tag : `#${h.tag}`))
   const tagLine = tags.length ? `\n\n${tags.join(' ')}` : ''
-  return `${body}${tagLine}`.trim()
+  return sanitizePublishedText(`${body}${tagLine}`.trim())
 }
 
 export function platformsFromState(postState) {

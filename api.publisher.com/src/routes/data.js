@@ -7,6 +7,8 @@ import {
   saveWorkspaceConfig,
   saveLinkedInConfig,
   saveMetaConfig,
+  saveRedditConfig,
+  saveQuoraConfig,
   toClientConfig,
   stripPlaceholderSecrets,
 } from '../lib/configStore.js'
@@ -69,6 +71,26 @@ router.put('/config/meta', async (req, res, next) => {
     const meta = stripPlaceholderSecrets(req.body?.meta || req.body)
     const config = await saveMetaConfig(req.workspaceId, meta)
     res.json({ ok: true, config: toClientConfig(config), message: 'Meta configuration saved to database' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.put('/config/reddit', async (req, res, next) => {
+  try {
+    const reddit = stripPlaceholderSecrets(req.body?.reddit || req.body)
+    const config = await saveRedditConfig(req.workspaceId, reddit)
+    res.json({ ok: true, config: toClientConfig(config), message: 'Reddit configuration saved to database' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.put('/config/quora', async (req, res, next) => {
+  try {
+    const quora = req.body?.quora || req.body
+    const config = await saveQuoraConfig(req.workspaceId, quora)
+    res.json({ ok: true, config: toClientConfig(config), message: 'Quora configuration saved to database' })
   } catch (err) {
     next(err)
   }
@@ -170,6 +192,7 @@ function mapDraft(d) {
 }
 
 function mapScheduled(d) {
+  const ps = d.postState || {}
   return {
     id: d._id.toString(),
     body: d.body,
@@ -178,6 +201,8 @@ function mapScheduled(d) {
     timezone: d.timezone,
     status: d.status,
     error: d.error,
+    bulkTitle: ps.bulkTitle,
+    imagePreview: ps.imagePreview,
   }
 }
 

@@ -21,9 +21,43 @@ export function configFromServer(server) {
       hasAccessToken: server.linkedin?.hasAccessToken,
       tokenExpiresAt: server.linkedin?.tokenExpiresAt || null,
     },
+    reddit: {
+      clientId: server.reddit?.clientId || '',
+      clientSecret: '',
+      refreshToken: '',
+      subreddit: server.reddit?.subreddit || '',
+      userAgent: server.reddit?.userAgent || 'PulsePublisher/1.0',
+      connected: server.reddit?.connected,
+      hasClientSecret: server.reddit?.hasClientSecret,
+      hasRefreshToken: server.reddit?.hasRefreshToken,
+    },
+    quora: {
+      profileUrl: server.quora?.profileUrl || '',
+      defaultTopic: server.quora?.defaultTopic || '',
+      connected: server.quora?.connected,
+    },
+    gmail: {
+      clientId: server.gmail?.clientId || '',
+      clientSecret: '',
+      fromEmail: server.gmail?.fromEmail || '',
+      connected: server.gmail?.connected,
+      sendReady: server.gmail?.sendReady,
+      hasClientSecret: server.gmail?.hasClientSecret,
+      hasRefreshToken: server.gmail?.hasRefreshToken,
+      tokenExpiresAt: server.gmail?.tokenExpiresAt || null,
+    },
     webhookUrl: server.webhookUrl || '',
     notificationsEnabled: server.notificationsEnabled ?? true,
   }
+}
+
+export function gmailPayloadForSave(gmail) {
+  const out = {
+    clientId: gmail.clientId?.trim(),
+    fromEmail: gmail.fromEmail?.trim(),
+  }
+  if (gmail.clientSecret?.trim()) out.clientSecret = gmail.clientSecret.trim()
+  return out
 }
 
 export function linkedinPayloadForSave(linkedin) {
@@ -41,6 +75,24 @@ export function metaPayloadForSave(meta) {
   if (meta.appSecret?.trim()) out.appSecret = meta.appSecret.trim()
   if (meta.pageToken?.trim()) out.pageToken = meta.pageToken.trim()
   return out
+}
+
+export function redditPayloadForSave(reddit) {
+  const out = {
+    clientId: reddit.clientId?.trim(),
+    subreddit: reddit.subreddit?.trim(),
+    userAgent: reddit.userAgent?.trim() || 'PulsePublisher/1.0',
+  }
+  if (reddit.clientSecret?.trim()) out.clientSecret = reddit.clientSecret.trim()
+  if (reddit.refreshToken?.trim()) out.refreshToken = reddit.refreshToken.trim()
+  return out
+}
+
+export function quoraPayloadForSave(quora) {
+  return {
+    profileUrl: quora.profileUrl?.trim(),
+    defaultTopic: quora.defaultTopic?.trim(),
+  }
 }
 
 const API_CONFIG_KEY = 'pulse_api_config'

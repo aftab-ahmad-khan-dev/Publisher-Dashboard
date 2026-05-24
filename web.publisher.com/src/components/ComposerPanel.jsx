@@ -1,9 +1,11 @@
 import PlatformSelector from './PlatformSelector'
+import CommunityContentGuide from './CommunityContentGuide'
 import CharacterCounter from './CharacterCounter'
 import ImageUploader from './ImageUploader'
 import HashtagManager from './HashtagManager'
 import PublishControls from './PublishControls'
 import ScheduleQueue from './ScheduleQueue'
+import { containsForbiddenDash } from '../lib/contentSanitize'
 
 export default function ComposerPanel({
   state,
@@ -34,6 +36,8 @@ export default function ComposerPanel({
     <div className="space-y-3">
       <PlatformSelector platforms={state.platforms} togglePlatform={togglePlatform} />
 
+      <CommunityContentGuide body={state.body} platforms={state.platforms} />
+
       <div className="space-y-2">
         <label
           htmlFor="post-body"
@@ -45,11 +49,16 @@ export default function ComposerPanel({
           id="post-body"
           value={state.body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Write once — publish everywhere. What's on your mind?"
+          placeholder="Write once, publish everywhere. For Reddit & Quora, lead with helpful insight, not a sales pitch."
           rows={3}
           className="input-premium w-full resize-none py-2 text-sm leading-relaxed"
         />
         <CharacterCounter getFullLength={getFullLength} />
+        {containsForbiddenDash(state.body) && (
+          <p className="text-[11px] text-rose-400/95">
+            Em dashes (—) are not allowed in post copy. Use a comma or period instead.
+          </p>
+        )}
       </div>
 
       <ImageUploader

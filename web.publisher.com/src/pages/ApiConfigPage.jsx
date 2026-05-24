@@ -6,8 +6,14 @@ import PageShell, { PageScroll } from "../components/PageShell";
 import PlatformIcon, { MetaSuiteIcons } from "../components/PlatformIcon";
 import { getConnectionSummary } from "../lib/connections";
 import { isLivePublishing } from "../lib/api";
-import { linkedInOAuthUrl } from "../lib/backendApi";
-import { linkedinPayloadForSave, metaPayloadForSave } from "../lib/configUtils";
+import { linkedInOAuthUrl, gmailOAuthUrl } from "../lib/backendApi";
+import {
+  linkedinPayloadForSave,
+  metaPayloadForSave,
+  redditPayloadForSave,
+  quoraPayloadForSave,
+  gmailPayloadForSave,
+} from "../lib/configUtils";
 
 const FORM_ID = "api-config-form";
 
@@ -17,6 +23,9 @@ export default function ApiConfigPage() {
     saveApiConfig,
     saveLinkedInConfig,
     saveMetaConfig,
+    saveRedditConfig,
+    saveQuoraConfig,
+    saveGmailConfig,
     testPlatformConnection,
     requestNotificationPermission,
     refreshFromServer,
@@ -43,6 +52,18 @@ export default function ApiConfigPage() {
       setSearchParams({}, { replace: true });
     } else if (status === "error") {
       alert(message || "LinkedIn connection failed");
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, refreshFromServer, setSearchParams]);
+
+  useEffect(() => {
+    const status = searchParams.get("gmail");
+    const message = searchParams.get("message");
+    if (status === "connected") {
+      refreshFromServer();
+      setSearchParams({}, { replace: true });
+    } else if (status === "error") {
+      alert(message || "Gmail connection failed");
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, refreshFromServer, setSearchParams]);
@@ -116,7 +137,11 @@ export default function ApiConfigPage() {
     saveApiConfig(form);
   };
 
-  const [lastTest, setLastTest] = useState({ meta: null, linkedin: null })
+  const [lastTest, setLastTest] = useState({ meta: null, linkedin: null, reddit: null, quora: null, gmail: null })
+  const [redditSave, setRedditSave] = useState("idle")
+  const [quoraSave, setQuoraSave] = useState("idle")
+  const redditTimer = useRef(null)
+  const quoraTimer = useRef(null)
 
   const testConnection = async (platform) => {
     setTesting(platform);
@@ -133,11 +158,73 @@ export default function ApiConfigPage() {
     }));
   };
 
+  const persistReddit = useCallback(
+    async (reddit) => {
+      if (!live) return;
+      setRedditSave("saving");
+      try {
+        await saveRedditConfig(reddit);
+        setRedditSave("saved");
+        setTimeout(() => setRedditSave("idle"), 2000);
+      } catch {
+        setRedditSave("error");
+      }
+    },
+    [live, saveRedditConfig],
+  );
+
+  const persistQuora = useCallback(
+    async (quora) => {
+      if (!live) return;
+      setQuoraSave("saving");
+      try {
+        await saveQuoraConfig(quora);
+        setQuoraSave("saved");
+        setTimeout(() => setQuoraSave("idle"), 2000);
+      } catch {
+        setQuoraSave("error");
+      }
+    },
+    [live, saveQuoraConfig],
+  );
+
+  useEffect(() => {
+    if (!live) return undefined;
+    if (redditTimer.current) clearTimeout(redditTimer.current);
+    redditTimer.current = setTimeout(() => {
+      persistReddit(form.reddit);
+    }, 700);
+    return () => clearTimeout(redditTimer.current);
+  }, [
+    live,
+    form.reddit.clientId,
+    form.reddit.subreddit,
+    form.reddit.clientSecret,
+    form.reddit.refreshToken,
+    persistReddit,
+  ]);
+
+  useEffect(() => {
+    if (!live) return undefined;
+    if (quoraTimer.current) clearTimeout(quoraTimer.current);
+    quoraTimer.current = setTimeout(() => {
+      persistQuora(form.quora);
+    }, 700);
+    return () => clearTimeout(quoraTimer.current);
+  }, [live, form.quora.profileUrl, form.quora.defaultTopic, persistQuora]);
+
   const metaStatus = getPlatformStatus("meta", form, summary, lastTest.meta);
   const linkedInStatus = getPlatformStatus("linkedin", form, summary, lastTest.linkedin);
+  const redditStatus = getPlatformStatus("reddit", form, summary, lastTest.reddit);
+  const quoraStatus = getPlatformStatus("quora", form, summary, lastTest.quora);
 
   const connectLinkedIn = () => {
     const url = linkedInOAuthUrl();
+    if (url) window.location.href = url;
+  };
+
+  const connectGmail = () => {
+    const url = gmailOAuthUrl();
     if (url) window.location.href = url;
   };
 
@@ -152,7 +239,7 @@ export default function ApiConfigPage() {
     <PageShell>
       <PageHeader
         title='API Configuration'
-        subtitle='Connect Meta & LinkedIn'
+        subtitle='Meta · LinkedIn · Reddit · Quora (community = informational)'
         action={
           <div className='flex items-center gap-2'>
             <button
@@ -163,7 +250,7 @@ export default function ApiConfigPage() {
               Save configuration
             </button>
             <span className='rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-slate-400'>
-              {summary.connectedCount}/2 ready
+              {summary.connectedCount}/5 ready
               {syncing ? " · syncing…" : ""}
             </span>
           </div>
@@ -248,8 +335,10 @@ export default function ApiConfigPage() {
                   </div>
                 </div>
                 <StatusDot
-                  connected={summary.linkedInReady}
-                  label={summary.linkedInPublish ? "Live" : "Setup"}
+                  connected={summary.linkedInPublish}
+                  label={
+                    summary.linkedInPublish ? "Live" : summary.linkedInReady ? "Connect" : "Setup"
+                  }
                 />
               </div>
               <div className='mt-3 grid gap-2 sm:grid-cols-2'>
@@ -315,6 +404,117 @@ export default function ApiConfigPage() {
             <PlatformStatusCard status={linkedInStatus} platform='linkedin' />
             </div>
             </div>
+
+            <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
+            <div className='flex min-h-full flex-col gap-3'>
+            <section className='surface-panel flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
+              <div className='flex items-center justify-between gap-3'>
+                <div className='flex items-center gap-3'>
+                  <PlatformIcon platform='reddit' size='lg' />
+                  <div>
+                    <h3 className='text-sm font-semibold text-white'>Reddit</h3>
+                    <p className='text-[10px] text-slate-500'>Script app · self-posts · no promo tone</p>
+                  </div>
+                </div>
+                <StatusDot connected={summary.redditReady} />
+              </div>
+              <div className='mt-3 grid gap-2 sm:grid-cols-2'>
+                <Field label='Client ID' value={form.reddit.clientId} onChange={(v) => update('reddit', 'clientId', v)} placeholder='Reddit app id' />
+                <SecretField label='Client Secret' value={form.reddit.clientSecret} hasStored={form.reddit.hasClientSecret} onChange={(v) => update('reddit', 'clientSecret', v)} />
+                <SecretField label='Refresh Token' value={form.reddit.refreshToken} hasStored={form.reddit.hasRefreshToken} onChange={(v) => update('reddit', 'refreshToken', v)} className='sm:col-span-2' />
+                <Field label='Subreddit' value={form.reddit.subreddit} onChange={(v) => update('reddit', 'subreddit', v)} placeholder='yourcommunity (no r/)' />
+                <Field label='User-Agent' value={form.reddit.userAgent} onChange={(v) => update('reddit', 'userAgent', v)} placeholder='PulsePublisher/1.0' />
+              </div>
+              <div className='flex-1' aria-hidden />
+              <div className='mt-auto flex flex-wrap gap-2 pt-3'>
+                <button type='button' onClick={() => testConnection('reddit')} disabled={testing === 'reddit'} className='btn-secondary px-3 py-1.5 text-xs'>
+                  {testing === 'reddit' ? 'Testing…' : 'Test & save Reddit'}
+                </button>
+                {live && (
+                  <button type='button' onClick={() => persistReddit(redditPayloadForSave(form.reddit))} className='btn-secondary px-3 py-1.5 text-xs'>
+                    Save Reddit now
+                  </button>
+                )}
+              </div>
+            </section>
+            <PlatformStatusCard status={redditStatus} platform='reddit' />
+            </div>
+
+            <div className='flex min-h-full flex-col gap-3'>
+            <section className='surface-panel flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
+              <div className='flex items-center justify-between gap-3'>
+                <div className='flex items-center gap-3'>
+                  <PlatformIcon platform='quora' size='lg' />
+                  <div>
+                    <h3 className='text-sm font-semibold text-white'>Quora</h3>
+                    <p className='text-[10px] text-slate-500'>Guided paste · expertise answers only</p>
+                  </div>
+                </div>
+                <StatusDot connected={summary.quoraReady} />
+              </div>
+              <div className='mt-3 space-y-2'>
+                <Field label='Profile URL' value={form.quora.profileUrl} onChange={(v) => update('quora', 'profileUrl', v)} placeholder='https://www.quora.com/profile/…' className='w-full' />
+                <Field label='Default topic (optional)' value={form.quora.defaultTopic} onChange={(v) => update('quora', 'defaultTopic', v)} placeholder='e.g. Startup advice' className='w-full' />
+              </div>
+              <p className='mt-3 text-[11px] leading-relaxed text-amber-400/80'>
+                Quora has no public posting API. Pulse formats your answer and copies it for you — write like you are helping someone, not selling.
+              </p>
+              <div className='flex-1' aria-hidden />
+              <div className='mt-auto flex flex-wrap gap-2 pt-3'>
+                <button type='button' onClick={() => testConnection('quora')} disabled={testing === 'quora'} className='btn-secondary px-3 py-1.5 text-xs'>
+                  {testing === 'quora' ? 'Testing…' : 'Test & save Quora'}
+                </button>
+                {live && (
+                  <button type='button' onClick={() => persistQuora(quoraPayloadForSave(form.quora))} className='btn-secondary px-3 py-1.5 text-xs'>
+                    Save Quora now
+                  </button>
+                )}
+              </div>
+            </section>
+            <PlatformStatusCard status={quoraStatus} platform='quora' />
+            </div>
+            </div>
+
+            <section className='surface-panel rounded-xl p-4'>
+              <div className='flex flex-wrap items-start justify-between gap-3'>
+                <div className='flex items-center gap-3'>
+                  <span className='flex h-10 w-10 items-center justify-center rounded-xl bg-[#EA4335] text-lg font-bold text-white'>M</span>
+                  <div>
+                    <h3 className='text-sm font-semibold text-white'>Gmail (Mailsuite compatible)</h3>
+                    <p className='text-[10px] text-slate-500'>
+                      Bulk send from your inbox · opens in Pulse + Mailsuite extension in Gmail
+                    </p>
+                  </div>
+                </div>
+                <StatusDot connected={summary.gmailReady} label={summary.gmailReady ? 'Ready' : 'Setup'} />
+              </div>
+              <div className='mt-3 grid gap-2 sm:grid-cols-2'>
+                <Field label='Google Client ID' value={form.gmail?.clientId || ''} onChange={(v) => update('gmail', 'clientId', v)} placeholder='OAuth client ID' />
+                <SecretField label='Client Secret' value={form.gmail?.clientSecret || ''} hasStored={form.gmail?.hasClientSecret} onChange={(v) => update('gmail', 'clientSecret', v)} />
+              </div>
+              <p className='mt-2 text-[11px] text-slate-500'>
+                Create credentials in Google Cloud Console → Gmail API enabled → OAuth redirect:{' '}
+                <code className='text-slate-400'>http://localhost:3001/api/auth/gmail/callback</code>
+              </p>
+              <div className='mt-3 flex flex-wrap gap-2'>
+                {live && (
+                  <button type='button' onClick={connectGmail} className='btn-primary px-3 py-1.5 text-xs'>
+                    Connect Gmail
+                  </button>
+                )}
+                <button type='button' onClick={() => testConnection('gmail')} disabled={testing === 'gmail'} className='btn-secondary px-3 py-1.5 text-xs'>
+                  {testing === 'gmail' ? 'Testing…' : 'Test Gmail'}
+                </button>
+                {live && (
+                  <button type='button' onClick={() => saveGmailConfig(gmailPayloadForSave(form.gmail))} className='btn-secondary px-3 py-1.5 text-xs'>
+                    Save Gmail now
+                  </button>
+                )}
+              </div>
+              {form.gmail?.fromEmail && (
+                <p className='mt-2 text-[11px] text-emerald-400/90'>Sending as {form.gmail.fromEmail}</p>
+              )}
+            </section>
 
             <section className='surface-panel rounded-xl p-4'>
               <h3 className='text-sm font-semibold text-white'>Webhooks</h3>
@@ -438,6 +638,83 @@ function getPlatformStatus(platform, form, summary, lastTest) {
     });
   }
 
+  if (platform === "reddit") {
+    if (lastTest === "error") {
+      return withAlive({
+        tier: "error",
+        title: "Reddit connection failed",
+        message: "Check script app credentials, refresh token, and subreddit.",
+      });
+    }
+    if (!summary.redditReady) {
+      return withAlive({
+        tier: "idle",
+        title: "Not connected",
+        message: "Add Reddit app credentials. Posts must be informational — promotional tone may be removed by mods.",
+      });
+    }
+    return withAlive({
+      tier: lastTest === "ok" ? "functional" : "connected",
+      title: lastTest === "ok" ? "Connected & functional" : "Connected",
+      message:
+        lastTest === "ok"
+          ? "Reddit API verified. Self-posts publish to your subreddit."
+          : "Credentials saved. Run “Test & save Reddit” to verify.",
+    });
+  }
+
+  if (platform === "quora") {
+    if (lastTest === "error") {
+      return withAlive({
+        tier: "error",
+        title: "Quora setup invalid",
+        message: "Use a valid quora.com profile URL.",
+      });
+    }
+    if (!summary.quoraReady) {
+      return withAlive({
+        tier: "idle",
+        title: "Not connected",
+        message: "Add your Quora profile for guided, informational answers (manual paste).",
+      });
+    }
+    return withAlive({
+      tier: lastTest === "ok" ? "functional" : "connected",
+      title: "Ready for guided posts",
+      message:
+        "Quora profile saved. Publish copies expertise-style answers for you to paste — avoid promotional language.",
+    });
+  }
+
+  if (platform === "gmail") {
+    if (lastTest === "error") {
+      return withAlive({
+        tier: "error",
+        title: "Gmail connection failed",
+        message: "Check OAuth client ID/secret and reconnect.",
+      });
+    }
+    if (!summary.gmailReady) {
+      return withAlive({
+        tier: "idle",
+        title: "Not connected",
+        message: "Save Google OAuth app credentials, then Connect Gmail.",
+      });
+    }
+    return withAlive({
+      tier: lastTest === "ok" ? "functional" : "connected",
+      title: lastTest === "ok" ? "Ready to send bulk mail" : "Connected",
+      message:
+        lastTest === "ok"
+          ? "Gmail API verified. Bulk sends appear in Sent — use Mailsuite in Gmail for extra tracking."
+          : "OAuth connected. Test before your first campaign.",
+    });
+  }
+
+  if (platform !== "linkedin") {
+    return withAlive({ tier: "idle", title: "Unknown", message: "" });
+  }
+
   if (lastTest === "error") {
     return withAlive({
       tier: "error",
@@ -526,7 +803,7 @@ function PlatformStatusCard({ status, platform }) {
             {platform === "meta" ? (
               <MetaSuiteIcons size='sm' />
             ) : (
-              <PlatformIcon platform='linkedin' size='sm' />
+              <PlatformIcon platform={platform} size='sm' />
             )}
           </div>
           <p className='mt-1.5 line-clamp-3 text-[11px] leading-relaxed text-slate-400'>

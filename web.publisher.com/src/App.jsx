@@ -11,6 +11,9 @@ import DraftsPage from './pages/DraftsPage'
 import ScheduledPage from './pages/ScheduledPage'
 import CalendarPage from './pages/CalendarPage'
 import ApiConfigPage from './pages/ApiConfigPage'
+import BulkUploadPage from './pages/BulkUploadPage'
+import EmailPage from './pages/EmailPage'
+import AppToaster from './components/AppToaster'
 
 function AppRoutes() {
   return (
@@ -20,6 +23,8 @@ function AppRoutes() {
         <Route element={<DashboardLayout />}>
           <Route index element={<Navigate to="/compose" replace />} />
           <Route path="compose" element={<ComposePage />} />
+          <Route path="bulk" element={<BulkUploadPage />} />
+          <Route path="email" element={<EmailPage />} />
           <Route path="drafts" element={<DraftsPage />} />
           <Route path="scheduled" element={<ScheduledPage />} />
           <Route path="calendar" element={<CalendarPage />} />
@@ -43,6 +48,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppDataProvider>
+          <AppToaster />
           <SplashScreen visible={splash} />
           <div
             className={`h-dvh max-h-dvh overflow-hidden ${splash ? 'opacity-0' : 'opacity-100 transition-opacity duration-500'}`}

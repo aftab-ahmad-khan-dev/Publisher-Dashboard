@@ -2,12 +2,8 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../components/layout/Sidebar'
 import TopBar from '../components/layout/TopBar'
-import Toast from '../components/Toast'
-import { useAppData } from '../contexts/AppDataContext'
-
 export default function DashboardLayout() {
   const [mobileNav, setMobileNav] = useState(false)
-  const { toast, dismissToast } = useAppData()
 
   return (
     <div className="dashboard-shell flex h-dvh max-h-dvh overflow-hidden bg-[#06080f]">
@@ -36,8 +32,6 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
-
-      <Toast toast={toast} onDismiss={dismissToast} />
     </div>
   )
 }
