@@ -15,6 +15,7 @@ import {
   quoraPayloadForSave,
   gmailPayloadForSave,
 } from "../lib/configUtils";
+import { STORAGE_KEYS, readJsonStorage, writeJsonStorage } from "../lib/storage";
 
 const FORM_ID = "api-config-form";
 
@@ -43,6 +44,16 @@ export default function ApiConfigPage() {
 
   useEffect(() => {
     setForm(apiConfig);
+  }, [apiConfig]);
+
+  useEffect(() => {
+    const saved = readJsonStorage(STORAGE_KEYS.platformTestStatus, {});
+    const summaryNow = getConnectionSummary(apiConfig);
+    setLastTest((prev) => ({
+      ...saved,
+      ...prev,
+      ...(summaryNow.quoraReady ? { quora: "ok" } : {}),
+    }));
   }, [apiConfig]);
 
   useEffect(() => {
@@ -156,15 +167,13 @@ export default function ApiConfigPage() {
     setTesting(platform);
     const result = await testPlatformConnection(platform, form);
     setTesting(null);
-    setLastTest((t) => ({
-      ...t,
-      [platform]:
-        result.ok === false
-          ? "error"
-          : result.needsToken
-            ? "needsToken"
-            : "ok",
-    }));
+    const status =
+      result.ok === false ? "error" : result.needsToken ? "needsToken" : "ok";
+    setLastTest((t) => {
+      const next = { ...t, [platform]: status };
+      writeJsonStorage(STORAGE_KEYS.platformTestStatus, next);
+      return next;
+    });
   };
 
   const persistReddit = useCallback(
@@ -513,7 +522,7 @@ export default function ApiConfigPage() {
               <div className='flex-1' aria-hidden />
               <div className='mt-auto flex flex-wrap gap-2 pt-3'>
                 <button type='button' onClick={() => testConnection('quora')} disabled={testing === 'quora'} className='btn-secondary px-3 py-1.5 text-xs'>
-                  {testing === 'quora' ? 'Testing…' : 'Test & save Quora'}
+                  {testing === 'quora' ? 'Testing…' : summary.quoraReady ? 'Re-test & save Quora' : 'Test & save Quora'}
                 </button>
                 {live && (
                   <button type='button' onClick={() => persistQuora(quoraPayloadForSave(form.quora))} className='btn-secondary px-3 py-1.5 text-xs'>
@@ -743,10 +752,10 @@ function getPlatformStatus(platform, form, summary, lastTest) {
       });
     }
     return withAlive({
-      tier: lastTest === "ok" ? "functional" : "connected",
+      tier: "functional",
       title: "Ready for guided posts",
       message:
-        "Quora profile saved. Publish copies expertise-style answers for you to paste — avoid promotional language.",
+        "Quora profile saved. Publish copies expertise-style answers for you to paste — avoid promotional language. Re-test only if you change the profile URL.",
     });
   }
 
