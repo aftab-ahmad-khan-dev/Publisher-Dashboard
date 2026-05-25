@@ -90,7 +90,7 @@ router.post('/connections/linkedin/test', async (req, res, next) => {
     if (!isLinkedInConfigured(config.linkedin)) {
       return res.status(400).json({
         ok: false,
-        error: 'Client ID, Client Secret, and Organization URN are required.',
+        error: 'Client ID and Client Secret are required (Org URN is optional for profile posts).',
       })
     }
     const result = await testLinkedInConnection(config.linkedin)

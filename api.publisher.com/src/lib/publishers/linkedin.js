@@ -1,5 +1,73 @@
 const LINKEDIN_VERSION = '202402'
 
+function parseLinkedInError(status, raw) {
+  let data = {}
+  try {
+    data = JSON.parse(raw)
+  } catch {
+    data = { message: raw }
+  }
+  const code = data.code || data.serviceErrorCode
+  const message = data.message || raw || `LinkedIn API error (${status})`
+
+  if (status === 401 || code === 'INVALID_ACCESS_TOKEN' || /invalid access token/i.test(message)) {
+    return (
+      'LinkedIn rejected the access token. Generate a new token for app “Publisher” (Client ID must match), ' +
+      'paste the full string with Copy access token, then Save LinkedIn now. ' +
+      'For company posts use scopes w_organization_social + r_organization_social and a real urn:li:organization:ID. ' +
+      'For profile posts use w_member_social (leave Org URN blank or remove placeholder 12345).'
+    )
+  }
+  return message
+}
+
+async function fetchLinkedInUserinfo(accessToken) {
+  const res = await fetch('https://api.linkedin.com/v2/userinfo', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  const raw = await res.text()
+  if (!res.ok) {
+    throw new Error(parseLinkedInError(res.status, raw))
+  }
+  return JSON.parse(raw)
+}
+
+function personUrnFromUserinfo(data) {
+  if (!data?.sub) return null
+  const sub = String(data.sub)
+  if (sub.startsWith('urn:li:')) return sub
+  return `urn:li:person:${sub}`
+}
+
+function isPlaceholderOrgUrn(orgUrn) {
+  const org = orgUrn?.trim()
+  if (!org) return true
+  return /^urn:li:organization:12345$/i.test(org)
+}
+
+function isValidOrganizationUrn(orgUrn) {
+  const org = orgUrn?.trim()
+  if (!org || isPlaceholderOrgUrn(org)) return false
+  if (/^https?:\/\//i.test(org) || org.includes('linkedin.com')) return false
+  return /^urn:li:organization:\d+$/i.test(org)
+}
+
+/** Prefer real org URN; otherwise post as the authenticated member (w_member_social). */
+export async function resolveLinkedInAuthor(accessToken, orgUrn) {
+  const userinfo = await fetchLinkedInUserinfo(accessToken)
+  const useOrg = isValidOrganizationUrn(orgUrn)
+
+  if (useOrg) {
+    return { author: org, mode: 'organization', userinfo }
+  }
+
+  const person = personUrnFromUserinfo(userinfo)
+  if (!person) {
+    throw new Error('Could not resolve LinkedIn member URN. Reconnect via OAuth in API Config.')
+  }
+  return { author: person, mode: 'member', userinfo }
+}
+
 export async function testLinkedInConnection(linkedin) {
   const token = linkedin.accessToken?.trim()
   if (!token) {
@@ -10,28 +78,38 @@ export async function testLinkedInConnection(linkedin) {
       needsToken: true,
     }
   }
-  const res = await fetch('https://api.linkedin.com/v2/userinfo', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!res.ok) {
-    const err = await res.text()
-    return { ok: false, error: err || 'LinkedIn token validation failed' }
+
+  try {
+    const { author, mode, userinfo } = await resolveLinkedInAuthor(token, linkedin.orgUrn)
+    const name = userinfo.name || userinfo.given_name || ''
+    const modeLabel = mode === 'organization' ? 'organization page' : 'personal profile'
+    return {
+      ok: true,
+      message: `LinkedIn token valid${name ? ` (${name})` : ''}. Will publish to ${modeLabel} (${author}).`,
+    }
+  } catch (err) {
+    return { ok: false, error: err.message }
   }
-  const data = await res.json().catch(() => ({}))
-  return { ok: true, message: `LinkedIn token valid${data.name ? ` (${data.name})` : ''}` }
 }
 
 export async function publishToLinkedIn({ text, orgUrn, accessToken }) {
+  const token = accessToken?.trim()
+  if (!token) {
+    throw new Error('LinkedIn access token is missing. Connect OAuth or paste a token in API Config.')
+  }
+
+  const { author, mode } = await resolveLinkedInAuthor(token, orgUrn)
+
   const res = await fetch('https://api.linkedin.com/rest/posts', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
       'X-Restli-Protocol-Version': '2.0.0',
       'LinkedIn-Version': LINKEDIN_VERSION,
     },
     body: JSON.stringify({
-      author: orgUrn,
+      author,
       commentary: text,
       visibility: 'PUBLIC',
       distribution: {
@@ -43,16 +121,23 @@ export async function publishToLinkedIn({ text, orgUrn, accessToken }) {
       isReshareDisabledByAuthor: false,
     }),
   })
+
   const raw = await res.text()
+  if (!res.ok) {
+    throw new Error(parseLinkedInError(res.status, raw))
+  }
+
   let data = {}
   try {
     data = JSON.parse(raw)
   } catch {
-    data = { raw }
+    data = {}
   }
-  if (!res.ok) {
-    throw new Error(data.message || data.error || raw || 'LinkedIn publish failed')
-  }
+
   const postId = res.headers.get('x-restli-id') || data.id
-  return { platform: 'linkedin', postId }
+  return {
+    platform: 'linkedin',
+    postId,
+    authorMode: mode,
+  }
 }

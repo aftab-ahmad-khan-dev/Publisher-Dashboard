@@ -5,12 +5,12 @@ export function isMetaConfigured(meta) {
   return Boolean(meta?.appId?.trim() && meta?.appSecret?.trim() && meta?.pageToken?.trim())
 }
 
+/** App credentials saved. Org URN is optional (profile posts use w_member_social). */
 export function isLinkedInConfigured(linkedin) {
-  return Boolean(
-    linkedin?.clientId?.trim() &&
-      linkedin?.clientSecret?.trim() &&
-      linkedin?.orgUrn?.trim(),
-  )
+  const hasClientId = Boolean(linkedin?.clientId?.trim())
+  const hasSecret =
+    Boolean(linkedin?.clientSecret?.trim()) || Boolean(linkedin?.hasClientSecret)
+  return hasClientId && hasSecret
 }
 
 export function canPublishLinkedIn(linkedin) {

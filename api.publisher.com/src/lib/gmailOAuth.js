@@ -9,11 +9,24 @@ const SCOPES = [
 
 const pendingStates = new Map()
 
+export function getGmailOAuthSetup(config = {}) {
+  const { clientId, redirectUri } = getClientCredentials(config)
+  return {
+    redirectUri,
+    clientIdConfigured: Boolean(clientId),
+    redirectUrisToRegister: [
+      redirectUri,
+      'http://127.0.0.1:3001/api/auth/gmail/callback',
+    ].filter((u, i, a) => a.indexOf(u) === i),
+  }
+}
+
 function getClientCredentials(config) {
   return {
-    clientId: config.gmail?.clientId?.trim() || process.env.GMAIL_CLIENT_ID?.trim(),
+    clientId:
+      process.env.GMAIL_CLIENT_ID?.trim() || config.gmail?.clientId?.trim() || '',
     clientSecret:
-      config.gmail?.clientSecret?.trim() || process.env.GMAIL_CLIENT_SECRET?.trim(),
+      process.env.GMAIL_CLIENT_SECRET?.trim() || config.gmail?.clientSecret?.trim() || '',
     redirectUri:
       process.env.GMAIL_REDIRECT_URI?.trim() ||
       'http://localhost:3001/api/auth/gmail/callback',
@@ -24,7 +37,9 @@ export function startGmailAuth(workspaceId) {
   return getWorkspaceConfig(workspaceId).then((config) => {
     const { clientId, redirectUri } = getClientCredentials(config)
     if (!clientId) {
-      throw new Error('Gmail Client ID is required. Save it in API Config first.')
+      throw new Error(
+        'Gmail Client ID is required. Paste it in API Config → Save Gmail now, or set GMAIL_CLIENT_ID in api.publisher.com/.env and restart the API server.',
+      )
     }
 
     const state = crypto.randomBytes(16).toString('hex')

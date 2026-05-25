@@ -77,7 +77,7 @@ export async function testQuoraConnection(quora) {
 
 export async function testLinkedInConnection(linkedin) {
   if (!isLinkedInConfigured(linkedin)) {
-    return { ok: false, error: 'Client ID, Client Secret, and Organization URN are required.' }
+    return { ok: false, error: 'Client ID and Client Secret are required (Org URN is optional for profile posts).' }
   }
   if (isLivePublishing()) {
     return postBackend('/connections/linkedin/test', { linkedin })

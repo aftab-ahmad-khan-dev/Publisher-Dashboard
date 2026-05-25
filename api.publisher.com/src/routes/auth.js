@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { startLinkedInAuth, handleLinkedInCallback } from '../lib/linkedinOAuth.js'
-import { startGmailAuth, handleGmailCallback } from '../lib/gmailOAuth.js'
+import { startGmailAuth, handleGmailCallback, getGmailOAuthSetup } from '../lib/gmailOAuth.js'
+import { getWorkspaceConfig } from '../lib/configStore.js'
 
 const router = Router()
 const WEB_URL = process.env.WEB_URL?.trim() || 'http://localhost:5173'
@@ -30,6 +31,15 @@ router.get('/auth/linkedin/callback', async (req, res) => {
     redirect({ linkedin: 'connected' })
   } catch (err) {
     redirect({ linkedin: 'error', message: err.message })
+  }
+})
+
+router.get('/auth/gmail/setup', async (req, res, next) => {
+  try {
+    const config = await getWorkspaceConfig(req.workspaceId)
+    res.json({ ok: true, ...getGmailOAuthSetup(config) })
+  } catch (err) {
+    next(err)
   }
 })
 

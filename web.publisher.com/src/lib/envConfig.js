@@ -13,6 +13,10 @@ export function getEnvApiDefaults() {
       orgUrn: import.meta.env.VITE_LINKEDIN_ORG_URN?.trim() || '',
       accessToken: import.meta.env.VITE_LINKEDIN_ACCESS_TOKEN?.trim() || '',
     },
+    gmail: {
+      clientId: import.meta.env.VITE_GMAIL_CLIENT_ID?.trim() || '',
+      clientSecret: import.meta.env.VITE_GMAIL_CLIENT_SECRET?.trim() || '',
+    },
     webhookUrl: import.meta.env.VITE_WEBHOOK_URL?.trim() || '',
   }
 }
@@ -40,6 +44,15 @@ export function mergeApiConfigWithEnv(base, stored = {}) {
       orgUrn: stored.linkedin?.orgUrn || env.linkedin.orgUrn || base.linkedin.orgUrn,
       accessToken:
         stored.linkedin?.accessToken || env.linkedin.accessToken || base.linkedin.accessToken,
+    },
+    gmail: {
+      ...base.gmail,
+      ...env.gmail,
+      ...stored.gmail,
+      clientId: stored.gmail?.clientId || env.gmail.clientId || base.gmail?.clientId || '',
+      clientSecret:
+        stored.gmail?.clientSecret || env.gmail.clientSecret || base.gmail?.clientSecret || '',
+      fromEmail: stored.gmail?.fromEmail || base.gmail?.fromEmail || '',
     },
     webhookUrl: stored.webhookUrl || env.webhookUrl || base.webhookUrl,
     notificationsEnabled:

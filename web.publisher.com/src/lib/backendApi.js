@@ -88,6 +88,10 @@ export function gmailOAuthUrl() {
   return `${API_BASE}/auth/gmail?workspaceId=${encodeURIComponent(getWorkspaceId())}`
 }
 
+export async function fetchGmailOAuthSetup() {
+  return apiFetch('/auth/gmail/setup')
+}
+
 export async function saveGmailRemote(gmail) {
   return apiFetch('/config/gmail', { method: 'PUT', body: { gmail } })
 }

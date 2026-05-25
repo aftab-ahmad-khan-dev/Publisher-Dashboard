@@ -7,16 +7,12 @@ export function isMetaConfigured(meta) {
   return filled || (Boolean(meta?.appId?.trim()) && hasSecrets)
 }
 
+/** App credentials saved. Org URN is optional (profile posts use w_member_social). */
 export function isLinkedInConfigured(linkedin) {
-  const hasSecrets = linkedin?.hasClientSecret
-  const filled =
-    Boolean(linkedin?.clientId?.trim()) &&
-    Boolean(linkedin?.clientSecret?.trim()) &&
-    Boolean(linkedin?.orgUrn?.trim())
-  return (
-    filled ||
-    (Boolean(linkedin?.clientId?.trim()) && Boolean(linkedin?.orgUrn?.trim()) && hasSecrets)
-  )
+  const hasClientId = Boolean(linkedin?.clientId?.trim())
+  const hasSecret =
+    Boolean(linkedin?.clientSecret?.trim()) || Boolean(linkedin?.hasClientSecret)
+  return hasClientId && hasSecret
 }
 
 export function isLinkedInPublishReady(linkedin) {

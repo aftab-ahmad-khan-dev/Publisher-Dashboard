@@ -6,7 +6,8 @@ import PageShell, { PageScroll } from "../components/PageShell";
 import PlatformIcon, { MetaSuiteIcons } from "../components/PlatformIcon";
 import { getConnectionSummary } from "../lib/connections";
 import { isLivePublishing } from "../lib/api";
-import { linkedInOAuthUrl, gmailOAuthUrl } from "../lib/backendApi";
+import { linkedInOAuthUrl, gmailOAuthUrl, fetchGmailOAuthSetup } from "../lib/backendApi";
+import { showToast } from "../lib/toast";
 import {
   linkedinPayloadForSave,
   metaPayloadForSave,
@@ -67,6 +68,13 @@ export default function ApiConfigPage() {
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, refreshFromServer, setSearchParams]);
+
+  useEffect(() => {
+    if (!live) return
+    fetchGmailOAuthSetup()
+      .then((data) => setGmailOAuthSetup(data))
+      .catch(() => setGmailOAuthSetup(null))
+  }, [live])
 
   const summary = getConnectionSummary(form);
 
@@ -138,6 +146,7 @@ export default function ApiConfigPage() {
   };
 
   const [lastTest, setLastTest] = useState({ meta: null, linkedin: null, reddit: null, quora: null, gmail: null })
+  const [gmailOAuthSetup, setGmailOAuthSetup] = useState(null)
   const [redditSave, setRedditSave] = useState("idle")
   const [quoraSave, setQuoraSave] = useState("idle")
   const redditTimer = useRef(null)
@@ -223,9 +232,35 @@ export default function ApiConfigPage() {
     if (url) window.location.href = url;
   };
 
-  const connectGmail = () => {
+  const connectGmail = async () => {
+    const payload = gmailPayloadForSave(form.gmail);
+    const hasId = Boolean(payload.clientId);
+    const hasSecret = Boolean(form.gmail?.clientSecret?.trim()) || form.gmail?.hasClientSecret;
+
+    if (!hasId) {
+      showToast(
+        "Paste Google Client ID (and Secret), click Save Gmail now, then Connect. Or set GMAIL_CLIENT_ID in api .env and restart the API.",
+        "error",
+      );
+      return;
+    }
+    if (!hasSecret) {
+      showToast("Client Secret is required before Connect Gmail.", "error");
+      return;
+    }
+
+    if (live) {
+      try {
+        await saveGmailConfig(payload);
+      } catch (err) {
+        showToast(err.message || "Could not save Gmail config", "error");
+        return;
+      }
+    }
+
     const url = gmailOAuthUrl();
     if (url) window.location.href = url;
+    else showToast("Set VITE_API_BASE_URL so Connect Gmail can reach the API.", "error");
   };
 
   const enableNotifications = async () => {
@@ -355,12 +390,21 @@ export default function ApiConfigPage() {
                   onChange={(v) => update("linkedin", "clientSecret", v)}
                 />
                 <Field
-                  label='Org URN'
+                  label='Org URN (company page only, optional)'
                   value={form.linkedin.orgUrn}
                   onChange={(v) => update("linkedin", "orgUrn", v)}
-                  placeholder='urn:li:organization:…'
+                  placeholder='urn:li:organization:12345678'
                   className='sm:col-span-2'
                 />
+                {form.linkedin.orgUrn?.trim() &&
+                  (/^https?:\/\//i.test(form.linkedin.orgUrn) ||
+                    form.linkedin.orgUrn.includes('linkedin.com')) && (
+                    <p className='sm:col-span-2 text-[10px] text-rose-400/95'>
+                      Org URN is not a URL. Clear this field for profile posts, or use{' '}
+                      <code className='text-rose-300/90'>urn:li:organization:YOUR_ID</code>. Redirect
+                      URI belongs in LinkedIn Developer app settings, not here.
+                    </p>
+                  )}
                 <SecretField
                   label='Access Token (optional if using OAuth)'
                   value={form.linkedin.accessToken || ""}
@@ -368,6 +412,13 @@ export default function ApiConfigPage() {
                   onChange={(v) => update("linkedin", "accessToken", v)}
                   className='sm:col-span-2'
                 />
+                <p className='sm:col-span-2 text-[10px] leading-relaxed text-slate-500'>
+                  Portal token needs <code className='text-violet-300/90'>w_member_social</code> for your
+                  profile, or <code className='text-violet-300/90'>w_organization_social</code> for a company
+                  page. Use Copy access token (full string). Placeholder org{' '}
+                  <code className='text-slate-400'>urn:li:organization:12345</code> is ignored; profile is used
+                  instead.
+                </p>
               </div>
               <div className='flex-1' aria-hidden />
               <div className='mt-auto flex flex-wrap gap-2 pt-3'>
@@ -492,10 +543,23 @@ export default function ApiConfigPage() {
                 <Field label='Google Client ID' value={form.gmail?.clientId || ''} onChange={(v) => update('gmail', 'clientId', v)} placeholder='OAuth client ID' />
                 <SecretField label='Client Secret' value={form.gmail?.clientSecret || ''} hasStored={form.gmail?.hasClientSecret} onChange={(v) => update('gmail', 'clientSecret', v)} />
               </div>
-              <p className='mt-2 text-[11px] text-slate-500'>
-                Create credentials in Google Cloud Console → Gmail API enabled → OAuth redirect:{' '}
-                <code className='text-slate-400'>http://localhost:3001/api/auth/gmail/callback</code>
-              </p>
+              <div className='mt-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-2.5 text-[11px] leading-relaxed text-slate-400'>
+                <p className='font-medium text-amber-200/90'>Fix redirect_uri_mismatch in Google Cloud</p>
+                <p className='mt-1'>
+                  Same OAuth client as Client ID above → <strong className='text-slate-300'>Credentials</strong> →
+                  your Web client → <strong className='text-slate-300'>Authorized redirect URIs</strong> (not
+                  JavaScript origins). Add <em>exactly</em>:
+                </p>
+                <ul className='mt-1.5 list-inside list-disc space-y-0.5 font-mono text-[10px] text-violet-300/90'>
+                  {(gmailOAuthSetup?.redirectUrisToRegister || [
+                    'http://localhost:3001/api/auth/gmail/callback',
+                    'http://127.0.0.1:3001/api/auth/gmail/callback',
+                  ]).map((uri) => (
+                    <li key={uri}>{uri}</li>
+                  ))}
+                </ul>
+                <p className='mt-1.5 text-slate-500'>No trailing slash. Use http (not https) for local dev. Save in Google, wait ~1 min, then Connect again.</p>
+              </div>
               <div className='mt-3 flex flex-wrap gap-2'>
                 {live && (
                   <button type='button' onClick={connectGmail} className='btn-primary px-3 py-1.5 text-xs'>
@@ -719,7 +783,7 @@ function getPlatformStatus(platform, form, summary, lastTest) {
     return withAlive({
       tier: "error",
       title: "LinkedIn connection failed",
-      message: "Verify client ID, secret, org URN, and access token.",
+      message: "Verify client ID, secret, and access token (org URN only for company pages).",
     });
   }
   if (!summary.linkedInReady) {
