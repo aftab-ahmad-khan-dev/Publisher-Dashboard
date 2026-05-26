@@ -8,6 +8,7 @@ import {
   isGmailConfigured,
   canSendGmail,
 } from './platforms.js'
+import { isRedditPlaceholder, resolveRedditCredentials } from './redditSetup.js'
 
 const DEFAULT_CONFIG = {
   meta: { appId: '', appSecret: '', pageToken: '', connected: false },
@@ -171,11 +172,8 @@ function fillFromEnv(config) {
       tokenExpiresAt: config.linkedin.tokenExpiresAt || null,
     },
     reddit: {
-      clientId: config.reddit?.clientId || env.reddit.clientId,
-      clientSecret: config.reddit?.clientSecret || env.reddit.clientSecret,
-      refreshToken: config.reddit?.refreshToken || env.reddit.refreshToken,
-      subreddit: config.reddit?.subreddit || env.reddit.subreddit,
-      userAgent: config.reddit?.userAgent || env.reddit.userAgent,
+      ...config.reddit,
+      ...resolveRedditCredentials({ reddit: config.reddit }),
     },
     quora: {
       profileUrl: config.quora?.profileUrl || env.quora.profileUrl,
@@ -252,11 +250,20 @@ export async function saveMetaConfig(workspaceId, metaPatch) {
   })
 }
 
+function stripRedditPlaceholders(patch = {}) {
+  const out = { ...patch }
+  for (const key of ['clientId', 'clientSecret', 'refreshToken', 'subreddit', 'userAgent']) {
+    if (isRedditPlaceholder(out[key])) delete out[key]
+  }
+  return out
+}
+
 export async function saveRedditConfig(workspaceId, redditPatch) {
   const prev = await getWorkspaceConfig(workspaceId)
+  const clean = stripRedditPlaceholders(redditPatch)
   return saveWorkspaceConfig(workspaceId, {
     ...prev,
-    reddit: { ...prev.reddit, ...redditPatch },
+    reddit: { ...prev.reddit, ...clean },
   })
 }
 

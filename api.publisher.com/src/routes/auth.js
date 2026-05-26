@@ -1,6 +1,8 @@
 import { Router } from 'express'
 import { startLinkedInAuth, handleLinkedInCallback } from '../lib/linkedinOAuth.js'
 import { startGmailAuth, handleGmailCallback, getGmailOAuthSetup } from '../lib/gmailOAuth.js'
+import { startRedditAuth, handleRedditCallback } from '../lib/redditOAuth.js'
+import { getRedditEnvSetup } from '../lib/redditSetup.js'
 import { getWorkspaceConfig } from '../lib/configStore.js'
 
 const router = Router()
@@ -73,6 +75,43 @@ router.get('/auth/gmail/callback', async (req, res) => {
     redirect({ gmail: 'connected' })
   } catch (err) {
     redirect({ gmail: 'error', message: err.message })
+  }
+})
+
+router.get('/auth/reddit/setup', async (req, res, next) => {
+  try {
+    const config = await getWorkspaceConfig(req.workspaceId)
+    res.json({ ok: true, ...getRedditEnvSetup(config) })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/auth/reddit', async (req, res, next) => {
+  try {
+    const url = await startRedditAuth(req.workspaceId)
+    res.redirect(url)
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/auth/reddit/callback', async (req, res) => {
+  const { code, state, error } = req.query
+  const redirect = (params) => {
+    const q = new URLSearchParams(params).toString()
+    res.redirect(`${WEB_URL}/api-config?${q}`)
+  }
+
+  if (error) {
+    return redirect({ reddit: 'error', message: String(error) })
+  }
+
+  try {
+    await handleRedditCallback(code, state)
+    redirect({ reddit: 'connected' })
+  } catch (err) {
+    redirect({ reddit: 'error', message: err.message })
   }
 })
 

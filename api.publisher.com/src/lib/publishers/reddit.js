@@ -1,21 +1,19 @@
 import { redditTitleFromBody } from '../contentPolicy.js'
-
-const UA_DEFAULT = 'PulsePublisher/1.0'
+import { resolveRedditCredentials } from '../redditSetup.js'
 
 export function isRedditConfigured(reddit) {
+  const creds = resolveRedditCredentials({ reddit })
   return Boolean(
-    reddit?.clientId?.trim() &&
-      reddit?.clientSecret?.trim() &&
-      reddit?.refreshToken?.trim() &&
-      reddit?.subreddit?.trim(),
+    creds.clientId && creds.clientSecret && creds.refreshToken && creds.subreddit,
   )
 }
 
 async function redditAccessToken(reddit) {
-  const clientId = reddit.clientId.trim()
-  const clientSecret = reddit.clientSecret.trim()
-  const refreshToken = reddit.refreshToken.trim()
-  const userAgent = reddit.userAgent?.trim() || UA_DEFAULT
+  const creds = resolveRedditCredentials({ reddit })
+  const clientId = creds.clientId
+  const clientSecret = creds.clientSecret
+  const refreshToken = creds.refreshToken
+  const userAgent = creds.userAgent
 
   const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
   const res = await fetch('https://www.reddit.com/api/v1/access_token', {
@@ -39,13 +37,15 @@ async function redditAccessToken(reddit) {
 }
 
 export async function testRedditConnection(reddit) {
+  const creds = resolveRedditCredentials({ reddit })
   if (!isRedditConfigured(reddit)) {
     return {
       ok: false,
-      error: 'Client ID, Client Secret, Refresh Token, and Subreddit are required.',
+      error:
+        'Client ID, Client Secret, Refresh Token, and Subreddit are required (or set REDDIT_* in api .env, then Connect Reddit).',
     }
   }
-  const { accessToken, userAgent } = await redditAccessToken(reddit)
+  const { accessToken, userAgent } = await redditAccessToken(creds)
   const res = await fetch('https://oauth.reddit.com/api/v1/me', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -58,7 +58,7 @@ export async function testRedditConnection(reddit) {
   }
   return {
     ok: true,
-    message: `Reddit connected as u/${data.name}. Subreddit r/${reddit.subreddit.replace(/^r\//, '')} ready.`,
+    message: `Reddit connected as u/${data.name}. Subreddit r/${creds.subreddit.replace(/^r\//, '')} ready.`,
     username: data.name,
   }
 }
@@ -68,9 +68,10 @@ export async function publishToReddit({ text, postState, reddit }) {
     throw new Error('Reddit is not configured. Add API credentials in API Config.')
   }
 
+  const creds = resolveRedditCredentials({ reddit })
   const title = postState?.redditTitle?.trim() || redditTitleFromBody(text)
-  const { accessToken, userAgent } = await redditAccessToken(reddit)
-  const sr = reddit.subreddit.trim().replace(/^r\//, '')
+  const { accessToken, userAgent } = await redditAccessToken(creds)
+  const sr = creds.subreddit.replace(/^r\//, '')
 
   const res = await fetch('https://oauth.reddit.com/api/submit', {
     method: 'POST',

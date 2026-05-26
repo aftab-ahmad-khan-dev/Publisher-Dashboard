@@ -11,6 +11,7 @@ import {
   gmailOAuthUrl,
   fetchGmailOAuthSetup,
   fetchRedditSetup,
+  redditOAuthUrl,
 } from "../lib/backendApi";
 import { showToast } from "../lib/toast";
 import {
@@ -114,14 +115,31 @@ export default function ApiConfigPage() {
   }, [searchParams, refreshFromServer, setSearchParams]);
 
   useEffect(() => {
-    if (!live) return
+    const status = searchParams.get("reddit");
+    const message = searchParams.get("message");
+    if (status === "connected") {
+      refreshFromServer();
+      setLastTest((t) => ({ ...t, reddit: "ok" }));
+      writeJsonStorage(STORAGE_KEYS.redditTestStatus, "ok");
+      showToast("Reddit connected — run Test Reddit to verify posting.", "success");
+      setSearchParams({}, { replace: true });
+    } else if (status === "error") {
+      setLastTest((t) => ({ ...t, reddit: "error" }));
+      writeJsonStorage(STORAGE_KEYS.redditTestStatus, "error");
+      showToast(message || "Reddit connection failed", "error");
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, refreshFromServer, setSearchParams]);
+
+  useEffect(() => {
+    if (!live) return;
     fetchGmailOAuthSetup()
       .then((data) => setGmailOAuthSetup(data))
-      .catch(() => setGmailOAuthSetup(null))
+      .catch(() => setGmailOAuthSetup(null));
     fetchRedditSetup()
       .then((data) => setRedditEnvSetup(data))
-      .catch(() => setRedditEnvSetup(null))
-  }, [live])
+      .catch(() => setRedditEnvSetup(null));
+  }, [live]);
 
   const summary = getConnectionSummary(form);
 
@@ -192,12 +210,12 @@ export default function ApiConfigPage() {
     saveApiConfig(form);
   };
 
-  const [gmailOAuthSetup, setGmailOAuthSetup] = useState(null)
-  const [redditEnvSetup, setRedditEnvSetup] = useState(null)
-  const [redditSave, setRedditSave] = useState("idle")
-  const [quoraSave, setQuoraSave] = useState("idle")
-  const redditTimer = useRef(null)
-  const quoraTimer = useRef(null)
+  const [gmailOAuthSetup, setGmailOAuthSetup] = useState(null);
+  const [redditEnvSetup, setRedditEnvSetup] = useState(null);
+  const [redditSave, setRedditSave] = useState("idle");
+  const [quoraSave, setQuoraSave] = useState("idle");
+  const redditTimer = useRef(null);
+  const quoraTimer = useRef(null);
 
   const testConnection = async (platform) => {
     setTesting(platform);
@@ -207,8 +225,10 @@ export default function ApiConfigPage() {
       result.ok === false ? "error" : result.needsToken ? "needsToken" : "ok";
     setLastTest((t) => {
       const next = { ...t, [platform]: status };
-      if (platform === "gmail") writeJsonStorage(STORAGE_KEYS.gmailTestStatus, status);
-      if (platform === "reddit") writeJsonStorage(STORAGE_KEYS.redditTestStatus, status);
+      if (platform === "gmail")
+        writeJsonStorage(STORAGE_KEYS.gmailTestStatus, status);
+      if (platform === "reddit")
+        writeJsonStorage(STORAGE_KEYS.redditTestStatus, status);
       return next;
     });
   };
@@ -269,7 +289,12 @@ export default function ApiConfigPage() {
   }, [live, form.quora.profileUrl, form.quora.defaultTopic, persistQuora]);
 
   const metaStatus = getPlatformStatus("meta", form, summary, lastTest.meta);
-  const linkedInStatus = getPlatformStatus("linkedin", form, summary, lastTest.linkedin);
+  const linkedInStatus = getPlatformStatus(
+    "linkedin",
+    form,
+    summary,
+    lastTest.linkedin,
+  );
   const redditStatus = getPlatformStatus("reddit", form, summary, lastTest.reddit);
   const quoraStatus = getPlatformStatus("quora", form, summary, lastTest.quora);
   const gmailStatus = getPlatformStatus("gmail", form, summary, lastTest.gmail);
@@ -315,7 +340,47 @@ export default function ApiConfigPage() {
 
     const url = gmailOAuthUrl();
     if (url) window.location.href = url;
-    else showToast("Set VITE_API_BASE_URL so Connect Gmail can reach the API.", "error");
+    else
+      showToast(
+        "Set VITE_API_BASE_URL so Connect Gmail can reach the API.",
+        "error",
+      );
+  };
+
+  const connectReddit = async () => {
+    const payload = redditPayloadForSave(form.reddit);
+    const setup = redditEnvSetup;
+    const hasId = Boolean(payload.clientId) || setup?.clientIdConfigured;
+    const hasSecret =
+      Boolean(form.reddit?.clientSecret?.trim()) ||
+      form.reddit?.hasClientSecret ||
+      setup?.clientSecretConfigured;
+    const hasSub = Boolean(payload.subreddit) || setup?.subredditConfigured;
+
+    if (!hasId || !hasSecret) {
+      showToast(
+        "Paste Reddit Client ID and Secret (under the app name at reddit.com/prefs/apps), Save Reddit now, or set REDDIT_* in api .env.",
+        "error",
+      );
+      return;
+    }
+    if (!hasSub) {
+      showToast("Subreddit is required before Connect Reddit (e.g. technology).", "error");
+      return;
+    }
+
+    if (live) {
+      try {
+        await persistReddit(payload);
+      } catch (err) {
+        showToast(err.message || "Could not save Reddit config", "error");
+        return;
+      }
+    }
+
+    const url = redditOAuthUrl();
+    if (url) window.location.href = url;
+    else showToast("Set VITE_API_BASE_URL so Connect Reddit can reach the API.", "error");
   };
 
   const enableNotifications = async () => {
@@ -351,335 +416,427 @@ export default function ApiConfigPage() {
         <div className='mx-auto space-y-3 pb-2'>
           <form id={FORM_ID} onSubmit={handleSave} className='space-y-3'>
             <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
-            <div className='flex min-h-full flex-col gap-3'>
-            <section className='surface-panel flex min-h-[320px] flex-1 flex-col rounded-xl p-4'>
-              <div className='flex items-center justify-between gap-3'>
-                <div className='flex items-center gap-3'>
-                  <MetaSuiteIcons size='lg' />
-                  <div>
-                    <h3 className='text-sm font-semibold text-white'>Meta Suite</h3>
-                    <p className='text-[10px] text-slate-500'>
-                      Instagram + Facebook
+              <div className='flex min-h-full flex-col gap-3'>
+                <section className='surface-panel flex min-h-[320px] flex-1 flex-col rounded-xl p-4'>
+                  <div className='flex items-center justify-between gap-3'>
+                    <div className='flex items-center gap-3'>
+                      <MetaSuiteIcons size='lg' />
+                      <div>
+                        <h3 className='text-sm font-semibold text-white'>
+                          Meta Suite
+                        </h3>
+                        <p className='text-[10px] text-slate-500'>
+                          Instagram + Facebook
+                        </p>
+                      </div>
+                    </div>
+                    <StatusDot connected={summary.metaReady} />
+                  </div>
+                  <div className='mt-3 grid gap-2 sm:grid-cols-2'>
+                    <Field
+                      label='App ID'
+                      value={form.meta.appId}
+                      onChange={(v) => update("meta", "appId", v)}
+                      placeholder='Meta App ID'
+                    />
+                    <SecretField
+                      label='App Secret'
+                      value={form.meta.appSecret}
+                      hasStored={form.meta.hasAppSecret}
+                      onChange={(v) => update("meta", "appSecret", v)}
+                    />
+                    <SecretField
+                      label='Page Token'
+                      value={form.meta.pageToken}
+                      hasStored={form.meta.hasPageToken}
+                      onChange={(v) => update("meta", "pageToken", v)}
+                      className='sm:col-span-2'
+                    />
+                  </div>
+                  <div className='flex-1' aria-hidden />
+                  <div className='mt-auto flex flex-wrap gap-2 pt-3'>
+                    <button
+                      type='button'
+                      onClick={() => testConnection("meta")}
+                      disabled={testing === "meta"}
+                      className='btn-secondary px-3 py-1.5 text-xs'
+                    >
+                      {testing === "meta" ? "Testing…" : "Test & save Meta"}
+                    </button>
+                    {live && (
+                      <button
+                        type='button'
+                        onClick={() => persistMeta(metaPayloadForSave(form.meta))}
+                        className='btn-secondary px-3 py-1.5 text-xs'
+                      >
+                        Save Meta now
+                      </button>
+                    )}
+                  </div>
+                </section>
+                <PlatformStatusCard status={metaStatus} platform='meta' />
+              </div>
+
+              <div className='flex min-h-full flex-col gap-3'>
+                <section className='surface-panel flex min-h-[320px] flex-1 flex-col rounded-xl p-4'>
+                  <div className='flex items-center justify-between gap-3'>
+                    <div className='flex items-center gap-3'>
+                      <PlatformIcon platform='linkedin' size='lg' />
+                      <div>
+                        <h3 className='text-sm font-semibold text-white'>
+                          LinkedIn
+                        </h3>
+                        <p className='text-[10px] text-slate-500'>
+                          {summary.linkedInPublish
+                            ? "Ready to publish"
+                            : "Saved to DB — connect OAuth to publish"}
+                        </p>
+                      </div>
+                    </div>
+                    <StatusDot
+                      connected={summary.linkedInPublish}
+                      label={
+                        summary.linkedInPublish
+                          ? "Live"
+                          : summary.linkedInReady
+                            ? "Connect"
+                            : "Setup"
+                      }
+                    />
+                  </div>
+                  <div className='mt-3 grid gap-2 sm:grid-cols-2'>
+                    <Field
+                      label='Client ID'
+                      value={form.linkedin.clientId}
+                      onChange={(v) => update("linkedin", "clientId", v)}
+                      placeholder='Client ID'
+                    />
+                    <SecretField
+                      label='Client Secret'
+                      value={form.linkedin.clientSecret}
+                      hasStored={form.linkedin.hasClientSecret}
+                      onChange={(v) => update("linkedin", "clientSecret", v)}
+                    />
+                    <Field
+                      label='Org URN (company page only, optional)'
+                      value={form.linkedin.orgUrn}
+                      onChange={(v) => update("linkedin", "orgUrn", v)}
+                      placeholder='urn:li:organization:12345678'
+                      className='sm:col-span-2'
+                    />
+                    {form.linkedin.orgUrn?.trim() &&
+                      (/^https?:\/\//i.test(form.linkedin.orgUrn) ||
+                        form.linkedin.orgUrn.includes("linkedin.com")) && (
+                        <p className='sm:col-span-2 text-[10px] text-rose-400/95'>
+                          Org URN is not a URL. Clear this field for profile posts,
+                          or use{" "}
+                          <code className='text-rose-300/90'>
+                            urn:li:organization:YOUR_ID
+                          </code>
+                          . Redirect URI belongs in LinkedIn Developer app settings,
+                          not here.
+                        </p>
+                      )}
+                    <SecretField
+                      label='Access Token (optional if using OAuth)'
+                      value={form.linkedin.accessToken || ""}
+                      hasStored={form.linkedin.hasAccessToken}
+                      onChange={(v) => update("linkedin", "accessToken", v)}
+                      className='sm:col-span-2'
+                    />
+                    <p className='sm:col-span-2 text-[10px] leading-relaxed text-slate-500'>
+                      Portal token needs{" "}
+                      <code className='text-violet-300/90'>w_member_social</code> for
+                      your profile, or{" "}
+                      <code className='text-violet-300/90'>
+                        w_organization_social
+                      </code>{" "}
+                      for a company page. Use Copy access token (full string).
+                      Placeholder org{" "}
+                      <code className='text-slate-400'>
+                        urn:li:organization:12345
+                      </code>{" "}
+                      is ignored; profile is used instead.
                     </p>
                   </div>
-                </div>
-                <StatusDot connected={summary.metaReady} />
+                  <div className='flex-1' aria-hidden />
+                  <div className='mt-auto flex flex-wrap gap-2 pt-3'>
+                    {live && (
+                      <button
+                        type='button'
+                        onClick={connectLinkedIn}
+                        className='btn-primary px-3 py-1.5 text-xs'
+                      >
+                        Connect with LinkedIn
+                      </button>
+                    )}
+                    <button
+                      type='button'
+                      onClick={() => testConnection("linkedin")}
+                      disabled={testing === "linkedin"}
+                      className='btn-secondary px-3 py-1.5 text-xs'
+                    >
+                      {testing === "linkedin" ? "Testing…" : "Test & save LinkedIn"}
+                    </button>
+                    {live && (
+                      <button
+                        type='button'
+                        onClick={() =>
+                          persistLinkedIn(linkedinPayloadForSave(form.linkedin))
+                        }
+                        className='btn-secondary px-3 py-1.5 text-xs'
+                      >
+                        Save LinkedIn now
+                      </button>
+                    )}
+                  </div>
+                </section>
+                <PlatformStatusCard status={linkedInStatus} platform='linkedin' />
               </div>
-              <div className='mt-3 grid gap-2 sm:grid-cols-2'>
-                <Field
-                  label='App ID'
-                  value={form.meta.appId}
-                  onChange={(v) => update("meta", "appId", v)}
-                  placeholder='Meta App ID'
-                />
-                <SecretField
-                  label='App Secret'
-                  value={form.meta.appSecret}
-                  hasStored={form.meta.hasAppSecret}
-                  onChange={(v) => update("meta", "appSecret", v)}
-                />
-                <SecretField
-                  label='Page Token'
-                  value={form.meta.pageToken}
-                  hasStored={form.meta.hasPageToken}
-                  onChange={(v) => update("meta", "pageToken", v)}
-                  className='sm:col-span-2'
-                />
-              </div>
-              <div className='flex-1' aria-hidden />
-              <div className='mt-auto flex flex-wrap gap-2 pt-3'>
-                <button
-                  type='button'
-                  onClick={() => testConnection("meta")}
-                  disabled={testing === "meta"}
-                  className='btn-secondary px-3 py-1.5 text-xs'
-                >
-                  {testing === "meta" ? "Testing…" : "Test & save Meta"}
-                </button>
-                {live && (
-                  <button
-                    type='button'
-                    onClick={() => persistMeta(metaPayloadForSave(form.meta))}
-                    className='btn-secondary px-3 py-1.5 text-xs'
-                  >
-                    Save Meta now
-                  </button>
-                )}
-              </div>
-            </section>
-            <PlatformStatusCard status={metaStatus} platform='meta' />
             </div>
 
-            <div className='flex min-h-full flex-col gap-3'>
-            <section className='surface-panel flex min-h-[320px] flex-1 flex-col rounded-xl p-4'>
-              <div className='flex items-center justify-between gap-3'>
-                <div className='flex items-center gap-3'>
-                  <PlatformIcon platform='linkedin' size='lg' />
-                  <div>
-                    <h3 className='text-sm font-semibold text-white'>LinkedIn</h3>
-                    <p className='text-[10px] text-slate-500'>
-                      {summary.linkedInPublish
-                        ? "Ready to publish"
-                        : "Saved to DB — connect OAuth to publish"}
+            <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
+              <div className='flex min-h-full flex-col gap-3'>
+                <section className='surface-panel flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
+                  <div className='flex items-center justify-between gap-3'>
+                    <div className='flex items-center gap-3'>
+                      <PlatformIcon platform='reddit' size='lg' />
+                      <div>
+                        <h3 className='text-sm font-semibold text-white'>Reddit</h3>
+                        <p className='text-[10px] text-slate-500'>
+                          Script app · self-posts · no promo tone
+                        </p>
+                      </div>
+                    </div>
+                    <StatusDot
+                      connected={summary.redditReady}
+                      label={summary.redditReady ? "Ready" : "Setup"}
+                    />
+                  </div>
+                  <div className='mt-3 grid gap-2 sm:grid-cols-2'>
+                    <Field
+                      label='Client ID'
+                      value={form.reddit.clientId}
+                      onChange={(v) => update("reddit", "clientId", v)}
+                      placeholder='Reddit app id'
+                    />
+                    <SecretField
+                      label='Client Secret'
+                      value={form.reddit.clientSecret}
+                      hasStored={form.reddit.hasClientSecret}
+                      onChange={(v) => update("reddit", "clientSecret", v)}
+                    />
+                    <SecretField
+                      label='Refresh Token'
+                      value={form.reddit.refreshToken}
+                      hasStored={form.reddit.hasRefreshToken}
+                      onChange={(v) => update("reddit", "refreshToken", v)}
+                      className='sm:col-span-2'
+                    />
+                    <Field
+                      label='Subreddit'
+                      value={form.reddit.subreddit}
+                      onChange={(v) => update("reddit", "subreddit", v)}
+                      placeholder='yourcommunity (no r/)'
+                    />
+                    <Field
+                      label='User-Agent'
+                      value={form.reddit.userAgent}
+                      onChange={(v) => update("reddit", "userAgent", v)}
+                      placeholder='PulsePublisher/1.0 by u/yourname'
+                    />
+                  </div>
+                  <div className='mt-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-2.5 text-[11px] leading-relaxed text-slate-400'>
+                    <p className='font-medium text-amber-200/90'>Reddit app setup</p>
+                    <p className='mt-1'>
+                      <a
+                        href={redditEnvSetup?.appsUrl || "https://www.reddit.com/prefs/apps"}
+                        target='_blank'
+                        rel='noreferrer'
+                        className='text-violet-300 underline'
+                      >
+                        reddit.com/prefs/apps
+                      </a>{" "}
+                      → web or script app. Redirect URI:
+                    </p>
+                    <code className='mt-1 block break-all font-mono text-[10px] text-emerald-300/90'>
+                      {redditEnvSetup?.redirectUri ||
+                        "http://127.0.0.1:3001/api/auth/reddit/callback"}
+                    </code>
+                    <p className='mt-1.5 text-slate-500'>
+                      Client ID + secret → subreddit → Connect Reddit (or paste refresh token).
                     </p>
                   </div>
-                </div>
-                <StatusDot
-                  connected={summary.linkedInPublish}
-                  label={
-                    summary.linkedInPublish ? "Live" : summary.linkedInReady ? "Connect" : "Setup"
-                  }
-                />
+                  <div className='flex-1' aria-hidden />
+                  <div className='mt-auto flex flex-wrap gap-2 pt-3'>
+                    {live && (
+                      <button
+                        type='button'
+                        onClick={connectReddit}
+                        className='btn-primary px-3 py-1.5 text-xs'
+                      >
+                        Connect Reddit
+                      </button>
+                    )}
+                    <button
+                      type='button'
+                      onClick={() => testConnection("reddit")}
+                      disabled={testing === "reddit"}
+                      className='btn-secondary px-3 py-1.5 text-xs'
+                    >
+                      {testing === "reddit" ? "Testing…" : "Test Reddit"}
+                    </button>
+                    {live && (
+                      <button
+                        type='button'
+                        onClick={() =>
+                          persistReddit(redditPayloadForSave(form.reddit))
+                        }
+                        className='btn-secondary px-3 py-1.5 text-xs'
+                      >
+                        Save Reddit now
+                      </button>
+                    )}
+                  </div>
+                </section>
+                <PlatformStatusCard status={redditStatus} platform='reddit' />
               </div>
-              <div className='mt-3 grid gap-2 sm:grid-cols-2'>
-                <Field
-                  label='Client ID'
-                  value={form.linkedin.clientId}
-                  onChange={(v) => update("linkedin", "clientId", v)}
-                  placeholder='Client ID'
-                />
-                <SecretField
-                  label='Client Secret'
-                  value={form.linkedin.clientSecret}
-                  hasStored={form.linkedin.hasClientSecret}
-                  onChange={(v) => update("linkedin", "clientSecret", v)}
-                />
-                <Field
-                  label='Org URN (company page only, optional)'
-                  value={form.linkedin.orgUrn}
-                  onChange={(v) => update("linkedin", "orgUrn", v)}
-                  placeholder='urn:li:organization:12345678'
-                  className='sm:col-span-2'
-                />
-                {form.linkedin.orgUrn?.trim() &&
-                  (/^https?:\/\//i.test(form.linkedin.orgUrn) ||
-                    form.linkedin.orgUrn.includes('linkedin.com')) && (
-                    <p className='sm:col-span-2 text-[10px] text-rose-400/95'>
-                      Org URN is not a URL. Clear this field for profile posts, or use{' '}
-                      <code className='text-rose-300/90'>urn:li:organization:YOUR_ID</code>. Redirect
-                      URI belongs in LinkedIn Developer app settings, not here.
+
+              <div className='flex min-h-full flex-col gap-3'>
+                <section className='surface-panel flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
+                  <div className='flex flex-wrap items-start justify-between gap-3'>
+                    <div className='flex items-center gap-3'>
+                      <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EA4335] text-lg font-bold text-white'>
+                        M
+                      </span>
+                      <div>
+                        <h3 className='text-sm font-semibold text-white'>
+                          Gmail (Mailsuite compatible)
+                        </h3>
+                        <p className='text-[10px] text-slate-500'>
+                          Bulk send from your inbox · opens in Pulse + Mailsuite
+                          extension in Gmail
+                        </p>
+                      </div>
+                    </div>
+                    <StatusDot
+                      connected={summary.gmailReady}
+                      label={summary.gmailReady ? "Ready" : "Setup"}
+                    />
+                  </div>
+                  <div className='mt-3 grid gap-2 sm:grid-cols-2'>
+                    <Field
+                      label='Google Client ID'
+                      value={form.gmail?.clientId || ""}
+                      onChange={(v) => update("gmail", "clientId", v)}
+                      placeholder='OAuth client ID'
+                    />
+                    <SecretField
+                      label='Client Secret'
+                      value={form.gmail?.clientSecret || ""}
+                      hasStored={form.gmail?.hasClientSecret}
+                      onChange={(v) => update("gmail", "clientSecret", v)}
+                    />
+                  </div>
+                  {form.gmail?.fromEmail && (
+                    <p className='mt-1 text-[11px] text-emerald-400/90'>
+                      Sending as {form.gmail.fromEmail}
                     </p>
                   )}
-                <SecretField
-                  label='Access Token (optional if using OAuth)'
-                  value={form.linkedin.accessToken || ""}
-                  hasStored={form.linkedin.hasAccessToken}
-                  onChange={(v) => update("linkedin", "accessToken", v)}
-                  className='sm:col-span-2'
-                />
-                <p className='sm:col-span-2 text-[10px] leading-relaxed text-slate-500'>
-                  Portal token needs <code className='text-violet-300/90'>w_member_social</code> for your
-                  profile, or <code className='text-violet-300/90'>w_organization_social</code> for a company
-                  page. Use Copy access token (full string). Placeholder org{' '}
-                  <code className='text-slate-400'>urn:li:organization:12345</code> is ignored; profile is used
-                  instead.
-                </p>
+                  <div className='flex-1' aria-hidden />
+                  <div className='mt-auto flex flex-wrap gap-2 pt-3'>
+                    {live && (
+                      <button
+                        type='button'
+                        onClick={connectGmail}
+                        className='btn-primary px-3 py-1.5 text-xs'
+                      >
+                        Connect Gmail
+                      </button>
+                    )}
+                    <button
+                      type='button'
+                      onClick={() => testConnection("gmail")}
+                      disabled={testing === "gmail"}
+                      className='btn-secondary px-3 py-1.5 text-xs'
+                    >
+                      {testing === "gmail" ? "Testing…" : "Test Gmail"}
+                    </button>
+                    {live && (
+                      <button
+                        type='button'
+                        onClick={() =>
+                          saveGmailConfig(gmailPayloadForSave(form.gmail))
+                        }
+                        className='btn-secondary px-3 py-1.5 text-xs'
+                      >
+                        Save Gmail now
+                      </button>
+                    )}
+                  </div>
+                </section>
+                <PlatformStatusCard status={gmailStatus} platform='gmail' />
               </div>
-              <div className='flex-1' aria-hidden />
-              <div className='mt-auto flex flex-wrap gap-2 pt-3'>
-                {live && (
-                  <button
-                    type='button'
-                    onClick={connectLinkedIn}
-                    className='btn-primary px-3 py-1.5 text-xs'
-                  >
-                    Connect with LinkedIn
-                  </button>
-                )}
-                <button
-                  type='button'
-                  onClick={() => testConnection("linkedin")}
-                  disabled={testing === "linkedin"}
-                  className='btn-secondary px-3 py-1.5 text-xs'
-                >
-                  {testing === "linkedin" ? "Testing…" : "Test & save LinkedIn"}
-                </button>
-                {live && (
-                  <button
-                    type='button'
-                    onClick={() =>
-                      persistLinkedIn(linkedinPayloadForSave(form.linkedin))
-                    }
-                    className='btn-secondary px-3 py-1.5 text-xs'
-                  >
-                    Save LinkedIn now
-                  </button>
-                )}
-              </div>
-            </section>
-            <PlatformStatusCard status={linkedInStatus} platform='linkedin' />
-            </div>
             </div>
 
             <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
-            <div className='flex min-h-full flex-col gap-3'>
-            <section className='surface-panel flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
-              <div className='flex items-center justify-between gap-3'>
-                <div className='flex items-center gap-3'>
-                  <PlatformIcon platform='reddit' size='lg' />
-                  <div>
-                    <h3 className='text-sm font-semibold text-white'>Reddit</h3>
-                    <p className='text-[10px] text-slate-500'>Script app · self-posts · no promo tone</p>
+              <div className='flex min-h-full flex-col gap-3 lg:col-span-2'>
+                <section className='surface-panel flex flex-col rounded-xl p-4'>
+                  <div className='flex items-center justify-between gap-3'>
+                    <div className='flex items-center gap-3'>
+                      <PlatformIcon platform='quora' size='lg' />
+                      <div>
+                        <h3 className='text-sm font-semibold text-white'>Quora</h3>
+                        <p className='text-[10px] text-slate-500'>
+                          Guided paste · expertise answers only
+                        </p>
+                      </div>
+                    </div>
+                    <StatusDot connected={summary.quoraReady} />
                   </div>
-                </div>
-                <StatusDot connected={summary.redditReady} label={summary.redditReady ? 'Ready' : 'Setup'} />
-              </div>
-              <div className='mt-3 grid gap-2 sm:grid-cols-2'>
-                <Field label='Client ID' value={form.reddit.clientId} onChange={(v) => update('reddit', 'clientId', v)} placeholder='Reddit app id' />
-                <SecretField label='Client Secret' value={form.reddit.clientSecret} hasStored={form.reddit.hasClientSecret} onChange={(v) => update('reddit', 'clientSecret', v)} />
-                <SecretField label='Refresh Token' value={form.reddit.refreshToken} hasStored={form.reddit.hasRefreshToken} onChange={(v) => update('reddit', 'refreshToken', v)} className='sm:col-span-2' />
-                <Field label='Subreddit' value={form.reddit.subreddit} onChange={(v) => update('reddit', 'subreddit', v)} placeholder='yourcommunity (no r/)' />
-                <Field label='User-Agent' value={form.reddit.userAgent} onChange={(v) => update('reddit', 'userAgent', v)} placeholder='PulsePublisher/1.0' />
-              </div>
-              <div className='mt-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-2.5 text-[11px] leading-relaxed text-slate-400'>
-                <p className='font-medium text-amber-200/90'>Reddit script app</p>
-                <p className='mt-1'>
-                  Create a <strong className='text-slate-300'>script</strong> app at{' '}
-                  <span className='text-violet-300/90'>reddit.com/prefs/apps</span>, then paste Client ID,
-                  secret, and refresh token — or set{' '}
-                  <code className='text-emerald-300/90'>{redditEnvSetup?.envKeys?.[0] || 'REDDIT_CLIENT_ID'}</code>{' '}
-                  (and related vars) in <code className='text-slate-400'>api.publisher.com/.env</code>.
-                </p>
-              </div>
-              {redditEnvSetup?.clientIdConfigured && !form.reddit?.clientId?.trim() && (
-                <p className='mt-1 text-[10px] text-slate-500'>
-                  Using Reddit credentials from api .env — fields can stay empty if secrets are in .env too.
-                </p>
-              )}
-              <div className='flex-1' aria-hidden />
-              <div className='mt-auto flex flex-wrap gap-2 pt-3'>
-                <button type='button' onClick={() => testConnection('reddit')} disabled={testing === 'reddit'} className='btn-secondary px-3 py-1.5 text-xs'>
-                  {testing === 'reddit' ? 'Testing…' : 'Test Reddit'}
-                </button>
-                {live && (
-                  <button type='button' onClick={() => persistReddit(redditPayloadForSave(form.reddit))} className='btn-secondary px-3 py-1.5 text-xs'>
-                    Save Reddit now
-                  </button>
-                )}
-              </div>
-            </section>
-            <PlatformStatusCard status={redditStatus} platform='reddit' />
-            </div>
-
-            <div className='flex min-h-full flex-col gap-3'>
-            <section className='surface-panel flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
-              <div className='flex flex-wrap items-start justify-between gap-3'>
-                <div className='flex items-center gap-3'>
-                  <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EA4335] text-lg font-bold text-white'>M</span>
-                  <div>
-                    <h3 className='text-sm font-semibold text-white'>Gmail (Mailsuite compatible)</h3>
-                    <p className='text-[10px] text-slate-500'>
-                      Bulk send from your inbox · opens in Pulse + Mailsuite extension in Gmail
-                    </p>
+                  <div className='mt-3 grid gap-2 sm:grid-cols-2'>
+                    <Field
+                      label='Profile URL'
+                      value={form.quora.profileUrl}
+                      onChange={(v) => update("quora", "profileUrl", v)}
+                      placeholder='https://www.quora.com/profile/…'
+                      className='w-full'
+                    />
+                    <Field
+                      label='Default topic (optional)'
+                      value={form.quora.defaultTopic}
+                      onChange={(v) => update("quora", "defaultTopic", v)}
+                      placeholder='e.g. Startup advice'
+                      className='w-full'
+                    />
                   </div>
-                </div>
-                <StatusDot connected={summary.gmailReady} label={summary.gmailReady ? 'Ready' : 'Setup'} />
-              </div>
-              <div className='mt-3 grid gap-2 sm:grid-cols-2'>
-                <Field label='Google Client ID' value={form.gmail?.clientId || ''} onChange={(v) => update('gmail', 'clientId', v)} placeholder='OAuth client ID' />
-                <SecretField label='Client Secret' value={form.gmail?.clientSecret || ''} hasStored={form.gmail?.hasClientSecret} onChange={(v) => update('gmail', 'clientSecret', v)} />
-              </div>
-              <div className='mt-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-2.5 text-[11px] leading-relaxed text-slate-400'>
-                <p className='font-medium text-amber-200/90'>Fix Error 400: redirect_uri_mismatch</p>
-                <p className='mt-1'>
-                  In{' '}
-                  <a
-                    href={gmailOAuthSetup?.googleCredentialsUrl || 'https://console.cloud.google.com/apis/credentials'}
-                    target='_blank'
-                    rel='noreferrer'
-                    className='text-violet-300 underline'
-                  >
-                    Google Cloud → Credentials
-                  </a>
-                  , open the <strong className='text-slate-300'>same</strong> OAuth client as the Client ID
-                  below (type: <strong className='text-slate-300'>Web application</strong>) →{' '}
-                  <strong className='text-slate-300'>Authorized redirect URIs</strong> — not JavaScript origins.
-                </p>
-                {gmailOAuthSetup?.clientId && (
-                  <p className='mt-2 text-[10px] text-slate-500'>
-                    API uses this Client ID (must match Google):{' '}
-                    <code className='block mt-0.5 break-all font-mono text-amber-200/90'>
-                      {gmailOAuthSetup.clientId}
-                    </code>
+                  <p className='mt-3 text-[11px] leading-relaxed text-amber-400/80'>
+                    Quora has no public posting API. Pulse formats your answer and
+                    copies it for you — write like you are helping someone, not
+                    selling.
                   </p>
-                )}
-                {gmailOAuthSetup?.redirectUri && (
-                  <p className='mt-2 text-[10px] text-slate-500'>
-                    Add this redirect URI exactly (copy/paste):{' '}
-                    <code className='block mt-0.5 break-all font-mono text-emerald-300/90'>
-                      {gmailOAuthSetup.redirectUri}
-                    </code>
-                  </p>
-                )}
-                <p className='mt-1.5 text-slate-500'>
-                  Optional second URI:{' '}
-                  <code className='font-mono text-violet-300/90'>http://127.0.0.1:3001/api/auth/gmail/callback</code>
-                  . Save in Google, wait ~1 minute, restart API, then Connect again. Never use{' '}
-                  <code className='text-rose-300/80'>…/api-config</code> or port 5173.
-                </p>
-              </div>
-              {gmailOAuthSetup?.clientIdConfigured && !form.gmail?.clientId?.trim() && (
-                <p className='mt-1 text-[10px] text-slate-500'>
-                  Using Gmail credentials from api .env — fields can stay empty if secret is in .env too.
-                </p>
-              )}
-              {form.gmail?.fromEmail && (
-                <p className='mt-1 text-[11px] text-emerald-400/90'>Sending as {form.gmail.fromEmail}</p>
-              )}
-              <div className='flex-1' aria-hidden />
-              <div className='mt-auto flex flex-wrap gap-2 pt-3'>
-                {live && (
-                  <button type='button' onClick={connectGmail} className='btn-primary px-3 py-1.5 text-xs'>
-                    Connect Gmail
-                  </button>
-                )}
-                <button type='button' onClick={() => testConnection('gmail')} disabled={testing === 'gmail'} className='btn-secondary px-3 py-1.5 text-xs'>
-                  {testing === 'gmail' ? 'Testing…' : 'Test Gmail'}
-                </button>
-                {live && (
-                  <button type='button' onClick={() => saveGmailConfig(gmailPayloadForSave(form.gmail))} className='btn-secondary px-3 py-1.5 text-xs'>
-                    Save Gmail now
-                  </button>
-                )}
-              </div>
-            </section>
-            <PlatformStatusCard status={gmailStatus} platform='gmail' />
-            </div>
-            </div>
-
-            <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
-            <div className='flex min-h-full flex-col gap-3 lg:col-span-2'>
-            <section className='surface-panel flex flex-col rounded-xl p-4'>
-              <div className='flex items-center justify-between gap-3'>
-                <div className='flex items-center gap-3'>
-                  <PlatformIcon platform='quora' size='lg' />
-                  <div>
-                    <h3 className='text-sm font-semibold text-white'>Quora</h3>
-                    <p className='text-[10px] text-slate-500'>Guided paste · expertise answers only</p>
+                  <div className='mt-3 flex flex-wrap gap-2'>
+                    <button
+                      type='button'
+                      onClick={() => testConnection("quora")}
+                      disabled={testing === "quora"}
+                      className='btn-secondary px-3 py-1.5 text-xs'
+                    >
+                      {testing === "quora" ? "Testing…" : "Test & save Quora"}
+                    </button>
+                    {live && (
+                      <button
+                        type='button'
+                        onClick={() => persistQuora(quoraPayloadForSave(form.quora))}
+                        className='btn-secondary px-3 py-1.5 text-xs'
+                      >
+                        Save Quora now
+                      </button>
+                    )}
                   </div>
-                </div>
-                <StatusDot connected={summary.quoraReady} />
+                </section>
+                <PlatformStatusCard status={quoraStatus} platform='quora' />
               </div>
-              <div className='mt-3 grid gap-2 sm:grid-cols-2'>
-                <Field label='Profile URL' value={form.quora.profileUrl} onChange={(v) => update('quora', 'profileUrl', v)} placeholder='https://www.quora.com/profile/…' className='w-full' />
-                <Field label='Default topic (optional)' value={form.quora.defaultTopic} onChange={(v) => update('quora', 'defaultTopic', v)} placeholder='e.g. Startup advice' className='w-full' />
-              </div>
-              <p className='mt-3 text-[11px] leading-relaxed text-amber-400/80'>
-                Quora has no public posting API. Pulse formats your answer and copies it for you — write like you are helping someone, not selling.
-              </p>
-              <div className='mt-3 flex flex-wrap gap-2'>
-                <button type='button' onClick={() => testConnection('quora')} disabled={testing === 'quora'} className='btn-secondary px-3 py-1.5 text-xs'>
-                  {testing === 'quora' ? 'Testing…' : 'Test & save Quora'}
-                </button>
-                {live && (
-                  <button type='button' onClick={() => persistQuora(quoraPayloadForSave(form.quora))} className='btn-secondary px-3 py-1.5 text-xs'>
-                    Save Quora now
-                  </button>
-                )}
-              </div>
-            </section>
-            <PlatformStatusCard status={quoraStatus} platform='quora' />
-            </div>
             </div>
 
             <section className='surface-panel rounded-xl p-4'>
@@ -775,7 +932,13 @@ function StatusDot({ connected, label }) {
 
 function withAlive(status) {
   const alive = status.tier === "functional" || status.tier === "connected";
-  return { ...status, alive };
+  const signal =
+    status.tier === "functional"
+      ? { text: "Signal live", className: "text-emerald-500/80" }
+      : status.tier === "connected"
+        ? { text: "Saved · run test to verify", className: "text-amber-500/80" }
+        : { text: "No signal · flatline", className: "text-slate-500" };
+  return { ...status, alive, signal };
 }
 
 function getPlatformStatus(platform, form, summary, lastTest) {
@@ -791,7 +954,8 @@ function getPlatformStatus(platform, form, summary, lastTest) {
       return withAlive({
         tier: "idle",
         title: "Not connected",
-        message: "Add Meta credentials above to enable Instagram & Facebook publishing.",
+        message:
+          "Add Meta credentials above to enable Instagram & Facebook publishing.",
       });
     }
     const verified = lastTest === "ok";
@@ -827,15 +991,16 @@ function getPlatformStatus(platform, form, summary, lastTest) {
       lastTest === "ok" ||
       Boolean(
         form.reddit?.hasClientSecret &&
-          form.reddit?.hasRefreshToken &&
-          form.reddit?.clientId?.trim() &&
-          form.reddit?.subreddit?.trim(),
+        form.reddit?.hasRefreshToken &&
+        form.reddit?.clientId?.trim() &&
+        form.reddit?.subreddit?.trim(),
       );
     if (redditVerified) {
       return withAlive({
         tier: "functional",
         title: "Ready to publish",
-        message: "Reddit API ready. Self-posts publish to your subreddit — keep copy informational.",
+        message:
+          "Reddit API ready. Self-posts publish to your subreddit — keep copy informational.",
       });
     }
     return withAlive({
@@ -857,7 +1022,8 @@ function getPlatformStatus(platform, form, summary, lastTest) {
       return withAlive({
         tier: "idle",
         title: "Not connected",
-        message: "Add your Quora profile for guided, informational answers (manual paste).",
+        message:
+          "Add your Quora profile for guided, informational answers (manual paste).",
       });
     }
     return withAlive({
@@ -901,7 +1067,8 @@ function getPlatformStatus(platform, form, summary, lastTest) {
     return withAlive({
       tier: "connected",
       title: "Connected",
-      message: "Credentials saved. Connect Gmail, then run Test Gmail before your first campaign.",
+      message:
+        "Credentials saved. Connect Gmail, then run Test Gmail before your first campaign.",
     });
   }
 
@@ -913,7 +1080,8 @@ function getPlatformStatus(platform, form, summary, lastTest) {
     return withAlive({
       tier: "error",
       title: "LinkedIn connection failed",
-      message: "Verify client ID, secret, and access token (org URN only for company pages).",
+      message:
+        "Verify client ID, secret, and access token (org URN only for company pages).",
     });
   }
   if (!summary.linkedInReady) {
@@ -1004,19 +1172,22 @@ function PlatformStatusCard({ status, platform }) {
             {status.message}
           </p>
           <p
-            className={`mt-2 text-[10px] font-medium uppercase tracking-wider ${status.alive ? "text-emerald-500/80" : "text-slate-500"}`}
+            className={`mt-2 text-[10px] font-medium uppercase tracking-wider ${status.signal.className}`}
           >
-            {status.alive ? "Signal live" : "No signal · flatline"}
+            {status.signal.text}
           </p>
         </div>
-        <HeartbeatMonitor alive={status.alive} color={s.color} boxClass={s.monitor} />
+        <HeartbeatMonitor
+          alive={status.alive}
+          color={s.color}
+          boxClass={s.monitor}
+        />
       </div>
     </div>
   );
 }
 
-const ECG_ALIVE_PATH =
-  "M4 16 H14 L18 8 L22 24 L26 12 L30 20 L34 16 H76";
+const ECG_ALIVE_PATH = "M4 16 H14 L18 8 L22 24 L26 12 L30 20 L34 16 H76";
 const ECG_DEAD_PATH = "M4 16 H76";
 
 function HeartbeatMonitor({ alive, color, boxClass }) {
