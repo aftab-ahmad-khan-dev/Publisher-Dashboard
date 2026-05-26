@@ -28,6 +28,7 @@ const DEFAULT_CONFIG = {
     subreddit: '',
     userAgent: 'PulsePublisher/1.0',
     connected: false,
+    publishReady: false,
   },
   quora: {
     profileUrl: '',
@@ -69,6 +70,7 @@ export function withDerivedFlags(config) {
     reddit: {
       ...config.reddit,
       connected: isRedditConfigured(config.reddit),
+      publishReady: isRedditConfigured(config.reddit),
     },
     quora: {
       ...config.quora,
@@ -76,7 +78,7 @@ export function withDerivedFlags(config) {
     },
     gmail: {
       ...config.gmail,
-      connected: isGmailConfigured(config.gmail),
+      connected: canSendGmail(config.gmail),
       sendReady: canSendGmail(config.gmail),
     },
   }
@@ -103,7 +105,10 @@ export function envDefaults() {
     meta: {
       appId: process.env.META_APP_ID?.trim() || '',
       appSecret: process.env.META_APP_SECRET?.trim() || '',
-      pageToken: process.env.META_PAGE_TOKEN?.trim() || '',
+      pageToken:
+        process.env.META_PAGE_TOKEN?.trim() ||
+        process.env.META_ACCESS_TOKEN?.trim() ||
+        '',
     },
     linkedin: {
       clientId: process.env.LINKEDIN_CLIENT_ID?.trim() || '',
@@ -324,6 +329,7 @@ export function toClientConfig(config) {
       subreddit: config.reddit?.subreddit || '',
       userAgent: config.reddit?.userAgent || 'PulsePublisher/1.0',
       connected: config.reddit?.connected,
+      publishReady: config.reddit?.publishReady,
       hasClientSecret: Boolean(config.reddit?.clientSecret?.trim()),
       hasRefreshToken: Boolean(config.reddit?.refreshToken?.trim()),
     },

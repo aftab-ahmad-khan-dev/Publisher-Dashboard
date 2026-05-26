@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import { getWorkspaceConfig, saveGmailTokens } from './configStore.js'
+import { logger } from './logger.js'
 
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
@@ -7,18 +8,87 @@ const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
 ]
 
-const pendingStates = new Map()
+const GMAIL_CALLBACK_PATH = '/api/auth/gmail/callback'
+const OAUTH_STATE_TTL_MS = 15 * 60 * 1000
+const DEFAULT_127_REDIRECT = `http://127.0.0.1:3001${GMAIL_CALLBACK_PATH}`
+const DEFAULT_LOCAL_REDIRECT = DEFAULT_127_REDIRECT
+
+/** Google OAuth redirect must hit the API callback — never the Vite /api-config page. */
+export function normalizeGmailRedirectUri(uri) {
+  const value = uri?.trim()
+  if (!value) return null
+  if (value.includes('/api-config')) return null
+  try {
+    const url = new URL(value)
+    if (!url.pathname.endsWith(GMAIL_CALLBACK_PATH)) return null
+    // Google matches redirect URIs literally — localhost ≠ 127.0.0.1
+    if (url.hostname === 'localhost') url.hostname = '127.0.0.1'
+    return url.toString().replace(/\/$/, '')
+  } catch {
+    return null
+  }
+}
 
 export function getGmailOAuthSetup(config = {}) {
-  const { clientId, redirectUri } = getClientCredentials(config)
+  const { clientId, clientSecret, redirectUri } = getClientCredentials(config)
+  const fromEnv = normalizeGmailRedirectUri(process.env.GMAIL_REDIRECT_URI)
+  const redirectUrisToRegister = [
+    DEFAULT_LOCAL_REDIRECT,
+    DEFAULT_127_REDIRECT,
+    fromEnv,
+    redirectUri,
+  ].filter((u, i, a) => u && a.indexOf(u) === i)
+
   return {
     redirectUri,
+    clientId: clientId || '',
     clientIdConfigured: Boolean(clientId),
-    redirectUrisToRegister: [
-      redirectUri,
-      'http://127.0.0.1:3001/api/auth/gmail/callback',
-    ].filter((u, i, a) => a.indexOf(u) === i),
+    clientSecretConfigured: Boolean(clientSecret),
+    redirectUrisToRegister,
+    googleCredentialsUrl: 'https://console.cloud.google.com/apis/credentials',
   }
+}
+
+function stateSigningKey() {
+  return (
+    process.env.OAUTH_STATE_SECRET?.trim() ||
+    process.env.GMAIL_CLIENT_SECRET?.trim() ||
+    process.env.CRON_SECRET?.trim() ||
+    'pulse-gmail-oauth-dev-only'
+  )
+}
+
+function createOAuthState(workspaceId) {
+  const payload = { w: workspaceId, t: Date.now() }
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  const sig = crypto.createHmac('sha256', stateSigningKey()).update(body).digest('base64url')
+  return `${body}.${sig}`
+}
+
+function parseOAuthState(state) {
+  if (!state || typeof state !== 'string') return null
+  const dot = state.indexOf('.')
+  if (dot <= 0) return null
+  const body = state.slice(0, dot)
+  const sig = state.slice(dot + 1)
+  const expected = crypto.createHmac('sha256', stateSigningKey()).update(body).digest('base64url')
+  if (sig.length !== expected.length) return null
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(sig, 'utf8'), Buffer.from(expected, 'utf8'))) {
+      return null
+    }
+  } catch {
+    return null
+  }
+  let payload
+  try {
+    payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'))
+  } catch {
+    return null
+  }
+  if (!payload?.w || !payload?.t) return null
+  if (Date.now() - payload.t > OAUTH_STATE_TTL_MS) return null
+  return { workspaceId: String(payload.w) }
 }
 
 function getClientCredentials(config) {
@@ -28,8 +98,7 @@ function getClientCredentials(config) {
     clientSecret:
       process.env.GMAIL_CLIENT_SECRET?.trim() || config.gmail?.clientSecret?.trim() || '',
     redirectUri:
-      process.env.GMAIL_REDIRECT_URI?.trim() ||
-      'http://localhost:3001/api/auth/gmail/callback',
+      normalizeGmailRedirectUri(process.env.GMAIL_REDIRECT_URI) || DEFAULT_LOCAL_REDIRECT,
   }
 }
 
@@ -42,8 +111,7 @@ export function startGmailAuth(workspaceId) {
       )
     }
 
-    const state = crypto.randomBytes(16).toString('hex')
-    pendingStates.set(state, { workspaceId, at: Date.now() })
+    const state = createOAuthState(workspaceId)
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -55,16 +123,28 @@ export function startGmailAuth(workspaceId) {
       state,
     })
 
+    const dbClientId = config.gmail?.clientId?.trim()
+    if (dbClientId && dbClientId !== clientId) {
+      logger.warn(
+        'Gmail Client ID in MongoDB differs from GMAIL_CLIENT_ID in .env — OAuth uses .env. Add redirect URI to the .env client in Google Cloud.',
+        { envClient: clientId.slice(0, 24), dbClient: dbClientId.slice(0, 24) },
+      )
+    }
+    logger.info('Gmail OAuth → Google (register this redirect URI on this Client ID)', {
+      redirectUri,
+      clientId,
+    })
+
     return `https://accounts.google.com/o/oauth2/v2/auth?${params}`
   })
 }
 
 export async function handleGmailCallback(code, state) {
-  const pending = pendingStates.get(state)
-  pendingStates.delete(state)
-  if (!pending) throw new Error('Invalid or expired OAuth state')
-  if (Date.now() - pending.at > 10 * 60 * 1000) {
-    throw new Error('OAuth session expired. Try again.')
+  const pending = parseOAuthState(state)
+  if (!pending) {
+    throw new Error(
+      'Invalid or expired OAuth state. Click Connect Gmail again (finish within 15 minutes). If you changed GMAIL_CLIENT_SECRET in .env, restart the API first, then connect.',
+    )
   }
 
   const config = await getWorkspaceConfig(pending.workspaceId)
@@ -84,6 +164,11 @@ export async function handleGmailCallback(code, state) {
 
   const tokenData = await tokenRes.json().catch(() => ({}))
   if (!tokenRes.ok) {
+    if (tokenData.error === 'invalid_client') {
+      throw new Error(
+        'The provided client secret is invalid. In Google Cloud → Credentials → your Web client (same Client ID as .env) → Client secrets → create/copy secret → paste into GMAIL_CLIENT_SECRET in api .env, restart API, Save Gmail now, then Connect again.',
+      )
+    }
     throw new Error(tokenData.error_description || tokenData.error || 'Gmail token exchange failed')
   }
 

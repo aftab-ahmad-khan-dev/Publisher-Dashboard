@@ -92,6 +92,10 @@ export async function fetchGmailOAuthSetup() {
   return apiFetch('/auth/gmail/setup')
 }
 
+export async function fetchRedditSetup() {
+  return apiFetch('/connections/reddit/setup')
+}
+
 export async function saveGmailRemote(gmail) {
   return apiFetch('/config/gmail', { method: 'PUT', body: { gmail } })
 }

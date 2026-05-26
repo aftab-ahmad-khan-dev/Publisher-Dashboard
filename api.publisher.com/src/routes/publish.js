@@ -23,6 +23,7 @@ import { sanitizePostState } from '../lib/contentSanitize.js'
 import { testMetaConnection } from '../lib/publishers/meta.js'
 import { testLinkedInConnection } from '../lib/publishers/linkedin.js'
 import { testRedditConnection } from '../lib/publishers/reddit.js'
+import { getRedditEnvSetup } from '../lib/redditSetup.js'
 import { testQuoraConnection } from '../lib/publishers/quora.js'
 import { publishToAllPlatforms } from '../lib/publishers/index.js'
 import { broadcastEvent } from '../lib/events.js'
@@ -41,6 +42,15 @@ router.post('/connections/meta/test', async (req, res, next) => {
     const result = await testMetaConnection(config.meta)
     if (!result.ok) return res.status(400).json(result)
     res.json({ ...result, saved: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/connections/reddit/setup', async (req, res, next) => {
+  try {
+    const config = await getWorkspaceConfig(req.workspaceId)
+    res.json({ ok: true, ...getRedditEnvSetup(config) })
   } catch (err) {
     next(err)
   }

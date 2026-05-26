@@ -28,6 +28,7 @@ export function configFromServer(server) {
       subreddit: server.reddit?.subreddit || '',
       userAgent: server.reddit?.userAgent || 'PulsePublisher/1.0',
       connected: server.reddit?.connected,
+      publishReady: server.reddit?.publishReady,
       hasClientSecret: server.reddit?.hasClientSecret,
       hasRefreshToken: server.reddit?.hasRefreshToken,
     },

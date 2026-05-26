@@ -53,14 +53,19 @@ router.get('/auth/gmail', async (req, res, next) => {
 })
 
 router.get('/auth/gmail/callback', async (req, res) => {
-  const { code, state, error } = req.query
+  const { code, state, error, error_description: errorDesc } = req.query
   const redirect = (params) => {
     const q = new URLSearchParams(params).toString()
     res.redirect(`${WEB_URL}/api-config?${q}`)
   }
 
   if (error) {
-    return redirect({ gmail: 'error', message: error })
+    const message =
+      (typeof errorDesc === 'string' && errorDesc) ||
+      (error === 'redirect_uri_mismatch'
+        ? 'Redirect URI mismatch — add http://localhost:3001/api/auth/gmail/callback in Google Cloud (not /api-config).'
+        : String(error))
+    return redirect({ gmail: 'error', message })
   }
 
   try {

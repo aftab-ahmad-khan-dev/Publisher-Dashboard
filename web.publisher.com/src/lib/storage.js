@@ -4,8 +4,9 @@ export const STORAGE_KEYS = {
   apiConfig: 'pulse_api_config',
   scheduledQueue: 'pulse_scheduled_queue',
   drafts: 'pulse_drafts',
-  /** Remembers last successful API Config test per platform (session persists across visits) */
-  platformTestStatus: 'pulse_platform_test_status',
+  /** Gmail / Reddit API Config test result (persists across visits) */
+  gmailTestStatus: 'pulse_gmail_test_status',
+  redditTestStatus: 'pulse_reddit_test_status',
 }
 
 export function readJsonStorage(key, fallback) {

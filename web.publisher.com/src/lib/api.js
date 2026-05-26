@@ -29,7 +29,17 @@ export async function testMetaConnection(meta) {
 }
 
 export async function testRedditConnection(reddit) {
-  if (!isRedditConfigured(reddit)) {
+  const hasId = Boolean(reddit?.clientId?.trim())
+  const hasStored =
+    reddit?.hasClientSecret && reddit?.hasRefreshToken && Boolean(reddit?.subreddit?.trim())
+  if (!hasId && !hasStored) {
+    return {
+      ok: false,
+      error:
+        'Client ID, Client Secret, Refresh Token, and Subreddit are required (or set REDDIT_* in api .env).',
+    }
+  }
+  if (!isRedditConfigured(reddit) && !hasStored) {
     return {
       ok: false,
       error: 'Client ID, Client Secret, Refresh Token, and Subreddit are required.',
@@ -47,8 +57,14 @@ export async function testRedditConnection(reddit) {
 }
 
 export async function testGmailConnection(gmail) {
-  if (!gmail?.clientId?.trim()) {
-    return { ok: false, error: 'Gmail Client ID and Client Secret are required. Connect via OAuth.' }
+  const hasId = Boolean(gmail?.clientId?.trim())
+  const hasStored = gmail?.hasClientSecret
+  if (!hasId && !hasStored) {
+    return {
+      ok: false,
+      error:
+        'Gmail Client ID and Client Secret are required (or set GMAIL_* in api .env), then Connect.',
+    }
   }
   if (!gmail?.hasRefreshToken && !gmail?.sendReady) {
     return { ok: false, error: 'Connect Gmail with OAuth before testing.' }

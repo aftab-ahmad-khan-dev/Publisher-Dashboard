@@ -26,7 +26,18 @@ export function isRedditConfigured(reddit) {
     Boolean(reddit?.clientSecret?.trim()) &&
     Boolean(reddit?.refreshToken?.trim()) &&
     Boolean(reddit?.subreddit?.trim())
-  return filled || (Boolean(reddit?.clientId?.trim()) && Boolean(reddit?.subreddit?.trim()) && hasSecrets)
+  return (
+    Boolean(reddit?.publishReady || reddit?.connected) ||
+    filled ||
+    (Boolean(reddit?.clientId?.trim()) && Boolean(reddit?.subreddit?.trim()) && hasSecrets)
+  )
+}
+
+export function isRedditPublishReady(reddit) {
+  return (
+    isRedditConfigured(reddit) &&
+    Boolean(reddit?.hasClientSecret && reddit?.hasRefreshToken && reddit?.subreddit?.trim())
+  )
 }
 
 export function isQuoraConfigured(quora) {
@@ -34,7 +45,17 @@ export function isQuoraConfigured(quora) {
 }
 
 export function isGmailConfigured(gmail) {
-  return Boolean(gmail?.sendReady || gmail?.connected || gmail?.hasRefreshToken)
+  const hasSecrets = gmail?.hasClientSecret && gmail?.hasRefreshToken
+  return Boolean(
+    gmail?.sendReady ||
+      gmail?.connected ||
+      gmail?.hasRefreshToken ||
+      (Boolean(gmail?.clientId?.trim()) && hasSecrets),
+  )
+}
+
+export function isGmailSendReady(gmail) {
+  return isGmailConfigured(gmail) && Boolean(gmail?.hasRefreshToken || gmail?.sendReady)
 }
 
 export function getConnectionSummary(apiConfig) {
@@ -76,6 +97,7 @@ export function withDerivedConnectionFlags(config) {
     reddit: {
       ...config.reddit,
       connected: isRedditConfigured(config.reddit),
+      publishReady: isRedditPublishReady(config.reddit),
     },
     quora: {
       ...config.quora,
@@ -84,7 +106,7 @@ export function withDerivedConnectionFlags(config) {
     gmail: {
       ...config.gmail,
       connected: isGmailConfigured(config.gmail),
-      sendReady: isGmailConfigured(config.gmail),
+      sendReady: isGmailSendReady(config.gmail),
     },
   }
 }

@@ -6,7 +6,12 @@ import PageShell, { PageScroll } from "../components/PageShell";
 import PlatformIcon, { MetaSuiteIcons } from "../components/PlatformIcon";
 import { getConnectionSummary } from "../lib/connections";
 import { isLivePublishing } from "../lib/api";
-import { linkedInOAuthUrl, gmailOAuthUrl, fetchGmailOAuthSetup } from "../lib/backendApi";
+import {
+  linkedInOAuthUrl,
+  gmailOAuthUrl,
+  fetchGmailOAuthSetup,
+  fetchRedditSetup,
+} from "../lib/backendApi";
 import { showToast } from "../lib/toast";
 import {
   linkedinPayloadForSave,
@@ -39,6 +44,13 @@ export default function ApiConfigPage() {
   const [testing, setTesting] = useState(null);
   const [linkedInSave, setLinkedInSave] = useState("idle");
   const [metaSave, setMetaSave] = useState("idle");
+  const [lastTest, setLastTest] = useState({
+    meta: null,
+    linkedin: null,
+    reddit: null,
+    quora: null,
+    gmail: null,
+  });
   const linkedInTimer = useRef(null);
   const metaTimer = useRef(null);
 
@@ -47,12 +59,28 @@ export default function ApiConfigPage() {
   }, [apiConfig]);
 
   useEffect(() => {
-    const saved = readJsonStorage(STORAGE_KEYS.platformTestStatus, {});
     const summaryNow = getConnectionSummary(apiConfig);
+    const savedGmail = readJsonStorage(STORAGE_KEYS.gmailTestStatus, null);
+    const savedReddit = readJsonStorage(STORAGE_KEYS.redditTestStatus, null);
+    const redditHasTokens =
+      apiConfig?.reddit?.hasClientSecret &&
+      apiConfig?.reddit?.hasRefreshToken &&
+      Boolean(apiConfig?.reddit?.clientId?.trim()) &&
+      Boolean(apiConfig?.reddit?.subreddit?.trim());
     setLastTest((prev) => ({
-      ...saved,
       ...prev,
-      ...(summaryNow.quoraReady ? { quora: "ok" } : {}),
+      gmail: summaryNow.gmailReady
+        ? savedGmail === "error"
+          ? "error"
+          : "ok"
+        : null,
+      reddit: summaryNow.redditReady
+        ? savedReddit === "error"
+          ? "error"
+          : savedReddit === "ok" || redditHasTokens
+            ? "ok"
+            : null
+        : null,
     }));
   }, [apiConfig]);
 
@@ -73,9 +101,14 @@ export default function ApiConfigPage() {
     const message = searchParams.get("message");
     if (status === "connected") {
       refreshFromServer();
+      setLastTest((t) => ({ ...t, gmail: "ok" }));
+      writeJsonStorage(STORAGE_KEYS.gmailTestStatus, "ok");
+      showToast("Gmail connected — you can send bulk mail from Email.", "success");
       setSearchParams({}, { replace: true });
     } else if (status === "error") {
-      alert(message || "Gmail connection failed");
+      setLastTest((t) => ({ ...t, gmail: "error" }));
+      writeJsonStorage(STORAGE_KEYS.gmailTestStatus, "error");
+      showToast(message || "Gmail connection failed", "error");
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, refreshFromServer, setSearchParams]);
@@ -85,6 +118,9 @@ export default function ApiConfigPage() {
     fetchGmailOAuthSetup()
       .then((data) => setGmailOAuthSetup(data))
       .catch(() => setGmailOAuthSetup(null))
+    fetchRedditSetup()
+      .then((data) => setRedditEnvSetup(data))
+      .catch(() => setRedditEnvSetup(null))
   }, [live])
 
   const summary = getConnectionSummary(form);
@@ -156,8 +192,8 @@ export default function ApiConfigPage() {
     saveApiConfig(form);
   };
 
-  const [lastTest, setLastTest] = useState({ meta: null, linkedin: null, reddit: null, quora: null, gmail: null })
   const [gmailOAuthSetup, setGmailOAuthSetup] = useState(null)
+  const [redditEnvSetup, setRedditEnvSetup] = useState(null)
   const [redditSave, setRedditSave] = useState("idle")
   const [quoraSave, setQuoraSave] = useState("idle")
   const redditTimer = useRef(null)
@@ -171,7 +207,8 @@ export default function ApiConfigPage() {
       result.ok === false ? "error" : result.needsToken ? "needsToken" : "ok";
     setLastTest((t) => {
       const next = { ...t, [platform]: status };
-      writeJsonStorage(STORAGE_KEYS.platformTestStatus, next);
+      if (platform === "gmail") writeJsonStorage(STORAGE_KEYS.gmailTestStatus, status);
+      if (platform === "reddit") writeJsonStorage(STORAGE_KEYS.redditTestStatus, status);
       return next;
     });
   };
@@ -235,6 +272,7 @@ export default function ApiConfigPage() {
   const linkedInStatus = getPlatformStatus("linkedin", form, summary, lastTest.linkedin);
   const redditStatus = getPlatformStatus("reddit", form, summary, lastTest.reddit);
   const quoraStatus = getPlatformStatus("quora", form, summary, lastTest.quora);
+  const gmailStatus = getPlatformStatus("gmail", form, summary, lastTest.gmail);
 
   const connectLinkedIn = () => {
     const url = linkedInOAuthUrl();
@@ -243,24 +281,32 @@ export default function ApiConfigPage() {
 
   const connectGmail = async () => {
     const payload = gmailPayloadForSave(form.gmail);
-    const hasId = Boolean(payload.clientId);
-    const hasSecret = Boolean(form.gmail?.clientSecret?.trim()) || form.gmail?.hasClientSecret;
+    const hasId = Boolean(payload.clientId) || gmailOAuthSetup?.clientIdConfigured;
+    const hasSecret =
+      Boolean(form.gmail?.clientSecret?.trim()) ||
+      form.gmail?.hasClientSecret ||
+      gmailOAuthSetup?.clientSecretConfigured;
 
     if (!hasId) {
       showToast(
-        "Paste Google Client ID (and Secret), click Save Gmail now, then Connect. Or set GMAIL_CLIENT_ID in api .env and restart the API.",
+        "Paste Google Client ID (and Secret), click Save Gmail now, then Connect. Or set GMAIL_CLIENT_ID in api.publisher.com/.env and restart the API.",
         "error",
       );
       return;
     }
     if (!hasSecret) {
-      showToast("Client Secret is required before Connect Gmail.", "error");
+      showToast(
+        "Client Secret is required before Connect (paste it, save, or set GMAIL_CLIENT_SECRET in api .env).",
+        "error",
+      );
       return;
     }
 
     if (live) {
       try {
-        await saveGmailConfig(payload);
+        if (payload.clientId || form.gmail?.clientSecret?.trim()) {
+          await saveGmailConfig(payload);
+        }
       } catch (err) {
         showToast(err.message || "Could not save Gmail config", "error");
         return;
@@ -476,7 +522,7 @@ export default function ApiConfigPage() {
                     <p className='text-[10px] text-slate-500'>Script app · self-posts · no promo tone</p>
                   </div>
                 </div>
-                <StatusDot connected={summary.redditReady} />
+                <StatusDot connected={summary.redditReady} label={summary.redditReady ? 'Ready' : 'Setup'} />
               </div>
               <div className='mt-3 grid gap-2 sm:grid-cols-2'>
                 <Field label='Client ID' value={form.reddit.clientId} onChange={(v) => update('reddit', 'clientId', v)} placeholder='Reddit app id' />
@@ -485,10 +531,25 @@ export default function ApiConfigPage() {
                 <Field label='Subreddit' value={form.reddit.subreddit} onChange={(v) => update('reddit', 'subreddit', v)} placeholder='yourcommunity (no r/)' />
                 <Field label='User-Agent' value={form.reddit.userAgent} onChange={(v) => update('reddit', 'userAgent', v)} placeholder='PulsePublisher/1.0' />
               </div>
+              <div className='mt-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-2.5 text-[11px] leading-relaxed text-slate-400'>
+                <p className='font-medium text-amber-200/90'>Reddit script app</p>
+                <p className='mt-1'>
+                  Create a <strong className='text-slate-300'>script</strong> app at{' '}
+                  <span className='text-violet-300/90'>reddit.com/prefs/apps</span>, then paste Client ID,
+                  secret, and refresh token — or set{' '}
+                  <code className='text-emerald-300/90'>{redditEnvSetup?.envKeys?.[0] || 'REDDIT_CLIENT_ID'}</code>{' '}
+                  (and related vars) in <code className='text-slate-400'>api.publisher.com/.env</code>.
+                </p>
+              </div>
+              {redditEnvSetup?.clientIdConfigured && !form.reddit?.clientId?.trim() && (
+                <p className='mt-1 text-[10px] text-slate-500'>
+                  Using Reddit credentials from api .env — fields can stay empty if secrets are in .env too.
+                </p>
+              )}
               <div className='flex-1' aria-hidden />
               <div className='mt-auto flex flex-wrap gap-2 pt-3'>
                 <button type='button' onClick={() => testConnection('reddit')} disabled={testing === 'reddit'} className='btn-secondary px-3 py-1.5 text-xs'>
-                  {testing === 'reddit' ? 'Testing…' : 'Test & save Reddit'}
+                  {testing === 'reddit' ? 'Testing…' : 'Test Reddit'}
                 </button>
                 {live && (
                   <button type='button' onClick={() => persistReddit(redditPayloadForSave(form.reddit))} className='btn-secondary px-3 py-1.5 text-xs'>
@@ -502,43 +563,9 @@ export default function ApiConfigPage() {
 
             <div className='flex min-h-full flex-col gap-3'>
             <section className='surface-panel flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
-              <div className='flex items-center justify-between gap-3'>
-                <div className='flex items-center gap-3'>
-                  <PlatformIcon platform='quora' size='lg' />
-                  <div>
-                    <h3 className='text-sm font-semibold text-white'>Quora</h3>
-                    <p className='text-[10px] text-slate-500'>Guided paste · expertise answers only</p>
-                  </div>
-                </div>
-                <StatusDot connected={summary.quoraReady} />
-              </div>
-              <div className='mt-3 space-y-2'>
-                <Field label='Profile URL' value={form.quora.profileUrl} onChange={(v) => update('quora', 'profileUrl', v)} placeholder='https://www.quora.com/profile/…' className='w-full' />
-                <Field label='Default topic (optional)' value={form.quora.defaultTopic} onChange={(v) => update('quora', 'defaultTopic', v)} placeholder='e.g. Startup advice' className='w-full' />
-              </div>
-              <p className='mt-3 text-[11px] leading-relaxed text-amber-400/80'>
-                Quora has no public posting API. Pulse formats your answer and copies it for you — write like you are helping someone, not selling.
-              </p>
-              <div className='flex-1' aria-hidden />
-              <div className='mt-auto flex flex-wrap gap-2 pt-3'>
-                <button type='button' onClick={() => testConnection('quora')} disabled={testing === 'quora'} className='btn-secondary px-3 py-1.5 text-xs'>
-                  {testing === 'quora' ? 'Testing…' : summary.quoraReady ? 'Re-test & save Quora' : 'Test & save Quora'}
-                </button>
-                {live && (
-                  <button type='button' onClick={() => persistQuora(quoraPayloadForSave(form.quora))} className='btn-secondary px-3 py-1.5 text-xs'>
-                    Save Quora now
-                  </button>
-                )}
-              </div>
-            </section>
-            <PlatformStatusCard status={quoraStatus} platform='quora' />
-            </div>
-            </div>
-
-            <section className='surface-panel rounded-xl p-4'>
               <div className='flex flex-wrap items-start justify-between gap-3'>
                 <div className='flex items-center gap-3'>
-                  <span className='flex h-10 w-10 items-center justify-center rounded-xl bg-[#EA4335] text-lg font-bold text-white'>M</span>
+                  <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EA4335] text-lg font-bold text-white'>M</span>
                   <div>
                     <h3 className='text-sm font-semibold text-white'>Gmail (Mailsuite compatible)</h3>
                     <p className='text-[10px] text-slate-500'>
@@ -553,23 +580,54 @@ export default function ApiConfigPage() {
                 <SecretField label='Client Secret' value={form.gmail?.clientSecret || ''} hasStored={form.gmail?.hasClientSecret} onChange={(v) => update('gmail', 'clientSecret', v)} />
               </div>
               <div className='mt-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-2.5 text-[11px] leading-relaxed text-slate-400'>
-                <p className='font-medium text-amber-200/90'>Fix redirect_uri_mismatch in Google Cloud</p>
+                <p className='font-medium text-amber-200/90'>Fix Error 400: redirect_uri_mismatch</p>
                 <p className='mt-1'>
-                  Same OAuth client as Client ID above → <strong className='text-slate-300'>Credentials</strong> →
-                  your Web client → <strong className='text-slate-300'>Authorized redirect URIs</strong> (not
-                  JavaScript origins). Add <em>exactly</em>:
+                  In{' '}
+                  <a
+                    href={gmailOAuthSetup?.googleCredentialsUrl || 'https://console.cloud.google.com/apis/credentials'}
+                    target='_blank'
+                    rel='noreferrer'
+                    className='text-violet-300 underline'
+                  >
+                    Google Cloud → Credentials
+                  </a>
+                  , open the <strong className='text-slate-300'>same</strong> OAuth client as the Client ID
+                  below (type: <strong className='text-slate-300'>Web application</strong>) →{' '}
+                  <strong className='text-slate-300'>Authorized redirect URIs</strong> — not JavaScript origins.
                 </p>
-                <ul className='mt-1.5 list-inside list-disc space-y-0.5 font-mono text-[10px] text-violet-300/90'>
-                  {(gmailOAuthSetup?.redirectUrisToRegister || [
-                    'http://localhost:3001/api/auth/gmail/callback',
-                    'http://127.0.0.1:3001/api/auth/gmail/callback',
-                  ]).map((uri) => (
-                    <li key={uri}>{uri}</li>
-                  ))}
-                </ul>
-                <p className='mt-1.5 text-slate-500'>No trailing slash. Use http (not https) for local dev. Save in Google, wait ~1 min, then Connect again.</p>
+                {gmailOAuthSetup?.clientId && (
+                  <p className='mt-2 text-[10px] text-slate-500'>
+                    API uses this Client ID (must match Google):{' '}
+                    <code className='block mt-0.5 break-all font-mono text-amber-200/90'>
+                      {gmailOAuthSetup.clientId}
+                    </code>
+                  </p>
+                )}
+                {gmailOAuthSetup?.redirectUri && (
+                  <p className='mt-2 text-[10px] text-slate-500'>
+                    Add this redirect URI exactly (copy/paste):{' '}
+                    <code className='block mt-0.5 break-all font-mono text-emerald-300/90'>
+                      {gmailOAuthSetup.redirectUri}
+                    </code>
+                  </p>
+                )}
+                <p className='mt-1.5 text-slate-500'>
+                  Optional second URI:{' '}
+                  <code className='font-mono text-violet-300/90'>http://127.0.0.1:3001/api/auth/gmail/callback</code>
+                  . Save in Google, wait ~1 minute, restart API, then Connect again. Never use{' '}
+                  <code className='text-rose-300/80'>…/api-config</code> or port 5173.
+                </p>
               </div>
-              <div className='mt-3 flex flex-wrap gap-2'>
+              {gmailOAuthSetup?.clientIdConfigured && !form.gmail?.clientId?.trim() && (
+                <p className='mt-1 text-[10px] text-slate-500'>
+                  Using Gmail credentials from api .env — fields can stay empty if secret is in .env too.
+                </p>
+              )}
+              {form.gmail?.fromEmail && (
+                <p className='mt-1 text-[11px] text-emerald-400/90'>Sending as {form.gmail.fromEmail}</p>
+              )}
+              <div className='flex-1' aria-hidden />
+              <div className='mt-auto flex flex-wrap gap-2 pt-3'>
                 {live && (
                   <button type='button' onClick={connectGmail} className='btn-primary px-3 py-1.5 text-xs'>
                     Connect Gmail
@@ -584,10 +642,45 @@ export default function ApiConfigPage() {
                   </button>
                 )}
               </div>
-              {form.gmail?.fromEmail && (
-                <p className='mt-2 text-[11px] text-emerald-400/90'>Sending as {form.gmail.fromEmail}</p>
-              )}
             </section>
+            <PlatformStatusCard status={gmailStatus} platform='gmail' />
+            </div>
+            </div>
+
+            <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
+            <div className='flex min-h-full flex-col gap-3 lg:col-span-2'>
+            <section className='surface-panel flex flex-col rounded-xl p-4'>
+              <div className='flex items-center justify-between gap-3'>
+                <div className='flex items-center gap-3'>
+                  <PlatformIcon platform='quora' size='lg' />
+                  <div>
+                    <h3 className='text-sm font-semibold text-white'>Quora</h3>
+                    <p className='text-[10px] text-slate-500'>Guided paste · expertise answers only</p>
+                  </div>
+                </div>
+                <StatusDot connected={summary.quoraReady} />
+              </div>
+              <div className='mt-3 grid gap-2 sm:grid-cols-2'>
+                <Field label='Profile URL' value={form.quora.profileUrl} onChange={(v) => update('quora', 'profileUrl', v)} placeholder='https://www.quora.com/profile/…' className='w-full' />
+                <Field label='Default topic (optional)' value={form.quora.defaultTopic} onChange={(v) => update('quora', 'defaultTopic', v)} placeholder='e.g. Startup advice' className='w-full' />
+              </div>
+              <p className='mt-3 text-[11px] leading-relaxed text-amber-400/80'>
+                Quora has no public posting API. Pulse formats your answer and copies it for you — write like you are helping someone, not selling.
+              </p>
+              <div className='mt-3 flex flex-wrap gap-2'>
+                <button type='button' onClick={() => testConnection('quora')} disabled={testing === 'quora'} className='btn-secondary px-3 py-1.5 text-xs'>
+                  {testing === 'quora' ? 'Testing…' : 'Test & save Quora'}
+                </button>
+                {live && (
+                  <button type='button' onClick={() => persistQuora(quoraPayloadForSave(form.quora))} className='btn-secondary px-3 py-1.5 text-xs'>
+                    Save Quora now
+                  </button>
+                )}
+              </div>
+            </section>
+            <PlatformStatusCard status={quoraStatus} platform='quora' />
+            </div>
+            </div>
 
             <section className='surface-panel rounded-xl p-4'>
               <h3 className='text-sm font-semibold text-white'>Webhooks</h3>
@@ -720,19 +813,35 @@ function getPlatformStatus(platform, form, summary, lastTest) {
       });
     }
     if (!summary.redditReady) {
+      const hasPartial =
+        Boolean(form.reddit?.clientId?.trim()) || form.reddit?.hasClientSecret;
       return withAlive({
         tier: "idle",
         title: "Not connected",
-        message: "Add Reddit app credentials. Posts must be informational — promotional tone may be removed by mods.",
+        message: hasPartial
+          ? "Credentials saved — run Test Reddit to verify, or finish missing fields."
+          : "Add Reddit script app credentials (or set REDDIT_* in api .env), then Test Reddit.",
+      });
+    }
+    const redditVerified =
+      lastTest === "ok" ||
+      Boolean(
+        form.reddit?.hasClientSecret &&
+          form.reddit?.hasRefreshToken &&
+          form.reddit?.clientId?.trim() &&
+          form.reddit?.subreddit?.trim(),
+      );
+    if (redditVerified) {
+      return withAlive({
+        tier: "functional",
+        title: "Ready to publish",
+        message: "Reddit API ready. Self-posts publish to your subreddit — keep copy informational.",
       });
     }
     return withAlive({
-      tier: lastTest === "ok" ? "functional" : "connected",
-      title: lastTest === "ok" ? "Connected & functional" : "Connected",
-      message:
-        lastTest === "ok"
-          ? "Reddit API verified. Self-posts publish to your subreddit."
-          : "Credentials saved. Run “Test & save Reddit” to verify.",
+      tier: "connected",
+      title: "Connected",
+      message: "Credentials saved. Run Test Reddit to verify before publishing.",
     });
   }
 
@@ -752,10 +861,12 @@ function getPlatformStatus(platform, form, summary, lastTest) {
       });
     }
     return withAlive({
-      tier: "functional",
+      tier: lastTest === "ok" ? "functional" : "connected",
       title: "Ready for guided posts",
       message:
-        "Quora profile saved. Publish copies expertise-style answers for you to paste — avoid promotional language. Re-test only if you change the profile URL.",
+        lastTest === "ok"
+          ? "Quora profile saved. Publish copies expertise-style answers for you to paste — avoid promotional language."
+          : "Profile saved. Run “Test & save Quora” to confirm.",
     });
   }
 
@@ -768,19 +879,29 @@ function getPlatformStatus(platform, form, summary, lastTest) {
       });
     }
     if (!summary.gmailReady) {
+      const hasPartial =
+        Boolean(form.gmail?.clientId?.trim()) || form.gmail?.hasClientSecret;
       return withAlive({
         tier: "idle",
         title: "Not connected",
-        message: "Save Google OAuth app credentials, then Connect Gmail.",
+        message: hasPartial
+          ? "Credentials saved — click Connect Gmail to authorize sending."
+          : "Save Google OAuth credentials (or set GMAIL_* in api .env), then Connect Gmail.",
+      });
+    }
+    const gmailVerified = lastTest === "ok" || Boolean(form.gmail?.hasRefreshToken);
+    if (gmailVerified) {
+      return withAlive({
+        tier: "functional",
+        title: "Ready to send bulk mail",
+        message:
+          "Gmail OAuth active. Bulk sends appear in Sent — use Mailsuite in Gmail for opens/clicks.",
       });
     }
     return withAlive({
-      tier: lastTest === "ok" ? "functional" : "connected",
-      title: lastTest === "ok" ? "Ready to send bulk mail" : "Connected",
-      message:
-        lastTest === "ok"
-          ? "Gmail API verified. Bulk sends appear in Sent — use Mailsuite in Gmail for extra tracking."
-          : "OAuth connected. Test before your first campaign.",
+      tier: "connected",
+      title: "Connected",
+      message: "Credentials saved. Connect Gmail, then run Test Gmail before your first campaign.",
     });
   }
 
