@@ -7,6 +7,11 @@ const emailCampaignSchema = new mongoose.Schema(
     subject: { type: String, required: true },
     htmlBody: { type: String, default: '' },
     textBody: { type: String, default: '' },
+    // Optional pool of templates — when present, each recipient gets a random one.
+    templates: {
+      type: [{ subject: String, htmlBody: String, textBody: String }],
+      default: [],
+    },
     fromEmail: String,
     status: {
       type: String,

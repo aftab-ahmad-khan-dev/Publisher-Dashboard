@@ -21,6 +21,8 @@ function getClientCredentials(config) {
     clientSecret:
       config.linkedin.clientSecret?.trim() || process.env.LINKEDIN_CLIENT_SECRET?.trim(),
     redirectUri:
+      (process.env.API_PUBLIC_URL?.trim()?.replace(/\/$/, '') &&
+        `${process.env.API_PUBLIC_URL.trim().replace(/\/$/, '')}/api/auth/linkedin/callback`) ||
       process.env.LINKEDIN_REDIRECT_URI?.trim() ||
       'http://localhost:3001/api/auth/linkedin/callback',
   }

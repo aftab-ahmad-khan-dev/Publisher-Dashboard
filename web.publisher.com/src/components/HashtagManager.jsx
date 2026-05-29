@@ -43,7 +43,7 @@ export default function HashtagManager({
     <div className="space-y-3">
       <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
         Hashtags
-        <span className="ml-1 font-normal normal-case text-slate-600">(skipped on Reddit & Quora)</span>
+        <span className="ml-1 font-normal normal-case text-slate-600">(skipped on Reddit)</span>
       </label>
 
       <div className="flex gap-2">

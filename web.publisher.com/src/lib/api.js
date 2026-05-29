@@ -4,6 +4,8 @@ import {
   isLinkedInPublishReady,
   isRedditConfigured,
   isQuoraConfigured,
+  isPinterestConfigured,
+  isThreadsConfigured,
 } from './connections'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '') || ''
@@ -91,6 +93,30 @@ export async function testQuoraConnection(quora) {
   }
 }
 
+export async function testPinterestConnection(pinterest) {
+  const hasToken = Boolean(pinterest?.accessToken?.trim()) || pinterest?.hasAccessToken
+  if (!hasToken) {
+    return { ok: false, error: 'Pinterest access token is required (and a Board ID to publish).' }
+  }
+  if (isLivePublishing()) {
+    return postBackend('/connections/pinterest/test', { pinterest })
+  }
+  await delay(700)
+  return { ok: true, simulated: true, message: 'Pinterest looks configured (demo — no request sent).' }
+}
+
+export async function testThreadsConnection(threads) {
+  const hasToken = Boolean(threads?.accessToken?.trim()) || threads?.hasAccessToken
+  if (!hasToken) {
+    return { ok: false, error: 'Threads access token is required (and your Threads user ID to publish).' }
+  }
+  if (isLivePublishing()) {
+    return postBackend('/connections/threads/test', { threads })
+  }
+  await delay(700)
+  return { ok: true, simulated: true, message: 'Threads looks configured (demo — no request sent).' }
+}
+
 export async function testLinkedInConnection(linkedin) {
   if (!isLinkedInConfigured(linkedin)) {
     return { ok: false, error: 'Client ID and Client Secret are required (Org URN is optional for profile posts).' }
@@ -114,7 +140,8 @@ export async function publishToPlatforms(postState, apiConfig) {
   const needsMeta = enabled.some((p) => p === 'instagram' || p === 'facebook')
   const needsLinkedIn = enabled.includes('linkedin')
   const needsReddit = enabled.includes('reddit')
-  const needsQuora = enabled.includes('quora')
+  const needsPinterest = enabled.includes('pinterest')
+  const needsThreads = enabled.includes('threads')
 
   if (needsMeta && !isMetaConfigured(apiConfig.meta)) {
     return { ok: false, error: 'Configure Meta Suite in API Config before publishing to Instagram or Facebook.' }
@@ -128,8 +155,11 @@ export async function publishToPlatforms(postState, apiConfig) {
   if (needsReddit && !isRedditConfigured(apiConfig.reddit)) {
     return { ok: false, error: 'Configure Reddit in API Config before publishing to Reddit.' }
   }
-  if (needsQuora && !isQuoraConfigured(apiConfig.quora)) {
-    return { ok: false, error: 'Add your Quora profile URL in API Config.' }
+  if (needsPinterest && !isPinterestConfigured(apiConfig.pinterest)) {
+    return { ok: false, error: 'Add a Pinterest access token and Board ID in API Config before publishing.' }
+  }
+  if (needsThreads && !isThreadsConfigured(apiConfig.threads)) {
+    return { ok: false, error: 'Add a Threads access token and user ID in API Config before publishing.' }
   }
 
   if (isLivePublishing()) {

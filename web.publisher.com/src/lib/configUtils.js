@@ -37,6 +37,20 @@ export function configFromServer(server) {
       defaultTopic: server.quora?.defaultTopic || '',
       connected: server.quora?.connected,
     },
+    pinterest: {
+      accessToken: '',
+      boardId: server.pinterest?.boardId || '',
+      connected: server.pinterest?.connected,
+      publishReady: server.pinterest?.publishReady,
+      hasAccessToken: server.pinterest?.hasAccessToken,
+    },
+    threads: {
+      accessToken: '',
+      userId: server.threads?.userId || '',
+      connected: server.threads?.connected,
+      publishReady: server.threads?.publishReady,
+      hasAccessToken: server.threads?.hasAccessToken,
+    },
     gmail: {
       clientId: server.gmail?.clientId || '',
       clientSecret: '',
@@ -94,6 +108,18 @@ export function quoraPayloadForSave(quora) {
     profileUrl: quora.profileUrl?.trim(),
     defaultTopic: quora.defaultTopic?.trim(),
   }
+}
+
+export function pinterestPayloadForSave(pinterest) {
+  const out = { boardId: pinterest.boardId?.trim() || '' }
+  if (pinterest.accessToken?.trim()) out.accessToken = pinterest.accessToken.trim()
+  return out
+}
+
+export function threadsPayloadForSave(threads) {
+  const out = { userId: threads.userId?.trim() || '' }
+  if (threads.accessToken?.trim()) out.accessToken = threads.accessToken.trim()
+  return out
 }
 
 const API_CONFIG_KEY = 'pulse_api_config'

@@ -53,6 +53,26 @@ export function isQuoraConfigured(quora) {
   return Boolean(quora?.profileUrl?.trim());
 }
 
+export function isPinterestConfigured(pinterest) {
+  const hasToken =
+    Boolean(pinterest?.accessToken?.trim()) || Boolean(pinterest?.hasAccessToken);
+  return Boolean(
+    pinterest?.publishReady ||
+      pinterest?.connected ||
+      (hasToken && pinterest?.boardId?.trim()),
+  );
+}
+
+export function isThreadsConfigured(threads) {
+  const hasToken =
+    Boolean(threads?.accessToken?.trim()) || Boolean(threads?.hasAccessToken);
+  return Boolean(
+    threads?.publishReady ||
+      threads?.connected ||
+      (hasToken && threads?.userId?.trim()),
+  );
+}
+
 export function isGmailConfigured(gmail) {
   const hasSecrets = gmail?.hasClientSecret && gmail?.hasRefreshToken;
   return Boolean(
@@ -75,12 +95,15 @@ export function getConnectionSummary(apiConfig) {
   const linkedInPublish = isLinkedInPublishReady(apiConfig?.linkedin);
   const redditReady = isRedditConfigured(apiConfig?.reddit);
   const quoraReady = isQuoraConfigured(apiConfig?.quora);
+  const pinterestReady = isPinterestConfigured(apiConfig?.pinterest);
+  const threadsReady = isThreadsConfigured(apiConfig?.threads);
   const gmailReady = isGmailConfigured(apiConfig?.gmail);
   const connectedCount = [
     metaReady,
     linkedInReady,
     redditReady,
-    quoraReady,
+    pinterestReady,
+    threadsReady,
     gmailReady,
   ].filter(Boolean).length;
 
@@ -90,6 +113,8 @@ export function getConnectionSummary(apiConfig) {
     linkedInPublish,
     redditReady,
     quoraReady,
+    pinterestReady,
+    threadsReady,
     gmailReady,
     connectedCount,
     anyConnected: connectedCount > 0,
@@ -117,6 +142,16 @@ export function withDerivedConnectionFlags(config) {
     quora: {
       ...config.quora,
       connected: isQuoraConfigured(config.quora),
+    },
+    pinterest: {
+      ...config.pinterest,
+      connected: isPinterestConfigured(config.pinterest),
+      publishReady: isPinterestConfigured(config.pinterest),
+    },
+    threads: {
+      ...config.threads,
+      connected: isThreadsConfigured(config.threads),
+      publishReady: isThreadsConfigured(config.threads),
     },
     gmail: {
       ...config.gmail,

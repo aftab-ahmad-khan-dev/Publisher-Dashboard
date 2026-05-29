@@ -7,6 +7,8 @@ import {
   isQuoraConfigured,
   isGmailConfigured,
   canSendGmail,
+  isPinterestConfigured,
+  isThreadsConfigured,
 } from './platforms.js'
 import { isRedditPlaceholder, resolveRedditCredentials } from './redditSetup.js'
 
@@ -36,6 +38,16 @@ const DEFAULT_CONFIG = {
     defaultTopic: '',
     connected: false,
   },
+  pinterest: {
+    accessToken: '',
+    boardId: '',
+    connected: false,
+  },
+  threads: {
+    accessToken: '',
+    userId: '',
+    connected: false,
+  },
   gmail: {
     clientId: '',
     clientSecret: '',
@@ -54,6 +66,8 @@ const META_SECRET_FIELDS = ['appSecret', 'pageToken']
 const LINKEDIN_SECRET_FIELDS = ['clientSecret', 'accessToken', 'refreshToken']
 const REDDIT_SECRET_FIELDS = ['clientSecret', 'refreshToken']
 const GMAIL_SECRET_FIELDS = ['clientSecret', 'accessToken', 'refreshToken']
+const PINTEREST_SECRET_FIELDS = ['accessToken']
+const THREADS_SECRET_FIELDS = ['accessToken']
 
 export function withDerivedFlags(config) {
   const linkedinReady = isLinkedInConfigured(config.linkedin)
@@ -76,6 +90,16 @@ export function withDerivedFlags(config) {
     quora: {
       ...config.quora,
       connected: isQuoraConfigured(config.quora),
+    },
+    pinterest: {
+      ...config.pinterest,
+      connected: isPinterestConfigured(config.pinterest),
+      publishReady: isPinterestConfigured(config.pinterest),
+    },
+    threads: {
+      ...config.threads,
+      connected: isThreadsConfigured(config.threads),
+      publishReady: isThreadsConfigured(config.threads),
     },
     gmail: {
       ...config.gmail,
@@ -131,6 +155,14 @@ export function envDefaults() {
       profileUrl: process.env.QUORA_PROFILE_URL?.trim() || '',
       defaultTopic: process.env.QUORA_DEFAULT_TOPIC?.trim() || '',
     },
+    pinterest: {
+      accessToken: process.env.PINTEREST_ACCESS_TOKEN?.trim() || '',
+      boardId: process.env.PINTEREST_BOARD_ID?.trim() || '',
+    },
+    threads: {
+      accessToken: process.env.THREADS_ACCESS_TOKEN?.trim() || '',
+      userId: process.env.THREADS_USER_ID?.trim() || '',
+    },
     gmail: {
       clientId: process.env.GMAIL_CLIENT_ID?.trim() || '',
       clientSecret: process.env.GMAIL_CLIENT_SECRET?.trim() || '',
@@ -149,6 +181,8 @@ function docToConfig(doc) {
     linkedin: doc.linkedin || DEFAULT_CONFIG.linkedin,
     reddit: doc.reddit || DEFAULT_CONFIG.reddit,
     quora: doc.quora || DEFAULT_CONFIG.quora,
+    pinterest: doc.pinterest || DEFAULT_CONFIG.pinterest,
+    threads: doc.threads || DEFAULT_CONFIG.threads,
     gmail: doc.gmail || DEFAULT_CONFIG.gmail,
     webhookUrl: doc.webhookUrl ?? '',
     notificationsEnabled: doc.notificationsEnabled ?? true,
@@ -178,6 +212,14 @@ function fillFromEnv(config) {
     quora: {
       profileUrl: config.quora?.profileUrl || env.quora.profileUrl,
       defaultTopic: config.quora?.defaultTopic || env.quora.defaultTopic,
+    },
+    pinterest: {
+      accessToken: config.pinterest?.accessToken || env.pinterest.accessToken,
+      boardId: config.pinterest?.boardId || env.pinterest.boardId,
+    },
+    threads: {
+      accessToken: config.threads?.accessToken || env.threads.accessToken,
+      userId: config.threads?.userId || env.threads.userId,
     },
     gmail: {
       clientId: config.gmail?.clientId || env.gmail.clientId,
@@ -211,6 +253,8 @@ export async function saveWorkspaceConfig(workspaceId, config) {
     linkedin: mergeSection(prev.linkedin, config.linkedin || {}, LINKEDIN_SECRET_FIELDS),
     reddit: mergeSection(prev.reddit, config.reddit || {}, REDDIT_SECRET_FIELDS),
     quora: { ...prev.quora, ...(config.quora || {}) },
+    pinterest: mergeSection(prev.pinterest, config.pinterest || {}, PINTEREST_SECRET_FIELDS),
+    threads: mergeSection(prev.threads, config.threads || {}, THREADS_SECRET_FIELDS),
     gmail: mergeSection(prev.gmail, config.gmail || {}, GMAIL_SECRET_FIELDS),
     webhookUrl: config.webhookUrl ?? prev.webhookUrl,
     notificationsEnabled: config.notificationsEnabled ?? prev.notificationsEnabled,
@@ -224,6 +268,8 @@ export async function saveWorkspaceConfig(workspaceId, config) {
       linkedin: next.linkedin,
       reddit: next.reddit,
       quora: next.quora,
+      pinterest: next.pinterest,
+      threads: next.threads,
       gmail: next.gmail,
       webhookUrl: next.webhookUrl,
       notificationsEnabled: next.notificationsEnabled,
@@ -275,6 +321,22 @@ export async function saveQuoraConfig(workspaceId, quoraPatch) {
   })
 }
 
+export async function savePinterestConfig(workspaceId, pinterestPatch) {
+  const prev = await getWorkspaceConfig(workspaceId)
+  return saveWorkspaceConfig(workspaceId, {
+    ...prev,
+    pinterest: { ...prev.pinterest, ...pinterestPatch },
+  })
+}
+
+export async function saveThreadsConfig(workspaceId, threadsPatch) {
+  const prev = await getWorkspaceConfig(workspaceId)
+  return saveWorkspaceConfig(workspaceId, {
+    ...prev,
+    threads: { ...prev.threads, ...threadsPatch },
+  })
+}
+
 export async function saveLinkedInTokens(workspaceId, tokens) {
   return saveLinkedInConfig(workspaceId, tokens)
 }
@@ -298,6 +360,8 @@ export function resolveConfig(stored, bodyConfig) {
     linkedin: mergeSection(stored.linkedin, bodyConfig.linkedin || {}, LINKEDIN_SECRET_FIELDS),
     reddit: mergeSection(stored.reddit, bodyConfig.reddit || {}, REDDIT_SECRET_FIELDS),
     quora: { ...stored.quora, ...(bodyConfig.quora || {}) },
+    pinterest: mergeSection(stored.pinterest, bodyConfig.pinterest || {}, PINTEREST_SECRET_FIELDS),
+    threads: mergeSection(stored.threads, bodyConfig.threads || {}, THREADS_SECRET_FIELDS),
     gmail: mergeSection(stored.gmail, bodyConfig.gmail || {}, GMAIL_SECRET_FIELDS),
     webhookUrl: bodyConfig.webhookUrl ?? stored.webhookUrl,
     notificationsEnabled: bodyConfig.notificationsEnabled ?? stored.notificationsEnabled,
@@ -344,6 +408,20 @@ export function toClientConfig(config) {
       profileUrl: config.quora?.profileUrl || '',
       defaultTopic: config.quora?.defaultTopic || '',
       connected: config.quora?.connected,
+    },
+    pinterest: {
+      accessToken: '',
+      boardId: config.pinterest?.boardId || '',
+      connected: config.pinterest?.connected,
+      publishReady: config.pinterest?.publishReady,
+      hasAccessToken: Boolean(config.pinterest?.accessToken?.trim()),
+    },
+    threads: {
+      accessToken: '',
+      userId: config.threads?.userId || '',
+      connected: config.threads?.connected,
+      publishReady: config.threads?.publishReady,
+      hasAccessToken: Boolean(config.threads?.accessToken?.trim()),
     },
     gmail: {
       clientId: config.gmail?.clientId || '',

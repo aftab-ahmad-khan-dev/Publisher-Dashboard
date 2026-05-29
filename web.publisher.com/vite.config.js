@@ -24,9 +24,9 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.js',
       manifest: {
-        name: 'Pulse Publisher',
-        short_name: 'Pulse',
-        description: 'Social media publishing dashboard',
+        name: 'Publisher Suite',
+        short_name: 'Publisher Suite',
+        description: 'Publish once, reach everywhere — LinkedIn, Meta, Reddit, Pinterest, Threads & email from one dashboard.',
         theme_color: '#0a0c12',
         background_color: '#0a0c12',
         display: 'standalone',

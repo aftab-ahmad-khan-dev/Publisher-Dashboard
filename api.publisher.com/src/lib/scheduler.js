@@ -15,9 +15,9 @@ export function startScheduler() {
   if (timer) return
   timer = setInterval(() => {
     runDuePosts().catch(() => {})
-  }, 15_000)
+  }, 30_000)
   runDuePosts().catch(() => {})
-  logger.info('Scheduler started', { interval: '15s' })
+  logger.info('Scheduler started', { interval: '30s' })
 }
 
 export async function runDuePosts() {

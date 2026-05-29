@@ -2,7 +2,8 @@ import InstagramPreview from './InstagramPreview'
 import FacebookPreview from './FacebookPreview'
 import LinkedInPreview from './LinkedInPreview'
 import RedditPreview from './RedditPreview'
-import QuoraPreview from './QuoraPreview'
+import PinterestPreview from './PinterestPreview'
+import ThreadsPreview from './ThreadsPreview'
 
 function getHashtagString(hashtags, platform) {
   return hashtags
@@ -63,7 +64,13 @@ export default function PreviewPanel({ state, compact = false }) {
 
       <RedditPreview enabled={state.platforms.reddit} body={state.body} />
 
-      <QuoraPreview enabled={state.platforms.quora} body={state.body} />
+      <PinterestPreview
+        enabled={state.platforms.pinterest}
+        body={state.body}
+        imagePreviewUrl={state.imagePreviewUrl}
+      />
+
+      <ThreadsPreview enabled={state.platforms.threads} body={state.body} />
     </div>
   )
 }

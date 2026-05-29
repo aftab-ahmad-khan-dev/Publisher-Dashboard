@@ -4,14 +4,15 @@ export const AUTH_PASSWORD = 'Morgan'
 
 export const COMMUNITY_PLATFORMS = ['reddit', 'quora']
 
-export const PLATFORM_ORDER = ['instagram', 'facebook', 'linkedin', 'reddit', 'quora']
+export const PLATFORM_ORDER = ['instagram', 'facebook', 'linkedin', 'reddit', 'pinterest', 'threads']
 
 export const DEFAULT_PLATFORMS = {
   instagram: true,
   facebook: true,
   linkedin: true,
   reddit: false,
-  quora: false,
+  pinterest: false,
+  threads: false,
 }
 
 export const DEFAULT_IMAGE_VISIBILITY = {
@@ -19,7 +20,8 @@ export const DEFAULT_IMAGE_VISIBILITY = {
   facebook: true,
   linkedin: true,
   reddit: false,
-  quora: false,
+  pinterest: true,
+  threads: true,
 }
 
 export const PLATFORM_META = {
@@ -56,7 +58,7 @@ export const PLATFORM_META = {
     solid: '#FF4500',
     suite: 'Community',
     community: true,
-    policyHint: 'Share experiences, guides, and honest takes — not ads or link spam.',
+    policyHint: 'Share experiences, guides, and honest takes, not ads or link spam.',
   },
   quora: {
     key: 'quora',
@@ -66,7 +68,25 @@ export const PLATFORM_META = {
     solid: '#B92B27',
     suite: 'Community',
     community: true,
-    policyHint: 'Write expertise-driven answers — Quora penalizes promotional posts.',
+    policyHint: 'Write expertise-driven answers, Quora penalizes promotional posts.',
+  },
+  pinterest: {
+    key: 'pinterest',
+    label: 'Pinterest',
+    short: 'PIN',
+    color: 'bg-[#E60023]',
+    solid: '#E60023',
+    suite: 'Visual',
+    needsImage: true,
+    policyHint: 'Pinterest Pins require an image — attach one before publishing.',
+  },
+  threads: {
+    key: 'threads',
+    label: 'Threads',
+    short: 'TH',
+    color: 'bg-black',
+    solid: '#000000',
+    suite: 'Social',
   },
 }
 
@@ -78,4 +98,5 @@ export const NAV_ITEMS = [
   { path: '/scheduled', label: 'Scheduled', icon: 'scheduled' },
   { path: '/calendar', label: 'Calendar', icon: 'calendar' },
   { path: '/api-config', label: 'API Config', icon: 'api' },
+  { path: '/guide', label: 'Setup Guide', icon: 'guide' },
 ]

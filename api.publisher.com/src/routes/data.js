@@ -9,6 +9,8 @@ import {
   saveMetaConfig,
   saveRedditConfig,
   saveQuoraConfig,
+  savePinterestConfig,
+  saveThreadsConfig,
   toClientConfig,
   stripPlaceholderSecrets,
 } from '../lib/configStore.js'
@@ -91,6 +93,26 @@ router.put('/config/quora', async (req, res, next) => {
     const quora = req.body?.quora || req.body
     const config = await saveQuoraConfig(req.workspaceId, quora)
     res.json({ ok: true, config: toClientConfig(config), message: 'Quora configuration saved to database' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.put('/config/pinterest', async (req, res, next) => {
+  try {
+    const pinterest = stripPlaceholderSecrets(req.body?.pinterest || req.body)
+    const config = await savePinterestConfig(req.workspaceId, pinterest)
+    res.json({ ok: true, config: toClientConfig(config), message: 'Pinterest configuration saved to database' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.put('/config/threads', async (req, res, next) => {
+  try {
+    const threads = stripPlaceholderSecrets(req.body?.threads || req.body)
+    const config = await saveThreadsConfig(req.workspaceId, threads)
+    res.json({ ok: true, config: toClientConfig(config), message: 'Threads configuration saved to database' })
   } catch (err) {
     next(err)
   }

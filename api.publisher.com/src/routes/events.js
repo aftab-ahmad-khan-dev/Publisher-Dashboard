@@ -9,7 +9,7 @@ router.get('/events', (req, res) => {
   res.setHeader('Connection', 'keep-alive')
   res.flushHeaders?.()
   res.write(': connected\n\n')
-  subscribeClient(res)
+  const client = subscribeClient(res, req.workspaceId)
 
   const heartbeat = setInterval(() => {
     res.write(': ping\n\n')
@@ -17,7 +17,7 @@ router.get('/events', (req, res) => {
 
   req.on('close', () => {
     clearInterval(heartbeat)
-    unsubscribeClient(res)
+    unsubscribeClient(client)
   })
 })
 

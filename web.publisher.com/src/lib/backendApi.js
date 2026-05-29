@@ -1,16 +1,21 @@
 import { isLivePublishing } from "./api";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, "") || "";
-const AUTH_KEY = "pulse_auth_session";
 
-export function getWorkspaceId() {
+/**
+ * The tenant is derived server-side from the verified Clerk session, so the
+ * client just forwards its token. We read it from the global Clerk instance so
+ * non-React modules (this one) can authenticate without prop-drilling.
+ */
+async function getClerkToken() {
   try {
-    const raw = sessionStorage.getItem(AUTH_KEY);
-    if (raw) return JSON.parse(raw).workspaceId || "joseph-morgan";
+    if (typeof window !== "undefined" && window.Clerk?.session) {
+      return await window.Clerk.session.getToken();
+    }
   } catch {
-    /* ignore */
+    /* not signed in / Clerk not ready */
   }
-  return "joseph-morgan";
+  return null;
 }
 
 export function hasBackend() {
@@ -19,11 +24,12 @@ export function hasBackend() {
 
 export async function apiFetch(path, { method = "GET", body } = {}) {
   if (!API_BASE) throw new Error("VITE_API_BASE_URL is not set");
+  const token = await getClerkToken();
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
-      "X-Workspace-Id": getWorkspaceId(),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
@@ -34,24 +40,38 @@ export async function apiFetch(path, { method = "GET", body } = {}) {
   return data;
 }
 
+/** EventSource can't set headers, so the Clerk token rides along as a query param. */
 export function subscribeRealtime(onEvent) {
   if (!API_BASE) return () => {};
-  const url = `${API_BASE}/events?workspaceId=${encodeURIComponent(getWorkspaceId())}`;
-  const source = new EventSource(url);
+  let source = null;
+  let closed = false;
 
-  source.onmessage = (e) => {
-    try {
-      onEvent(JSON.parse(e.data));
-    } catch {
-      /* ignore */
-    }
+  getClerkToken().then((token) => {
+    if (closed) return;
+    const q = token ? `?__token=${encodeURIComponent(token)}` : "";
+    source = new EventSource(`${API_BASE}/events${q}`);
+    source.onmessage = (e) => {
+      try {
+        onEvent(JSON.parse(e.data));
+      } catch {
+        /* ignore */
+      }
+    };
+    source.onerror = () => source?.close();
+  });
+
+  return () => {
+    closed = true;
+    source?.close();
   };
+}
 
-  source.onerror = () => {
-    source.close();
-  };
-
-  return () => source.close();
+/** Build an OAuth-initiation URL with the Clerk token attached (browser navigation can't send headers). */
+async function oauthUrl(path) {
+  if (!API_BASE) return null;
+  const token = await getClerkToken();
+  const q = token ? `?__token=${encodeURIComponent(token)}` : "";
+  return `${API_BASE}${path}${q}`;
 }
 
 export async function loadBootstrap() {
@@ -78,14 +98,20 @@ export async function saveQuoraRemote(quora) {
   return apiFetch("/config/quora", { method: "PUT", body: { quora } });
 }
 
+export async function savePinterestRemote(pinterest) {
+  return apiFetch("/config/pinterest", { method: "PUT", body: { pinterest } });
+}
+
+export async function saveThreadsRemote(threads) {
+  return apiFetch("/config/threads", { method: "PUT", body: { threads } });
+}
+
 export function linkedInOAuthUrl() {
-  if (!API_BASE) return null;
-  return `${API_BASE}/auth/linkedin?workspaceId=${encodeURIComponent(getWorkspaceId())}`;
+  return oauthUrl("/auth/linkedin");
 }
 
 export function gmailOAuthUrl() {
-  if (!API_BASE) return null;
-  return `${API_BASE}/auth/gmail?workspaceId=${encodeURIComponent(getWorkspaceId())}`;
+  return oauthUrl("/auth/gmail");
 }
 
 export async function fetchGmailOAuthSetup() {
@@ -97,12 +123,19 @@ export async function fetchRedditSetup() {
 }
 
 export function redditOAuthUrl() {
-  if (!API_BASE) return null;
-  return `${API_BASE}/auth/reddit?workspaceId=${encodeURIComponent(getWorkspaceId())}`;
+  return oauthUrl("/auth/reddit");
 }
 
 export async function saveGmailRemote(gmail) {
   return apiFetch("/config/gmail", { method: "PUT", body: { gmail } });
+}
+
+export async function getEmailTemplateDraft() {
+  return apiFetch("/email/template-draft");
+}
+
+export async function saveEmailTemplateDraft(subject, body) {
+  return apiFetch("/email/template-draft", { method: "PUT", body: { subject, body } });
 }
 
 export async function listEmailCampaigns() {

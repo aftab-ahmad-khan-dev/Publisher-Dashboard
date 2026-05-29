@@ -105,7 +105,7 @@ export default function ComposePage() {
           </div>
         </PageScroll>
 
-        <PageScroll className="lg:w-[42%]">
+        <PageScroll className="hidden lg:block lg:w-[42%]">
           <PreviewPanel state={post.state} compact />
         </PageScroll>
       </PageBody>

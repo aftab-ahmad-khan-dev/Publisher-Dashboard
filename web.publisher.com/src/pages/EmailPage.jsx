@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppData } from '../contexts/AppDataContext'
 import { isLivePublishing } from '../lib/api'
@@ -9,8 +9,11 @@ import {
   getEmailCampaign,
   sendEmailCampaign,
   gmailOAuthUrl,
+  getEmailTemplateDraft,
+  saveEmailTemplateDraft,
 } from '../lib/backendApi'
 import { parseRecipients, mergeTemplate, MERGE_TAG_HELP, analyzePainFocusedEmail } from '../lib/emailParse'
+import { EMAIL_TEMPLATES } from '../lib/emailTemplates'
 import { sanitizePublishedText } from '../lib/contentSanitize'
 import PainPointEmailGuide from '../components/PainPointEmailGuide'
 import RecipientCsvUpload from '../components/RecipientCsvUpload'
@@ -23,19 +26,8 @@ sarah@acmecorp.com,Sarah Chen,Acme Corp,SaaS
 mike@brightlocal.io,Mike Torres,Bright Local,dental marketing
 jordan@shopnest.co,Jordan Lee,ShopNest,e-commerce`
 
-const SAMPLE_SUBJECT = `A {{niche}} ops pattern teams at {{company}} run into`
-
-const SAMPLE_BODY = `{{greeting}},
-
-{{painOpener}} often hit the same bottleneck: {growth stalls because manual follow-up eats the week|manual follow-up quietly caps growth|the week disappears into follow-up instead of closing}.
-
-I have been mapping {what separates teams that fix that quietly vs. teams that stay stuck|which teams break through vs. plateau|the pattern behind teams that recover vs. stay in the grind}. No pitch, just the pattern.
-
-If it resonates at {{companyLabel}}, happy to share the one-pager.
-
-{Worth a quick reply?|Open to a quick reply?|Would a short reply be useful?}
-
-Alex`
+const SAMPLE_SUBJECT = EMAIL_TEMPLATES[0].subject
+const SAMPLE_BODY = EMAIL_TEMPLATES[0].body
 
 function StatusBadge({ status }) {
   const styles = {
@@ -55,6 +47,9 @@ export default function EmailPage() {
   const { apiConfig, showToast } = useAppData()
   const live = isLivePublishing()
   const gmailReady = isGmailConfigured(apiConfig?.gmail)
+  // Open tracking needs a publicly reachable API; localhost can't be hit by mail clients.
+  const trackingUnreachable =
+    live && /localhost|127\.0\.0\.1/.test(import.meta.env.VITE_API_BASE_URL || '')
 
   const [subject, setSubject] = useState(SAMPLE_SUBJECT)
   const [body, setBody] = useState(SAMPLE_BODY)
@@ -62,6 +57,8 @@ export default function EmailPage() {
   const [previewIndex, setPreviewIndex] = useState(0)
   const [recipientFileName, setRecipientFileName] = useState('')
   const [trackOpens, setTrackOpens] = useState(true)
+  const [templateIndex, setTemplateIndex] = useState(0)
+  const [rotateTemplates, setRotateTemplates] = useState(false)
   const [sending, setSending] = useState(false)
   const [campaigns, setCampaigns] = useState([])
   const [selectedId, setSelectedId] = useState(null)
@@ -85,9 +82,18 @@ export default function EmailPage() {
   const loadPainSample = () => {
     setRecipientsRaw(SAMPLE_RECIPIENTS)
     setRecipientFileName('sample-recipients.csv')
-    setSubject(SAMPLE_SUBJECT)
-    setBody(SAMPLE_BODY)
+    setTemplateIndex(0)
+    setSubject(EMAIL_TEMPLATES[0].subject)
+    setBody(EMAIL_TEMPLATES[0].body)
     setPreviewIndex(0)
+  }
+
+  // Load a different template into the composer (cycles through the library).
+  const shuffleTemplate = () => {
+    const next = (templateIndex + 1) % EMAIL_TEMPLATES.length
+    setTemplateIndex(next)
+    setSubject(EMAIL_TEMPLATES[next].subject)
+    setBody(EMAIL_TEMPLATES[next].body)
   }
 
   const handleRecipientImport = (text, name) => {
@@ -132,6 +138,47 @@ export default function EmailPage() {
     return () => clearInterval(t)
   }, [loadCampaigns])
 
+  // Show the most recent campaign's email by default (no click needed).
+  useEffect(() => {
+    if (!selectedId && campaigns.length > 0) {
+      loadDetail(campaigns[0].id)
+    }
+  }, [campaigns, selectedId, loadDetail])
+
+  // Load this user's autosaved composer draft on mount.
+  const draftLoaded = useRef(false)
+  useEffect(() => {
+    if (!live) {
+      draftLoaded.current = true
+      return undefined
+    }
+    let cancelled = false
+    getEmailTemplateDraft()
+      .then((res) => {
+        if (cancelled) return
+        if (res?.draft && (res.draft.subject || res.draft.body)) {
+          setSubject(res.draft.subject || '')
+          setBody(res.draft.body || '')
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        draftLoaded.current = true
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [live])
+
+  // Autosave composer edits to the user's workspace (debounced).
+  useEffect(() => {
+    if (!live || !draftLoaded.current) return undefined
+    const t = setTimeout(() => {
+      saveEmailTemplateDraft(subject, body).catch(() => {})
+    }, 800)
+    return () => clearTimeout(t)
+  }, [subject, body, live])
+
   const handleSend = async () => {
     if (!gmailReady) {
       showToast('Connect Gmail in API Config first.', 'error')
@@ -157,20 +204,36 @@ export default function EmailPage() {
 
     setSending(true)
     try {
-      const htmlBody = body.includes('<') ? body : body.replace(/\n/g, '<br>\n')
+      const wrapHtml = (raw) =>
+        `<div style="font-family:sans-serif;line-height:1.5">${sanitizePublishedText(
+          raw.includes('<') ? raw : raw.replace(/\n/g, '<br>\n'),
+        )}</div>`
       const cleanSubject = sanitizePublishedText(subject)
       const cleanBody = sanitizePublishedText(body)
+      // When rotation is on, send the whole library so each recipient gets a random template.
+      const templates = rotateTemplates
+        ? EMAIL_TEMPLATES.map((t) => ({
+            subject: sanitizePublishedText(t.subject),
+            textBody: sanitizePublishedText(t.body),
+            htmlBody: wrapHtml(t.body),
+          }))
+        : []
       const res = await createEmailCampaign({
         subject: cleanSubject,
-        htmlBody: `<div style="font-family:sans-serif;line-height:1.5">${sanitizePublishedText(htmlBody)}</div>`,
+        htmlBody: wrapHtml(body),
         textBody: cleanBody,
+        templates,
         recipients,
         trackOpens,
         sendNow: true,
         batchSize: 25,
         batchDelayMs: 3000,
       })
-      showToast(`Sending to ${res.recipientCount} recipients via Gmail…`)
+      showToast(
+        rotateTemplates
+          ? `Sending to ${res.recipientCount} recipients — rotating ${EMAIL_TEMPLATES.length} templates`
+          : `Sending to ${res.recipientCount} recipients via Gmail…`,
+      )
       await loadCampaigns()
       if (res.campaign?.id) loadDetail(res.campaign.id)
     } catch (err) {
@@ -179,8 +242,8 @@ export default function EmailPage() {
     setSending(false)
   }
 
-  const connectGmail = () => {
-    const url = gmailOAuthUrl()
+  const connectGmail = async () => {
+    const url = await gmailOAuthUrl()
     if (url) window.location.href = url
     else showToast('API URL not configured', 'error')
   }
@@ -216,11 +279,40 @@ export default function EmailPage() {
 
           <section className="surface-panel rounded-xl p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-white">Compose (one template)</h2>
-              <button type="button" onClick={loadPainSample} className="text-[11px] text-violet-400">
-                Load pain-first sample
-              </button>
+              <h2 className="text-sm font-semibold text-white">
+                Compose
+                <span className="ml-1.5 text-[10px] font-normal text-slate-500">
+                  template {templateIndex + 1}/{EMAIL_TEMPLATES.length}
+                </span>
+              </h2>
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={loadPainSample} className="text-[11px] text-violet-400 hover:text-violet-300">
+                  Load pain-first sample
+                </button>
+                <button
+                  type="button"
+                  onClick={shuffleTemplate}
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-slate-200 hover:bg-white/[0.08]"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
+                  </svg>
+                  Shuffle template
+                </button>
+              </div>
             </div>
+            <label className="mt-2 flex items-start gap-2 rounded-lg border border-violet-500/20 bg-violet-500/[0.06] px-3 py-2 text-[11px] text-slate-300">
+              <input
+                type="checkbox"
+                checked={rotateTemplates}
+                onChange={(e) => setRotateTemplates(e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 rounded"
+              />
+              <span>
+                <span className="font-medium text-violet-200">Rotate all {EMAIL_TEMPLATES.length} templates on send</span> — each
+                recipient gets a randomly chosen template (great for bulk deliverability).
+              </span>
+            </label>
             <details className="mt-2 text-[11px] text-slate-500">
               <summary className="cursor-pointer text-violet-400/90">Merge tags for recipients</summary>
               <ul className="mt-2 grid gap-1 sm:grid-cols-2">
@@ -252,7 +344,7 @@ export default function EmailPage() {
                 onChange={(e) => setTrackOpens(e.target.checked)}
                 className="h-4 w-4 rounded"
               />
-              Track opens in Pulse dashboard (tracking pixel)
+              Track opens in Publisher Suite dashboard (tracking pixel)
             </label>
             {apiConfig?.gmail?.fromEmail && (
               <p className="mt-2 text-[11px] text-slate-500">
@@ -386,6 +478,15 @@ export default function EmailPage() {
             <p className="mt-1 text-[11px] text-slate-500">
               Sent / opened / failed counts. For Mailsuite tracking, check Gmail Sent folder with extension enabled.
             </p>
+            {trackingUnreachable && (
+              <div className="mt-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-[11px] leading-relaxed text-amber-200/80">
+                <span className="font-medium text-amber-200">Opens can’t be tracked on localhost.</span> Mail clients
+                can’t reach a local API, so the open pixel never loads and counts stay 0. Set{' '}
+                <code className="rounded bg-black/30 px-1 text-amber-200/90">API_PUBLIC_URL</code> on the server to a
+                public URL (deploy, or an ngrok/cloudflared tunnel) to count opens. See the{' '}
+                <Link to="/guide" className="font-medium text-violet-300 hover:text-violet-200">Setup Guide</Link>.
+              </div>
+            )}
 
             {campaigns.length === 0 ? (
               <p className="mt-8 text-center text-xs text-slate-500">No campaigns yet</p>
@@ -424,6 +525,25 @@ export default function EmailPage() {
               </ul>
             )}
           </section>
+
+          {detail?.campaign && (
+            <section className="surface-panel rounded-xl p-4">
+              <h2 className="text-sm font-semibold text-white">Original email</h2>
+              <p className="mt-3 text-[10px] font-medium uppercase tracking-wider text-slate-600">Subject</p>
+              <p className="mt-0.5 text-sm font-medium text-white">{detail.campaign.subject}</p>
+              <p className="mt-3 text-[10px] font-medium uppercase tracking-wider text-slate-600">Body</p>
+              <div className="mt-1 max-h-[280px] overflow-y-auto rounded-lg border border-white/[0.06] bg-black/20 p-3">
+                <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-300">
+                  {detail.campaign.textBody?.trim() ||
+                    detail.campaign.htmlBody?.replace(/<[^>]+>/g, '').trim() ||
+                    'No body content'}
+                </p>
+              </div>
+              <p className="mt-2 text-[10px] text-slate-600">
+                Template with merge tags — each recipient receives a personalized version.
+              </p>
+            </section>
+          )}
 
           {detail?.recipients && (
             <section className="surface-panel rounded-xl p-4">

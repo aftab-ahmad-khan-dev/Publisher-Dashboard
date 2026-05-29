@@ -19,6 +19,8 @@ import {
   metaPayloadForSave,
   redditPayloadForSave,
   quoraPayloadForSave,
+  pinterestPayloadForSave,
+  threadsPayloadForSave,
   gmailPayloadForSave,
 } from "../lib/configUtils";
 import { STORAGE_KEYS, readJsonStorage, writeJsonStorage } from "../lib/storage";
@@ -33,6 +35,8 @@ export default function ApiConfigPage() {
     saveMetaConfig,
     saveRedditConfig,
     saveQuoraConfig,
+    savePinterestConfig,
+    saveThreadsConfig,
     saveGmailConfig,
     testPlatformConnection,
     requestNotificationPermission,
@@ -61,8 +65,9 @@ export default function ApiConfigPage() {
 
   useEffect(() => {
     const summaryNow = getConnectionSummary(apiConfig);
-    const savedGmail = readJsonStorage(STORAGE_KEYS.gmailTestStatus, null);
-    const savedReddit = readJsonStorage(STORAGE_KEYS.redditTestStatus, null);
+    const saved = readJsonStorage(STORAGE_KEYS.platformTestStatus, {}) || {};
+    const savedGmail = saved.gmail ?? readJsonStorage(STORAGE_KEYS.gmailTestStatus, null);
+    const savedReddit = saved.reddit ?? readJsonStorage(STORAGE_KEYS.redditTestStatus, null);
     const redditHasTokens =
       apiConfig?.reddit?.hasClientSecret &&
       apiConfig?.reddit?.hasRefreshToken &&
@@ -70,6 +75,9 @@ export default function ApiConfigPage() {
       Boolean(apiConfig?.reddit?.subreddit?.trim());
     setLastTest((prev) => ({
       ...prev,
+      // Restore previously recorded status for meta / linkedin / quora so the
+      // working / dead / needs-attention badge persists without re-testing.
+      ...saved,
       gmail: summaryNow.gmailReady
         ? savedGmail === "error"
           ? "error"
@@ -225,6 +233,8 @@ export default function ApiConfigPage() {
       result.ok === false ? "error" : result.needsToken ? "needsToken" : "ok";
     setLastTest((t) => {
       const next = { ...t, [platform]: status };
+      // Persist every platform's status so it auto-restores next visit (no re-test).
+      writeJsonStorage(STORAGE_KEYS.platformTestStatus, next);
       if (platform === "gmail")
         writeJsonStorage(STORAGE_KEYS.gmailTestStatus, status);
       if (platform === "reddit")
@@ -279,15 +289,6 @@ export default function ApiConfigPage() {
     persistReddit,
   ]);
 
-  useEffect(() => {
-    if (!live) return undefined;
-    if (quoraTimer.current) clearTimeout(quoraTimer.current);
-    quoraTimer.current = setTimeout(() => {
-      persistQuora(form.quora);
-    }, 700);
-    return () => clearTimeout(quoraTimer.current);
-  }, [live, form.quora.profileUrl, form.quora.defaultTopic, persistQuora]);
-
   const metaStatus = getPlatformStatus("meta", form, summary, lastTest.meta);
   const linkedInStatus = getPlatformStatus(
     "linkedin",
@@ -296,11 +297,12 @@ export default function ApiConfigPage() {
     lastTest.linkedin,
   );
   const redditStatus = getPlatformStatus("reddit", form, summary, lastTest.reddit);
-  const quoraStatus = getPlatformStatus("quora", form, summary, lastTest.quora);
+  const pinterestStatus = getPlatformStatus("pinterest", form, summary, lastTest.pinterest);
+  const threadsStatus = getPlatformStatus("threads", form, summary, lastTest.threads);
   const gmailStatus = getPlatformStatus("gmail", form, summary, lastTest.gmail);
 
-  const connectLinkedIn = () => {
-    const url = linkedInOAuthUrl();
+  const connectLinkedIn = async () => {
+    const url = await linkedInOAuthUrl();
     if (url) window.location.href = url;
   };
 
@@ -338,7 +340,7 @@ export default function ApiConfigPage() {
       }
     }
 
-    const url = gmailOAuthUrl();
+    const url = await gmailOAuthUrl();
     if (url) window.location.href = url;
     else
       showToast(
@@ -378,7 +380,7 @@ export default function ApiConfigPage() {
       }
     }
 
-    const url = redditOAuthUrl();
+    const url = await redditOAuthUrl();
     if (url) window.location.href = url;
     else showToast("Set VITE_API_BASE_URL so Connect Reddit can reach the API.", "error");
   };
@@ -394,7 +396,7 @@ export default function ApiConfigPage() {
     <PageShell>
       <PageHeader
         title='API Configuration'
-        subtitle='Meta · LinkedIn · Reddit · Quora (community = informational)'
+        subtitle='Meta · LinkedIn · Reddit · Gmail'
         action={
           <div className='flex items-center gap-2'>
             <button
@@ -438,12 +440,14 @@ export default function ApiConfigPage() {
                       value={form.meta.appId}
                       onChange={(v) => update("meta", "appId", v)}
                       placeholder='Meta App ID'
+                      help='https://developers.facebook.com/apps'
                     />
                     <SecretField
                       label='App Secret'
                       value={form.meta.appSecret}
                       hasStored={form.meta.hasAppSecret}
                       onChange={(v) => update("meta", "appSecret", v)}
+                      help='https://developers.facebook.com/apps'
                     />
                     <SecretField
                       label='Page Token'
@@ -451,6 +455,7 @@ export default function ApiConfigPage() {
                       hasStored={form.meta.hasPageToken}
                       onChange={(v) => update("meta", "pageToken", v)}
                       className='sm:col-span-2'
+                      help='https://developers.facebook.com/tools/explorer'
                     />
                   </div>
                   <div className='flex-1' aria-hidden />
@@ -510,17 +515,20 @@ export default function ApiConfigPage() {
                       value={form.linkedin.clientId}
                       onChange={(v) => update("linkedin", "clientId", v)}
                       placeholder='Client ID'
+                      help='https://www.linkedin.com/developers/apps'
                     />
                     <SecretField
                       label='Client Secret'
                       value={form.linkedin.clientSecret}
                       hasStored={form.linkedin.hasClientSecret}
                       onChange={(v) => update("linkedin", "clientSecret", v)}
+                      help='https://www.linkedin.com/developers/apps'
                     />
                     <Field
                       label='Org URN (company page only, optional)'
                       value={form.linkedin.orgUrn}
                       onChange={(v) => update("linkedin", "orgUrn", v)}
+                      help='https://www.linkedin.com/company/'
                       placeholder='urn:li:organization:12345678'
                       className='sm:col-span-2'
                     />
@@ -619,18 +627,21 @@ export default function ApiConfigPage() {
                       value={form.reddit.clientId}
                       onChange={(v) => update("reddit", "clientId", v)}
                       placeholder='Reddit app id'
+                      help='https://www.reddit.com/prefs/apps'
                     />
                     <SecretField
                       label='Client Secret'
                       value={form.reddit.clientSecret}
                       hasStored={form.reddit.hasClientSecret}
                       onChange={(v) => update("reddit", "clientSecret", v)}
+                      help='https://www.reddit.com/prefs/apps'
                     />
                     <SecretField
                       label='Refresh Token'
                       value={form.reddit.refreshToken}
                       hasStored={form.reddit.hasRefreshToken}
                       onChange={(v) => update("reddit", "refreshToken", v)}
+                      help='https://www.reddit.com/prefs/apps'
                       className='sm:col-span-2'
                     />
                     <Field
@@ -714,7 +725,7 @@ export default function ApiConfigPage() {
                           Gmail (Mailsuite compatible)
                         </h3>
                         <p className='text-[10px] text-slate-500'>
-                          Bulk send from your inbox · opens in Pulse + Mailsuite
+                          Bulk send from your inbox · opens in Publisher Suite + Mailsuite
                           extension in Gmail
                         </p>
                       </div>
@@ -730,12 +741,14 @@ export default function ApiConfigPage() {
                       value={form.gmail?.clientId || ""}
                       onChange={(v) => update("gmail", "clientId", v)}
                       placeholder='OAuth client ID'
+                      help='https://console.cloud.google.com/apis/credentials'
                     />
                     <SecretField
                       label='Client Secret'
                       value={form.gmail?.clientSecret || ""}
                       hasStored={form.gmail?.hasClientSecret}
                       onChange={(v) => update("gmail", "clientSecret", v)}
+                      help='https://console.cloud.google.com/apis/credentials'
                     />
                   </div>
                   {form.gmail?.fromEmail && (
@@ -780,62 +793,138 @@ export default function ApiConfigPage() {
             </div>
 
             <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
-              <div className='flex min-h-full flex-col gap-3 lg:col-span-2'>
-                <section className='surface-panel flex flex-col rounded-xl p-4'>
+              {/* Pinterest */}
+              <div className='flex min-h-full flex-col gap-3'>
+                <section className='surface-panel flex min-h-[240px] flex-1 flex-col rounded-xl p-4'>
                   <div className='flex items-center justify-between gap-3'>
                     <div className='flex items-center gap-3'>
-                      <PlatformIcon platform='quora' size='lg' />
+                      <PlatformIcon platform='pinterest' size='lg' />
                       <div>
-                        <h3 className='text-sm font-semibold text-white'>Quora</h3>
+                        <h3 className='text-sm font-semibold text-white'>Pinterest</h3>
                         <p className='text-[10px] text-slate-500'>
-                          Guided paste · expertise answers only
+                          Image Pins · access token + board
                         </p>
                       </div>
                     </div>
-                    <StatusDot connected={summary.quoraReady} />
+                    <StatusDot
+                      connected={summary.pinterestReady}
+                      label={summary.pinterestReady ? "Ready" : "Setup"}
+                    />
                   </div>
                   <div className='mt-3 grid gap-2 sm:grid-cols-2'>
-                    <Field
-                      label='Profile URL'
-                      value={form.quora.profileUrl}
-                      onChange={(v) => update("quora", "profileUrl", v)}
-                      placeholder='https://www.quora.com/profile/…'
-                      className='w-full'
+                    <SecretField
+                      label='Access Token'
+                      value={form.pinterest?.accessToken || ""}
+                      hasStored={form.pinterest?.hasAccessToken}
+                      onChange={(v) => update("pinterest", "accessToken", v)}
+                      className='sm:col-span-2'
+                      help='https://developers.pinterest.com/apps/'
                     />
                     <Field
-                      label='Default topic (optional)'
-                      value={form.quora.defaultTopic}
-                      onChange={(v) => update("quora", "defaultTopic", v)}
-                      placeholder='e.g. Startup advice'
-                      className='w-full'
+                      label='Board ID'
+                      value={form.pinterest?.boardId || ""}
+                      onChange={(v) => update("pinterest", "boardId", v)}
+                      help='https://www.pinterest.com/'
+                      placeholder='Board to pin to'
+                      className='sm:col-span-2'
                     />
                   </div>
-                  <p className='mt-3 text-[11px] leading-relaxed text-amber-400/80'>
-                    Quora has no public posting API. Pulse formats your answer and
-                    copies it for you — write like you are helping someone, not
-                    selling.
+                  <p className='mt-2 text-[11px] leading-relaxed text-slate-500'>
+                    Generate a token at{" "}
+                    <a href='https://developers.pinterest.com/apps/' target='_blank' rel='noreferrer' className='text-violet-300 underline'>
+                      developers.pinterest.com
+                    </a>
+                    . Pins require an attached image.
                   </p>
-                  <div className='mt-3 flex flex-wrap gap-2'>
+                  <div className='flex-1' aria-hidden />
+                  <div className='mt-auto flex flex-wrap gap-2 pt-3'>
                     <button
                       type='button'
-                      onClick={() => testConnection("quora")}
-                      disabled={testing === "quora"}
+                      onClick={() => testConnection("pinterest")}
+                      disabled={testing === "pinterest"}
                       className='btn-secondary px-3 py-1.5 text-xs'
                     >
-                      {testing === "quora" ? "Testing…" : "Test & save Quora"}
+                      {testing === "pinterest" ? "Testing…" : "Test & save Pinterest"}
                     </button>
                     {live && (
                       <button
                         type='button'
-                        onClick={() => persistQuora(quoraPayloadForSave(form.quora))}
+                        onClick={() => savePinterestConfig(pinterestPayloadForSave(form.pinterest))}
                         className='btn-secondary px-3 py-1.5 text-xs'
                       >
-                        Save Quora now
+                        Save Pinterest now
                       </button>
                     )}
                   </div>
                 </section>
-                <PlatformStatusCard status={quoraStatus} platform='quora' />
+                <PlatformStatusCard status={pinterestStatus} platform='pinterest' />
+              </div>
+
+              {/* Threads */}
+              <div className='flex min-h-full flex-col gap-3'>
+                <section className='surface-panel flex min-h-[240px] flex-1 flex-col rounded-xl p-4'>
+                  <div className='flex items-center justify-between gap-3'>
+                    <div className='flex items-center gap-3'>
+                      <PlatformIcon platform='threads' size='lg' />
+                      <div>
+                        <h3 className='text-sm font-semibold text-white'>Threads</h3>
+                        <p className='text-[10px] text-slate-500'>
+                          Text posts · access token + user ID
+                        </p>
+                      </div>
+                    </div>
+                    <StatusDot
+                      connected={summary.threadsReady}
+                      label={summary.threadsReady ? "Ready" : "Setup"}
+                    />
+                  </div>
+                  <div className='mt-3 grid gap-2 sm:grid-cols-2'>
+                    <SecretField
+                      label='Access Token'
+                      value={form.threads?.accessToken || ""}
+                      hasStored={form.threads?.hasAccessToken}
+                      onChange={(v) => update("threads", "accessToken", v)}
+                      className='sm:col-span-2'
+                      help='https://developers.facebook.com/docs/threads'
+                    />
+                    <Field
+                      label='Threads User ID'
+                      value={form.threads?.userId || ""}
+                      onChange={(v) => update("threads", "userId", v)}
+                      help='https://developers.facebook.com/docs/threads'
+                      placeholder='Your Threads user ID'
+                      className='sm:col-span-2'
+                    />
+                  </div>
+                  <p className='mt-2 text-[11px] leading-relaxed text-slate-500'>
+                    Create a token via{" "}
+                    <a href='https://developers.facebook.com/docs/threads' target='_blank' rel='noreferrer' className='text-violet-300 underline'>
+                      Meta’s Threads API
+                    </a>
+                    . Test to auto-fill your user ID.
+                  </p>
+                  <div className='flex-1' aria-hidden />
+                  <div className='mt-auto flex flex-wrap gap-2 pt-3'>
+                    <button
+                      type='button'
+                      onClick={() => testConnection("threads")}
+                      disabled={testing === "threads"}
+                      className='btn-secondary px-3 py-1.5 text-xs'
+                    >
+                      {testing === "threads" ? "Testing…" : "Test & save Threads"}
+                    </button>
+                    {live && (
+                      <button
+                        type='button'
+                        onClick={() => saveThreadsConfig(threadsPayloadForSave(form.threads))}
+                        className='btn-secondary px-3 py-1.5 text-xs'
+                      >
+                        Save Threads now
+                      </button>
+                    )}
+                  </div>
+                </section>
+                <PlatformStatusCard status={threadsStatus} platform='threads' />
               </div>
             </div>
 
@@ -886,12 +975,26 @@ function Field({
   type = "text",
   placeholder,
   className = "",
+  help,
 }) {
   return (
     <div className={className}>
-      <label className='mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500'>
-        {label}
-      </label>
+      <div className='mb-1 flex items-center justify-between gap-2'>
+        <label className='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>
+          {label}
+        </label>
+        {help && (
+          <a
+            href={help}
+            target='_blank'
+            rel='noreferrer'
+            className='shrink-0 text-[9px] font-semibold text-violet-400 hover:text-violet-300'
+            title={`Where to get ${label}`}
+          >
+            Where to get it ↗
+          </a>
+        )}
+      </div>
       <input
         type={type}
         value={value}
@@ -904,7 +1007,7 @@ function Field({
   );
 }
 
-function SecretField({ label, value, onChange, hasStored, className = "" }) {
+function SecretField({ label, value, onChange, hasStored, className = "", help }) {
   const placeholder = hasStored
     ? "Saved in database — leave blank to keep"
     : "Enter value";
@@ -916,6 +1019,7 @@ function SecretField({ label, value, onChange, hasStored, className = "" }) {
       type='password'
       placeholder={placeholder}
       className={className}
+      help={help}
     />
   );
 }
@@ -1033,6 +1137,56 @@ function getPlatformStatus(platform, form, summary, lastTest) {
         lastTest === "ok"
           ? "Quora profile saved. Publish copies expertise-style answers for you to paste — avoid promotional language."
           : "Profile saved. Run “Test & save Quora” to confirm.",
+    });
+  }
+
+  if (platform === "pinterest") {
+    if (lastTest === "error") {
+      return withAlive({
+        tier: "error",
+        title: "Pinterest connection failed",
+        message: "Check your access token and Board ID, then test again.",
+      });
+    }
+    if (!summary.pinterestReady) {
+      return withAlive({
+        tier: "idle",
+        title: "Not connected",
+        message: "Add a Pinterest access token and Board ID, then Test & save.",
+      });
+    }
+    return withAlive({
+      tier: lastTest === "ok" ? "functional" : "connected",
+      title: lastTest === "ok" ? "Connected & functional" : "Connected",
+      message:
+        lastTest === "ok"
+          ? "Pinterest API verified. Pins publish to your board (image required)."
+          : "Credentials saved. Run “Test & save Pinterest” to verify.",
+    });
+  }
+
+  if (platform === "threads") {
+    if (lastTest === "error") {
+      return withAlive({
+        tier: "error",
+        title: "Threads connection failed",
+        message: "Check your access token and Threads user ID, then test again.",
+      });
+    }
+    if (!summary.threadsReady) {
+      return withAlive({
+        tier: "idle",
+        title: "Not connected",
+        message: "Add a Threads access token and user ID, then Test & save.",
+      });
+    }
+    return withAlive({
+      tier: lastTest === "ok" ? "functional" : "connected",
+      title: lastTest === "ok" ? "Connected & functional" : "Connected",
+      message:
+        lastTest === "ok"
+          ? "Threads API verified. Text posts publish to your account."
+          : "Credentials saved. Run “Test & save Threads” to verify.",
     });
   }
 

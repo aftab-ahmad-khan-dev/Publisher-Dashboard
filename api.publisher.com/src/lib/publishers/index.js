@@ -3,6 +3,8 @@ import { publishToFacebook, publishToInstagram } from './meta.js'
 import { publishToLinkedIn } from './linkedin.js'
 import { publishToReddit } from './reddit.js'
 import { publishToQuora } from './quora.js'
+import { publishToPinterest } from './pinterest.js'
+import { publishToThreads } from './threads.js'
 
 export async function publishToAllPlatforms({ platforms, postState, config }) {
   const results = []
@@ -36,6 +38,10 @@ export async function publishToAllPlatforms({ platforms, postState, config }) {
         results.push(await publishToReddit({ text, postState, reddit: config.reddit }))
       } else if (platform === 'quora') {
         results.push(await publishToQuora({ text, quora: config.quora, postState }))
+      } else if (platform === 'pinterest') {
+        results.push(await publishToPinterest({ text, postState, pinterest: config.pinterest }))
+      } else if (platform === 'threads') {
+        results.push(await publishToThreads({ text, postState, threads: config.threads }))
       }
     } catch (err) {
       errors.push({ platform, error: err.message })

@@ -51,7 +51,7 @@ export async function collectHealthStatus() {
   return {
     ok: healthy,
     service: 'api.publisher.com',
-    title: 'Pulse Publisher API',
+    title: 'Publisher Suite API',
     tagline: healthy
       ? 'Backend infrastructure is healthy and performing optimally. All services are running smoothly.'
       : 'Backend is running but MongoDB is unreachable. Check DATABASE in .env, Atlas IP allowlist, and network/DNS (queryTxt ETIMEOUT often means DNS or firewall).',

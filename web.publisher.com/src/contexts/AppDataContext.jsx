@@ -14,6 +14,8 @@ import {
   testLinkedInConnection,
   testRedditConnection,
   testQuoraConnection,
+  testPinterestConnection,
+  testThreadsConnection,
   testGmailConnection,
   publishToPlatforms,
   scheduleToPlatforms,
@@ -28,6 +30,8 @@ import {
   saveMetaRemote,
   saveRedditRemote,
   saveQuoraRemote,
+  savePinterestRemote,
+  saveThreadsRemote,
   saveGmailRemote,
   saveDraftRemote,
   deleteDraftRemote,
@@ -42,6 +46,8 @@ import {
   metaPayloadForSave,
   redditPayloadForSave,
   quoraPayloadForSave,
+  pinterestPayloadForSave,
+  threadsPayloadForSave,
   gmailPayloadForSave,
   readLocalStoredConfig,
   needsMetaMigration,
@@ -74,6 +80,8 @@ const DEFAULT_API_CONFIG = {
     connected: false,
   },
   quora: { profileUrl: '', defaultTopic: '', connected: false },
+  pinterest: { accessToken: '', boardId: '', connected: false },
+  threads: { accessToken: '', userId: '', connected: false },
   gmail: {
     clientId: '',
     clientSecret: '',
@@ -303,6 +311,42 @@ export function AppDataProvider({ children }) {
     [live, applyConfigResponse, showToast],
   )
 
+  const savePinterestConfig = useCallback(
+    async (pinterest) => {
+      if (!live) {
+        setApiConfig((c) => withDerivedConnectionFlags({ ...c, pinterest: { ...c.pinterest, ...pinterest } }))
+        return { ok: true }
+      }
+      try {
+        const res = await savePinterestRemote(pinterestPayloadForSave(pinterest))
+        applyConfigResponse(res.config)
+        return res
+      } catch (err) {
+        showToast(err.message, 'error')
+        throw err
+      }
+    },
+    [live, applyConfigResponse, showToast],
+  )
+
+  const saveThreadsConfig = useCallback(
+    async (threads) => {
+      if (!live) {
+        setApiConfig((c) => withDerivedConnectionFlags({ ...c, threads: { ...c.threads, ...threads } }))
+        return { ok: true }
+      }
+      try {
+        const res = await saveThreadsRemote(threadsPayloadForSave(threads))
+        applyConfigResponse(res.config)
+        return res
+      } catch (err) {
+        showToast(err.message, 'error')
+        throw err
+      }
+    },
+    [live, applyConfigResponse, showToast],
+  )
+
   const saveGmailConfig = useCallback(
     async (gmail) => {
       if (!live) {
@@ -330,9 +374,13 @@ export function AppDataProvider({ children }) {
             ? await testRedditConnection(config.reddit)
             : platform === 'quora'
               ? await testQuoraConnection(config.quora)
-              : platform === 'gmail'
-                ? await testGmailConnection(config.gmail)
-                : await testLinkedInConnection(config.linkedin)
+              : platform === 'pinterest'
+                ? await testPinterestConnection(config.pinterest)
+                : platform === 'threads'
+                  ? await testThreadsConnection(config.threads)
+                  : platform === 'gmail'
+                    ? await testGmailConnection(config.gmail)
+                    : await testLinkedInConnection(config.linkedin)
 
       if (result.ok) {
         if (platform === 'linkedin') {
@@ -341,6 +389,10 @@ export function AppDataProvider({ children }) {
           await saveRedditConfig(config.reddit)
         } else if (platform === 'quora') {
           await saveQuoraConfig(config.quora)
+        } else if (platform === 'pinterest') {
+          await savePinterestConfig(config.pinterest)
+        } else if (platform === 'threads') {
+          await saveThreadsConfig(config.threads)
         } else if (platform === 'gmail') {
           await saveGmailConfig(config.gmail)
         } else {
@@ -361,6 +413,8 @@ export function AppDataProvider({ children }) {
       saveMetaConfig,
       saveRedditConfig,
       saveQuoraConfig,
+      savePinterestConfig,
+      saveThreadsConfig,
       saveGmailConfig,
       refreshFromServer,
       showToast,
@@ -446,11 +500,15 @@ export function AppDataProvider({ children }) {
 
       const quoraResult = result.platformResults?.find?.((r) => r.platform === 'quora' && r.copyText)
       if (quoraResult?.copyText) {
+        // Quora has no public write API, so we get as close to one-click as we can:
+        // copy the formatted answer and open Quora in a new tab to paste & post.
         try {
           await navigator.clipboard.writeText(quoraResult.copyText)
-          showToast('Quora answer copied — paste it on Quora manually', 'success')
+          window.open(quoraResult.openUrl || 'https://www.quora.com/', '_blank', 'noopener')
+          showToast('Quora answer copied & Quora opened — paste and post', 'success')
         } catch {
-          showToast('Published — copy Quora answer from platform results', 'success')
+          window.open(quoraResult.openUrl || 'https://www.quora.com/', '_blank', 'noopener')
+          showToast('Quora opened — copy your answer from platform results and paste', 'success')
         }
       } else {
         showToast(`Published to ${platformNames}`)
@@ -719,6 +777,8 @@ export function AppDataProvider({ children }) {
         saveMetaConfig,
         saveRedditConfig,
         saveQuoraConfig,
+        savePinterestConfig,
+        saveThreadsConfig,
         saveGmailConfig,
         testPlatformConnection,
         publishNow,

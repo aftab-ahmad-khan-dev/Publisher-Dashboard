@@ -7,6 +7,8 @@ export const STORAGE_KEYS = {
   /** Gmail / Reddit API Config test result (persists across visits) */
   gmailTestStatus: "pulse_gmail_test_status",
   redditTestStatus: "pulse_reddit_test_status",
+  /** All-platform test status map: { meta|linkedin|reddit|quora|gmail: 'ok'|'error'|'needsToken' } */
+  platformTestStatus: "pulse_platform_test_status",
 };
 
 export function readJsonStorage(key, fallback) {

@@ -1,8 +1,9 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { clerkMiddleware, requireAuth } from "@clerk/express";
 import { ensureDbConnected } from "./lib/dbInit.js";
-import { workspaceMiddleware } from "./middleware/workspace.js";
+import { workspaceMiddleware, clerkEnabled } from "./middleware/workspace.js";
 import routes from "./routes.js";
 import healthRoutes from "./routes/health.js";
 import { startScheduler } from "./lib/scheduler.js";
@@ -49,6 +50,37 @@ app.get("/api/email/open/:trackingId.gif", async (req, res) => {
   res.send(TRANSPARENT_GIF);
 });
 
+/**
+ * SSE and OAuth-initiation routes are opened by browser navigation / EventSource
+ * and can't set an Authorization header, so the client passes the Clerk session
+ * token as `?__token=`. Promote it to a Bearer header before Clerk verifies it.
+ */
+function tokenFromQuery(req, _res, next) {
+  if (!req.headers.authorization && typeof req.query.__token === "string") {
+    req.headers.authorization = `Bearer ${req.query.__token}`;
+  }
+  next();
+}
+
+/**
+ * Require a signed-in Clerk session for every /api route except those that are
+ * legitimately unauthenticated: OAuth provider callbacks (verified via signed
+ * `state`) and the Vercel cron endpoint (verified via CRON_SECRET).
+ */
+function requireApiAuth(req, res, next) {
+  const p = req.path;
+  if (p.startsWith("/cron/") || p.endsWith("/callback")) return next();
+  return requireAuth()(req, res, next);
+}
+
+if (clerkEnabled) {
+  app.use("/api", tokenFromQuery, clerkMiddleware());
+} else {
+  logger.warn(
+    "CLERK_SECRET_KEY not set — API running in single-tenant fallback (no auth enforcement)",
+  );
+}
+
 app.use("/api", async (req, res, next) => {
   try {
     await ensureDbConnected();
@@ -57,6 +89,10 @@ app.use("/api", async (req, res, next) => {
     res.status(503).json({ ok: false, error: "Database unavailable" });
   }
 });
+
+if (clerkEnabled) {
+  app.use("/api", requireApiAuth);
+}
 
 app.use("/api", workspaceMiddleware, routes);
 
@@ -70,7 +106,7 @@ app.use((err, req, res, _next) => {
 
 function listen() {
   app.listen(port, () => {
-    logger.banner("Pulse Publisher API", [
+    logger.banner("Publisher Suite API", [
       `http://localhost:${port}`,
       `Health  http://localhost:${port}/`,
     ]);

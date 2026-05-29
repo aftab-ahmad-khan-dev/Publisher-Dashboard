@@ -13,6 +13,12 @@ const OAUTH_STATE_TTL_MS = 15 * 60 * 1000
 const DEFAULT_127_REDIRECT = `http://127.0.0.1:3001${GMAIL_CALLBACK_PATH}`
 const DEFAULT_LOCAL_REDIRECT = DEFAULT_127_REDIRECT
 
+/** Build a callback URL from API_PUBLIC_URL (the deployed domain) when set. */
+function publicCallback(path) {
+  const base = process.env.API_PUBLIC_URL?.trim()?.replace(/\/$/, '')
+  return base ? `${base}${path}` : null
+}
+
 /** Google OAuth redirect must hit the API callback — never the Vite /api-config page. */
 export function normalizeGmailRedirectUri(uri) {
   const value = uri?.trim()
@@ -98,7 +104,9 @@ function getClientCredentials(config) {
     clientSecret:
       process.env.GMAIL_CLIENT_SECRET?.trim() || config.gmail?.clientSecret?.trim() || '',
     redirectUri:
-      normalizeGmailRedirectUri(process.env.GMAIL_REDIRECT_URI) || DEFAULT_LOCAL_REDIRECT,
+      normalizeGmailRedirectUri(publicCallback(GMAIL_CALLBACK_PATH)) ||
+      normalizeGmailRedirectUri(process.env.GMAIL_REDIRECT_URI) ||
+      DEFAULT_LOCAL_REDIRECT,
   }
 }
 

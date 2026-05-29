@@ -27,6 +27,14 @@ const apiConfigSchema = new mongoose.Schema(
       profileUrl: String,
       defaultTopic: String,
     },
+    pinterest: {
+      accessToken: String,
+      boardId: String,
+    },
+    threads: {
+      accessToken: String,
+      userId: String,
+    },
     gmail: {
       clientId: String,
       clientSecret: String,

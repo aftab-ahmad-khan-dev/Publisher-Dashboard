@@ -11,9 +11,11 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@clerk/express": "^2.1.22",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
-    "mongoose": "^8.19.1"
+    "mongoose": "^8.19.1",
+    "nodemailer": "^8.0.10"
   }
 }

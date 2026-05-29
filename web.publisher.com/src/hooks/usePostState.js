@@ -23,7 +23,8 @@ export const PLATFORM_LIMITS = {
   facebook: 63206,
   linkedin: 3000,
   reddit: 40000,
-  quora: 50000,
+  pinterest: 500,
+  threads: 500,
 }
 
 export const CROP_HINTS = [
@@ -150,7 +151,7 @@ export function usePostState() {
   }, [])
 
   const hashtagCounts = useMemo(() => {
-    const counts = { instagram: 0, facebook: 0, linkedin: 0, reddit: 0, quora: 0 }
+    const counts = { instagram: 0, facebook: 0, linkedin: 0, reddit: 0, pinterest: 0, threads: 0 }
     state.hashtags.forEach((h) => {
       Object.keys(counts).forEach((p) => {
         if (h.platforms[p]) counts[p]++

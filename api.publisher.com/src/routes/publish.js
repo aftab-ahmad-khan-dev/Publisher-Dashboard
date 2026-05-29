@@ -8,6 +8,8 @@ import {
   saveMetaConfig,
   saveRedditConfig,
   saveQuoraConfig,
+  savePinterestConfig,
+  saveThreadsConfig,
 } from "../lib/configStore.js";
 import { refreshLinkedInTokenIfNeeded } from "../lib/linkedinOAuth.js";
 import {
@@ -24,6 +26,8 @@ import { testMetaConnection } from "../lib/publishers/meta.js";
 import { testLinkedInConnection } from "../lib/publishers/linkedin.js";
 import { testRedditConnection } from "../lib/publishers/reddit.js";
 import { testQuoraConnection } from "../lib/publishers/quora.js";
+import { testPinterestConnection } from "../lib/publishers/pinterest.js";
+import { testThreadsConnection } from "../lib/publishers/threads.js";
 import { publishToAllPlatforms } from "../lib/publishers/index.js";
 import { broadcastEvent } from "../lib/events.js";
 
@@ -79,6 +83,34 @@ router.post("/connections/quora/test", async (req, res, next) => {
     }
     const config = await getWorkspaceConfig(req.workspaceId);
     const result = await testQuoraConnection(config.quora);
+    if (!result.ok) return res.status(400).json(result);
+    res.json({ ...result, saved: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/connections/pinterest/test", async (req, res, next) => {
+  try {
+    if (req.body?.pinterest) {
+      await savePinterestConfig(req.workspaceId, req.body.pinterest);
+    }
+    const config = await getWorkspaceConfig(req.workspaceId);
+    const result = await testPinterestConnection(config.pinterest);
+    if (!result.ok) return res.status(400).json(result);
+    res.json({ ...result, saved: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/connections/threads/test", async (req, res, next) => {
+  try {
+    if (req.body?.threads) {
+      await saveThreadsConfig(req.workspaceId, req.body.threads);
+    }
+    const config = await getWorkspaceConfig(req.workspaceId);
+    const result = await testThreadsConnection(config.threads);
     if (!result.ok) return res.status(400).json(result);
     res.json({ ...result, saved: true });
   } catch (err) {

@@ -78,10 +78,15 @@ export async function runCampaignSend(campaignId, workspaceId) {
           await recipient.save()
 
           const data = { ...recipient.mergeData, email: recipient.email, name: recipient.name }
-          const subject = sanitizePublishedText(mergeTemplate(campaign.subject, data))
-          const text = sanitizePublishedText(mergeTemplate(campaign.textBody, data))
+          // When a template pool exists, each recipient gets a random template.
+          const pool = campaign.templates?.length
+            ? campaign.templates
+            : [{ subject: campaign.subject, textBody: campaign.textBody, htmlBody: campaign.htmlBody }]
+          const tpl = pool[Math.floor(Math.random() * pool.length)]
+          const subject = sanitizePublishedText(mergeTemplate(tpl.subject, data))
+          const text = sanitizePublishedText(mergeTemplate(tpl.textBody, data))
           let html =
-            sanitizePublishedText(mergeTemplate(campaign.htmlBody, data)) ||
+            sanitizePublishedText(mergeTemplate(tpl.htmlBody, data)) ||
             text.replace(/\n/g, '<br>\n')
 
           if (campaign.trackOpens && recipient.trackingId) {

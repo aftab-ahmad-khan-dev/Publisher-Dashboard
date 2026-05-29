@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { EmailCampaign } from '../models/EmailCampaign.js'
 import { EmailRecipient } from '../models/EmailRecipient.js'
+import { EmailTemplateDraft } from '../models/EmailTemplateDraft.js'
 import { parseRecipients } from '../lib/emailMerge.js'
 import { sanitizePublishedText } from '../lib/contentSanitize.js'
 import { runCampaignSend, newTrackingId } from '../lib/emailWorker.js'
@@ -126,6 +127,7 @@ router.post('/email/campaigns', async (req, res, next) => {
       subject,
       htmlBody,
       textBody,
+      templates: templateList,
       recipientsRaw,
       recipients: recipientList,
       trackOpens,
@@ -158,12 +160,23 @@ router.post('/email/campaigns', async (req, res, next) => {
     const cleanTextBody = sanitizePublishedText(textBody || '')
     const cleanHtmlBody = sanitizePublishedText(htmlBody || '')
 
+    const cleanTemplates = Array.isArray(templateList)
+      ? templateList
+          .filter((t) => t?.subject?.trim())
+          .map((t) => ({
+            subject: sanitizePublishedText(t.subject.trim()),
+            textBody: sanitizePublishedText(t.textBody || ''),
+            htmlBody: sanitizePublishedText(t.htmlBody || ''),
+          }))
+      : []
+
     const campaign = await EmailCampaign.create({
       workspaceId: req.workspaceId,
       name: name?.trim() || cleanSubject.slice(0, 48),
       subject: cleanSubject,
       htmlBody: cleanHtmlBody,
       textBody: cleanTextBody,
+      templates: cleanTemplates,
       fromEmail: config.gmail.fromEmail,
       trackOpens: trackOpens !== false,
       batchSize: batchSize || 25,
@@ -247,6 +260,31 @@ router.delete('/email/campaigns/:id', async (req, res, next) => {
       return res.status(400).json({ ok: false, error: 'Cannot delete active campaign.' })
     }
     await EmailRecipient.deleteMany({ campaignId: campaign._id })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Per-workspace autosaved composer draft (subject + body)
+router.get('/email/template-draft', async (req, res, next) => {
+  try {
+    const draft = await EmailTemplateDraft.findOne({ workspaceId: req.workspaceId }).lean()
+    res.json({ ok: true, draft: draft ? { subject: draft.subject, body: draft.body } : null })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.put('/email/template-draft', async (req, res, next) => {
+  try {
+    const subject = String(req.body?.subject ?? '').slice(0, 2000)
+    const body = String(req.body?.body ?? '').slice(0, 20000)
+    await EmailTemplateDraft.findOneAndUpdate(
+      { workspaceId: req.workspaceId },
+      { workspaceId: req.workspaceId, subject, body },
+      { upsert: true, new: true },
+    )
     res.json({ ok: true })
   } catch (err) {
     next(err)

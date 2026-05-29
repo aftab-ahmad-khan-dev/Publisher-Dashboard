@@ -43,7 +43,9 @@ export function resolveRedditCredentials(config = {}) {
 
 export function getRedditEnvSetup(config = {}) {
   const creds = resolveRedditCredentials(config)
+  const publicBase = process.env.API_PUBLIC_URL?.trim()?.replace(/\/$/, '')
   const redirectUri =
+    (publicBase && `${publicBase}/api/auth/reddit/callback`) ||
     process.env.REDDIT_REDIRECT_URI?.trim()?.replace(/\/$/, '') ||
     'http://127.0.0.1:3001/api/auth/reddit/callback'
 

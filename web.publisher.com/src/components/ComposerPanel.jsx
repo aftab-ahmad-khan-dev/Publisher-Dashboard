@@ -49,7 +49,7 @@ export default function ComposerPanel({
           id="post-body"
           value={state.body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Write once, publish everywhere. For Reddit & Quora, lead with helpful insight, not a sales pitch."
+          placeholder="Write once, publish everywhere. For Reddit, lead with helpful insight, not a sales pitch."
           rows={3}
           className="input-premium w-full resize-none py-2 text-sm leading-relaxed"
         />

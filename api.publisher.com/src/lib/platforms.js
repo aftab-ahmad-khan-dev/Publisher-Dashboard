@@ -19,6 +19,8 @@ export function canPublishLinkedIn(linkedin) {
 
 export { isRedditConfigured } from './publishers/reddit.js'
 export { isQuoraConfigured } from './publishers/quora.js'
+export { isPinterestConfigured } from './publishers/pinterest.js'
+export { isThreadsConfigured } from './publishers/threads.js'
 
 export function isGmailConfigured(gmail) {
   return Boolean(

@@ -1,20 +1,30 @@
+/** Each entry: { res, workspaceId } so events never cross tenants. */
 const clients = new Set()
 
-export function subscribeClient(res) {
-  clients.add(res)
+export function subscribeClient(res, workspaceId) {
+  const client = { res, workspaceId: workspaceId || null }
+  clients.add(client)
+  return client
 }
 
-export function unsubscribeClient(res) {
-  clients.delete(res)
+export function unsubscribeClient(client) {
+  clients.delete(client)
 }
 
-export function broadcastEvent(type, payload) {
+/**
+ * Broadcast to connected clients. When the payload carries a `workspaceId`,
+ * only clients in that same workspace receive it — preventing one tenant from
+ * seeing another tenant's publish/email activity over the shared event stream.
+ */
+export function broadcastEvent(type, payload = {}) {
   const data = JSON.stringify({ type, ...payload, at: Date.now() })
-  for (const res of clients) {
+  const target = payload.workspaceId || null
+  for (const client of clients) {
+    if (target && client.workspaceId && client.workspaceId !== target) continue
     try {
-      res.write(`data: ${data}\n\n`)
+      client.res.write(`data: ${data}\n\n`)
     } catch {
-      clients.delete(res)
+      clients.delete(client)
     }
   }
 }

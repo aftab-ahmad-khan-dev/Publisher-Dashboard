@@ -1,6 +1,6 @@
 {
-  "name": "Pulse Publisher",
-  "short_name": "Pulse",
+  "name": "Publisher Suite",
+  "short_name": "Publisher Suite",
   "description": "Social media publishing dashboard",
   "start_url": "/",
   "display": "standalone",
