@@ -109,6 +109,20 @@ function loadApiConfigLocal() {
 
 const AppDataContext = createContext(null)
 
+/**
+ * The composer holds the image as a File, which JSON.stringify drops to `{}` on the
+ * way to the API. Convert it to a compressed data URL the backend can actually post.
+ */
+async function withImageData(postState) {
+  const file = postState?.image
+  if (!file || !file.type?.startsWith('image/')) return postState
+  try {
+    return { ...postState, imageDataUrl: await compressImageFile(file) }
+  } catch {
+    return postState
+  }
+}
+
 export function AppDataProvider({ children }) {
   const { isAuthenticated } = useAuth()
   const live = hasBackend()
@@ -464,7 +478,7 @@ export function AppDataProvider({ children }) {
       }
 
       setPublishStatus('loading')
-      const result = await publishToPlatforms(postState, apiConfig)
+      const result = await publishToPlatforms(await withImageData(postState), apiConfig)
 
       if (!result.ok) {
         setPublishStatus('idle')
@@ -554,7 +568,7 @@ export function AppDataProvider({ children }) {
       }
 
       setPublishStatus('loading')
-      const result = await scheduleToPlatforms(postState, apiConfig)
+      const result = await scheduleToPlatforms(await withImageData(postState), apiConfig)
 
       if (!result.ok) {
         setPublishStatus('idle')

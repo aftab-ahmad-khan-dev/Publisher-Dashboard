@@ -70,12 +70,60 @@ export async function testMetaConnection(meta) {
   return { ok: true, message: `Meta connected as ${data.name || data.id}` }
 }
 
-export async function publishToFacebook({ message, pageToken }) {
-  const url = `https://graph.facebook.com/v21.0/me/feed`
-  const res = await fetch(url, {
+function dataUrlToBlob(dataUrl) {
+  const [meta, b64] = String(dataUrl).split(',')
+  const contentType = /data:(.*?);/.exec(meta)?.[1] || 'image/jpeg'
+  return new Blob([Buffer.from(b64 || '', 'base64')], { type: contentType })
+}
+
+export async function publishToFacebook({ message, pageToken, postState }) {
+  // Respect the per-platform image toggle; default to including the image when present.
+  const wantImage = postState?.imageVisibility?.facebook !== false
+  const dataUrl = wantImage ? postState?.imageDataUrl : null
+  const imageUrl = wantImage ? postState?.imageUrl : null
+
+  if (dataUrl && /^data:video\//i.test(dataUrl)) {
+    throw new Error(
+      'Facebook video publishing is not supported yet. Attach an image or remove the video.',
+    )
+  }
+
+  // With an image we must post to /me/photos (a /me/feed text post drops the image).
+  if (dataUrl || imageUrl) {
+    const url = `https://graph.facebook.com/v21.0/me/photos`
+    let res
+    if (imageUrl) {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: imageUrl,
+          caption: message,
+          published: true,
+          access_token: pageToken,
+        }),
+      })
+    } else {
+      const form = new FormData()
+      form.append('source', dataUrlToBlob(dataUrl), 'image.jpg')
+      if (message) form.append('caption', message)
+      form.append('published', 'true')
+      form.append('access_token', pageToken)
+      res = await fetch(url, { method: 'POST', body: form })
+    }
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || data.error) {
+      throw new Error(data.error?.message || 'Facebook photo publish failed')
+    }
+    return { platform: 'facebook', postId: data.post_id || data.id }
+  }
+
+  // Text-only feed post. `published: true` is the default, but we set it explicitly
+  // so the post can never land in a draft/scheduled state.
+  const res = await fetch(`https://graph.facebook.com/v21.0/me/feed`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, access_token: pageToken }),
+    body: JSON.stringify({ message, published: true, access_token: pageToken }),
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok || data.error) {

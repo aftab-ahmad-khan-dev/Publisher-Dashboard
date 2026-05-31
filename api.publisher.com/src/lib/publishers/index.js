@@ -15,7 +15,11 @@ export async function publishToAllPlatforms({ platforms, postState, config }) {
       const text = buildPostText(postState, platform)
       if (platform === 'facebook') {
         results.push(
-          await publishToFacebook({ message: text, pageToken: config.meta.pageToken }),
+          await publishToFacebook({
+            message: text,
+            pageToken: config.meta.pageToken,
+            postState,
+          }),
         )
       } else if (platform === 'instagram') {
         results.push(await publishToInstagram({ postState }))
