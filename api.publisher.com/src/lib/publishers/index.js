@@ -42,6 +42,7 @@ export async function publishToAllPlatforms({ platforms, postState, config, work
             text,
             orgUrn: config.linkedin.orgUrn,
             accessToken: config.linkedin.accessToken,
+            postState,
           }),
         )
       } else if (platform === 'reddit') {

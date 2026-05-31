@@ -95,13 +95,78 @@ export async function testLinkedInConnection(linkedin) {
   }
 }
 
-export async function publishToLinkedIn({ text, orgUrn, accessToken }) {
+/**
+ * Upload an image to LinkedIn and return its urn:li:image:... id.
+ * Two steps: initializeUpload (get an uploadUrl + image urn), then PUT the bytes.
+ */
+async function uploadLinkedInImage({ token, author, dataUrl }) {
+  const initRes = await fetch('https://api.linkedin.com/rest/images?action=initializeUpload', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'X-Restli-Protocol-Version': '2.0.0',
+      'LinkedIn-Version': LINKEDIN_VERSION,
+    },
+    body: JSON.stringify({ initializeUploadRequest: { owner: author } }),
+  })
+  const initRaw = await initRes.text()
+  if (!initRes.ok) {
+    throw new Error(parseLinkedInError(initRes.status, initRaw))
+  }
+  const initData = JSON.parse(initRaw)
+  const uploadUrl = initData.value?.uploadUrl
+  const imageUrn = initData.value?.image
+  if (!uploadUrl || !imageUrn) {
+    throw new Error('LinkedIn did not return an image upload URL.')
+  }
+
+  const [meta, b64] = String(dataUrl).split(',')
+  const contentType = /data:(.*?);/.exec(meta)?.[1] || 'image/jpeg'
+  const upRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': contentType },
+    body: Buffer.from(b64 || '', 'base64'),
+  })
+  if (!upRes.ok) {
+    const upRaw = await upRes.text().catch(() => '')
+    throw new Error(`LinkedIn image upload failed (${upRes.status}). ${upRaw}`.trim())
+  }
+
+  return imageUrn
+}
+
+export async function publishToLinkedIn({ text, orgUrn, accessToken, postState }) {
   const token = accessToken?.trim()
   if (!token) {
     throw new Error('LinkedIn access token is missing. Connect OAuth or paste a token in API Config.')
   }
 
   const { author, mode } = await resolveLinkedInAuthor(token, orgUrn)
+
+  // Optionally attach an image (respect the per-platform image toggle).
+  const wantImage = postState?.imageVisibility?.linkedin !== false
+  const dataUrl = wantImage ? postState?.imageDataUrl : null
+  let imageUrn = null
+  if (dataUrl?.startsWith('data:image/')) {
+    imageUrn = await uploadLinkedInImage({ token, author, dataUrl })
+  }
+
+  const body = {
+    author,
+    commentary: text,
+    visibility: 'PUBLIC',
+    distribution: {
+      feedDistribution: 'MAIN_FEED',
+      targetEntities: [],
+      thirdPartyDistributionChannels: [],
+    },
+    lifecycleState: 'PUBLISHED',
+    isReshareDisabledByAuthor: false,
+  }
+  if (imageUrn) {
+    body.content = { media: { id: imageUrn } }
+  }
 
   const res = await fetch('https://api.linkedin.com/rest/posts', {
     method: 'POST',
@@ -111,18 +176,7 @@ export async function publishToLinkedIn({ text, orgUrn, accessToken }) {
       'X-Restli-Protocol-Version': '2.0.0',
       'LinkedIn-Version': LINKEDIN_VERSION,
     },
-    body: JSON.stringify({
-      author,
-      commentary: text,
-      visibility: 'PUBLIC',
-      distribution: {
-        feedDistribution: 'MAIN_FEED',
-        targetEntities: [],
-        thirdPartyDistributionChannels: [],
-      },
-      lifecycleState: 'PUBLISHED',
-      isReshareDisabledByAuthor: false,
-    }),
+    body: JSON.stringify(body),
   })
 
   const raw = await res.text()
