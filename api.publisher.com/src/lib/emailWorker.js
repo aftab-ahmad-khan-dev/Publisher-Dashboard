@@ -16,10 +16,57 @@ const TRANSPARENT_GIF = Buffer.from(
 
 export { TRANSPARENT_GIF }
 
-function trackingBaseUrl() {
+function trackingApiBase() {
   const api =
     apiPublicBase() || process.env.WEB_URL?.replace('5173', '3001')?.trim()?.replace(/\/+$/, '')
-  return `${api || 'http://localhost:3001'}/api/email/open`
+  return `${api || 'http://localhost:3001'}/api/email`
+}
+
+/**
+ * Rewrite every absolute http(s) link in the HTML to pass through our click
+ * redirect, so a click is recorded by us regardless of the recipient's mail
+ * client or extensions. The original URL is preserved as the `u` param.
+ */
+export function rewriteLinksForTracking(html, clickBase, trackingId) {
+  if (!html || !trackingId) return html
+  return html.replace(
+    /href=(["'])(https?:\/\/[^"']+)\1/gi,
+    (_m, quote, url) =>
+      `href=${quote}${clickBase}/${trackingId}?u=${encodeURIComponent(url)}${quote}`,
+  )
+}
+
+export async function recordEmailClick(trackingId) {
+  const recipient = await EmailRecipient.findOne({ trackingId })
+  if (!recipient) return null
+
+  const wasFirstClick = !recipient.clickedAt
+  recipient.clickCount = (recipient.clickCount || 0) + 1
+  if (wasFirstClick) recipient.clickedAt = new Date()
+  // A click implies an open, even if the open pixel never loaded.
+  if (!recipient.openedAt) {
+    recipient.openedAt = new Date()
+    recipient.openCount = (recipient.openCount || 0) + 1
+  }
+  recipient.status = 'clicked'
+  await recipient.save()
+
+  if (wasFirstClick) {
+    await EmailCampaign.updateOne(
+      { _id: recipient.campaignId },
+      { $inc: { 'stats.clicked': 1 } },
+    )
+    const campaign = await EmailCampaign.findById(recipient.campaignId).lean()
+    if (campaign) {
+      broadcastEvent('EMAIL_CLICKED', {
+        workspaceId: campaign.workspaceId,
+        campaignId: campaign._id.toString(),
+        email: recipient.email,
+      })
+    }
+  }
+
+  return recipient
 }
 
 export async function recordEmailOpen(trackingId) {
@@ -64,7 +111,7 @@ export async function runCampaignSend(campaignId, workspaceId) {
     const recipients = await EmailRecipient.find({ campaignId, status: 'queued' }).sort({ _id: 1 })
     const batchSize = Math.min(Math.max(campaign.batchSize || 25, 1), 50)
     const delayMs = Math.max(campaign.batchDelayMs || 3000, 1000)
-    const trackBase = trackingBaseUrl()
+    const apiBase = trackingApiBase()
 
     logger.info('Email campaign sending', {
       campaignId: campaignId.toString(),
@@ -91,15 +138,18 @@ export async function runCampaignSend(campaignId, workspaceId) {
             sanitizePublishedText(mergeTemplate(tpl.htmlBody, data)) ||
             text.replace(/\n/g, '<br>\n')
 
-          // Persist the personalized content as actually composed (pre tracking
-          // pixel) so the campaign detail view can show what each recipient got.
+          // Persist the personalized content as actually composed (with original
+          // links, pre tracking) so the detail view shows what each recipient got.
           recipient.renderedSubject = subject
           recipient.renderedText = text
           recipient.renderedHtml = html
 
+          // Outgoing copy: rewrite links through our click redirect and add the
+          // open pixel. Click tracking works without image-loading or extensions.
+          let outHtml = html
           if (campaign.trackOpens && recipient.trackingId) {
-            const trackUrl = `${trackBase}/${recipient.trackingId}.gif`
-            html = injectTrackingPixel(html, trackUrl)
+            outHtml = rewriteLinksForTracking(outHtml, `${apiBase}/click`, recipient.trackingId)
+            outHtml = injectTrackingPixel(outHtml, `${apiBase}/open/${recipient.trackingId}.gif`)
           }
 
           const result = await sendGmailMessage({
@@ -108,7 +158,7 @@ export async function runCampaignSend(campaignId, workspaceId) {
             to: recipient.name ? `"${recipient.name}" <${recipient.email}>` : recipient.email,
             subject,
             text,
-            html,
+            html: outHtml,
           })
 
           recipient.status = 'sent'

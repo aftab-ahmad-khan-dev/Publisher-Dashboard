@@ -8,7 +8,7 @@ import routes from "./routes.js";
 import healthRoutes from "./routes/health.js";
 import { startScheduler } from "./lib/scheduler.js";
 import { collectHealthStatus } from "./lib/healthStatus.js";
-import { recordEmailOpen, TRANSPARENT_GIF } from "./lib/emailWorker.js";
+import { recordEmailOpen, recordEmailClick, TRANSPARENT_GIF } from "./lib/emailWorker.js";
 import { Media } from "./models/Media.js";
 import { logger, requestLogger } from "./lib/logger.js";
 
@@ -50,6 +50,19 @@ app.get("/api/email/open/:trackingId.gif", async (req, res) => {
   res.set("Content-Type", "image/gif");
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.send(TRANSPARENT_GIF);
+});
+
+/** Click tracking redirect — no auth (recipients' clicks hit this, then forward). */
+app.get("/api/email/click/:trackingId", async (req, res) => {
+  const target = typeof req.query.u === "string" ? req.query.u : "";
+  try {
+    await ensureDbConnected();
+    await recordEmailClick(req.params.trackingId);
+  } catch {
+    /* still redirect even if recording fails */
+  }
+  if (/^https?:\/\//i.test(target)) return res.redirect(302, target);
+  return res.redirect(302, process.env.WEB_URL || "/");
 });
 
 /** Public image host for Instagram — IG's servers fetch image_url, so no auth. */

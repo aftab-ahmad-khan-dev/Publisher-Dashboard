@@ -11,7 +11,7 @@ const emailRecipientSchema = new mongoose.Schema(
     mergeData: mongoose.Schema.Types.Mixed,
     status: {
       type: String,
-      enum: ['queued', 'sending', 'sent', 'failed', 'opened'],
+      enum: ['queued', 'sending', 'sent', 'failed', 'opened', 'clicked'],
       default: 'queued',
     },
     trackingId: { type: String, index: true },
@@ -25,6 +25,9 @@ const emailRecipientSchema = new mongoose.Schema(
     sentAt: Date,
     openedAt: Date,
     openCount: { type: Number, default: 0 },
+    // First-party click tracking — reliable regardless of image-loading/extensions.
+    clickedAt: Date,
+    clickCount: { type: Number, default: 0 },
   },
   { timestamps: true },
 )

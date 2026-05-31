@@ -517,6 +517,9 @@ export default function EmailPage() {
                           <span className="text-sky-400">{c.stats?.opened ?? 0}</span> opened
                         </span>
                         <span>
+                          <span className="text-violet-300">{c.stats?.clicked ?? 0}</span> clicked
+                        </span>
+                        <span>
                           <span className="text-rose-400">{c.stats?.failed ?? 0}</span> failed
                         </span>
                         <span>of {c.stats?.total ?? 0}</span>
@@ -551,13 +554,14 @@ export default function EmailPage() {
             <section className="surface-panel rounded-xl p-4">
               <h2 className="text-sm font-semibold text-white">Recipient delivery</h2>
               <div className="mt-2 max-h-[320px] overflow-x-auto overflow-y-auto">
-                <table className="w-full min-w-[420px] text-left text-[11px]">
+                <table className="w-full min-w-[480px] text-left text-[11px]">
                   <thead className="sticky top-0 bg-[#0a0c12] text-slate-500">
                     <tr>
                       <th className="py-1 pr-2">Email</th>
                       <th className="py-1 pr-2">Company</th>
                       <th className="py-1 pr-2">Status</th>
                       <th className="py-1 pr-2">Opens</th>
+                      <th className="py-1 pr-2">Clicks</th>
                       <th className="py-1"></th>
                     </tr>
                   </thead>
@@ -568,22 +572,25 @@ export default function EmailPage() {
                         onClick={() => setViewingRecipient(r)}
                         className="cursor-pointer border-t border-white/[0.04] text-slate-400 transition-colors hover:bg-white/[0.03]"
                       >
-                        <td className="py-1.5 pr-2 truncate max-w-[120px]">{r.email}</td>
+                        <td className="py-1.5 pr-2 truncate max-w-[80px] sm:max-w-[120px]">{r.email}</td>
                         <td className="py-1.5 pr-2 truncate max-w-[80px] text-slate-500">{r.company || r.niche || '—'}</td>
                         <td className="py-1.5 pr-2">
-                          <span
-                            className={
-                              r.status === 'sent' || r.status === 'opened'
-                                ? 'text-emerald-400'
-                                : r.status === 'failed'
-                                  ? 'text-rose-400'
-                                  : 'text-amber-400'
-                            }
-                          >
-                            {r.status}
-                          </span>
+                          <DeliveryStatus status={r.status} sentAt={r.sentAt} />
                         </td>
-                        <td className="py-1.5 pr-2">{r.openCount || (r.openedAt ? 1 : 0)}</td>
+                        <td className="py-1.5 pr-2" title={r.openedAt ? `First opened ${fmtTime(r.openedAt)}` : 'No opens recorded yet'}>
+                          {r.openCount > 0 ? (
+                            <span className="text-emerald-400">{r.openCount}×</span>
+                          ) : (
+                            <span className="text-slate-600">—</span>
+                          )}
+                        </td>
+                        <td className="py-1.5 pr-2" title={r.clickedAt ? `First clicked ${fmtTime(r.clickedAt)}` : 'No clicks recorded yet'}>
+                          {r.clickCount > 0 ? (
+                            <span className="text-violet-300">{r.clickCount}×</span>
+                          ) : (
+                            <span className="text-slate-600">—</span>
+                          )}
+                        </td>
                         <td className="py-1.5 text-right text-violet-300">View</td>
                       </tr>
                     ))}
@@ -604,6 +611,11 @@ export default function EmailPage() {
                   Send campaign
                 </button>
               )}
+              <p className="mt-2 text-[10px] leading-relaxed text-slate-600">
+                Opens use a 1×1 pixel and are best-effort (Gmail proxies/caches images, and "don't
+                load images" suppresses them). Clicks are tracked first-party via redirected links,
+                so they register reliably regardless of the recipient's mail client or extensions.
+              </p>
             </section>
           )}
         </PageScroll>
@@ -615,6 +627,42 @@ export default function EmailPage() {
         onClose={() => setViewingRecipient(null)}
       />
     </PageShell>
+  )
+}
+
+function fmtTime(iso) {
+  if (!iso) return ''
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  } catch {
+    return ''
+  }
+}
+
+const STATUS_STYLES = {
+  queued: { label: 'Queued', cls: 'bg-slate-500/10 text-slate-400 ring-slate-500/20' },
+  sending: { label: 'Sending', cls: 'bg-amber-500/10 text-amber-300 ring-amber-500/25' },
+  sent: { label: 'Sent', cls: 'bg-sky-500/10 text-sky-300 ring-sky-500/25' },
+  opened: { label: 'Opened', cls: 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/25' },
+  clicked: { label: 'Clicked', cls: 'bg-violet-500/10 text-violet-300 ring-violet-500/25' },
+  failed: { label: 'Failed', cls: 'bg-rose-500/10 text-rose-300 ring-rose-500/25' },
+}
+
+/** Delivery-status pill: Queued → Sending → Sent → Opened (or Failed), with the send time. */
+function DeliveryStatus({ status, sentAt }) {
+  const s = STATUS_STYLES[status] || STATUS_STYLES.queued
+  return (
+    <span className="inline-flex flex-col gap-0.5">
+      <span className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${s.cls}`}>
+        {s.label}
+      </span>
+      {sentAt && <span className="text-[9px] text-slate-600">{fmtTime(sentAt)}</span>}
+    </span>
   )
 }
 

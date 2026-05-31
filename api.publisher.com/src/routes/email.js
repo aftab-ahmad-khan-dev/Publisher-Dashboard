@@ -46,6 +46,8 @@ function mapRecipient(doc) {
     sentAt: doc.sentAt?.toISOString?.() || doc.sentAt,
     openedAt: doc.openedAt?.toISOString?.() || doc.openedAt,
     openCount: doc.openCount || 0,
+    clickedAt: doc.clickedAt?.toISOString?.() || doc.clickedAt,
+    clickCount: doc.clickCount || 0,
     gmailMessageId: doc.gmailMessageId,
     mergeData: doc.mergeData,
     renderedSubject: doc.renderedSubject,
