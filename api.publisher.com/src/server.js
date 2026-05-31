@@ -34,6 +34,7 @@ app.get("/api/health", async (req, res) => {
     environment: status.environment,
     runtime: status.runtime,
     scheduler: status.scheduler,
+    publicUrl: process.env.API_PUBLIC_URL || null,
     error: status.db.error || undefined,
   });
 });
