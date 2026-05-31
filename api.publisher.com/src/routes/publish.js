@@ -195,7 +195,12 @@ router.post("/publish", async (req, res, next) => {
         .json({ ok: false, error: "Quora profile URL is required in API Config." });
     }
 
-    const outcome = await publishToAllPlatforms({ platforms, postState, config });
+    const outcome = await publishToAllPlatforms({
+      platforms,
+      postState,
+      config,
+      workspaceId: req.workspaceId,
+    });
     if (!outcome.ok) {
       return res.status(400).json(outcome);
     }

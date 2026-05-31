@@ -9,6 +9,7 @@ import healthRoutes from "./routes/health.js";
 import { startScheduler } from "./lib/scheduler.js";
 import { collectHealthStatus } from "./lib/healthStatus.js";
 import { recordEmailOpen, TRANSPARENT_GIF } from "./lib/emailWorker.js";
+import { Media } from "./models/Media.js";
 import { logger, requestLogger } from "./lib/logger.js";
 
 const app = express();
@@ -48,6 +49,23 @@ app.get("/api/email/open/:trackingId.gif", async (req, res) => {
   res.set("Content-Type", "image/gif");
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.send(TRANSPARENT_GIF);
+});
+
+/** Public image host for Instagram — IG's servers fetch image_url, so no auth. */
+app.get("/api/media/:id", async (req, res) => {
+  try {
+    await ensureDbConnected();
+    const media = await Media.findById(req.params.id).lean();
+    if (!media?.data) return res.status(404).end();
+    const buf = Buffer.isBuffer(media.data)
+      ? media.data
+      : Buffer.from(media.data.buffer || media.data);
+    res.set("Content-Type", media.contentType || "image/jpeg");
+    res.set("Cache-Control", "public, max-age=86400");
+    return res.send(buf);
+  } catch {
+    return res.status(404).end();
+  }
 });
 
 /**

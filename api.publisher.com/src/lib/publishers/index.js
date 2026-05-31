@@ -5,8 +5,9 @@ import { publishToReddit } from './reddit.js'
 import { publishToQuora } from './quora.js'
 import { publishToPinterest } from './pinterest.js'
 import { publishToThreads } from './threads.js'
+import { resolvePublicImageUrl } from '../mediaHost.js'
 
-export async function publishToAllPlatforms({ platforms, postState, config }) {
+export async function publishToAllPlatforms({ platforms, postState, config, workspaceId }) {
   const results = []
   const errors = []
 
@@ -22,7 +23,14 @@ export async function publishToAllPlatforms({ platforms, postState, config }) {
           }),
         )
       } else if (platform === 'instagram') {
-        results.push(await publishToInstagram({ postState }))
+        const imageUrl = await resolvePublicImageUrl({ postState, workspaceId })
+        results.push(
+          await publishToInstagram({
+            message: text,
+            pageToken: config.meta.pageToken,
+            imageUrl,
+          }),
+        )
       } else if (platform === 'linkedin') {
         if (!canPublishLinkedIn(config.linkedin)) {
           throw new Error(

@@ -132,19 +132,72 @@ export async function publishToFacebook({ message, pageToken, postState }) {
   return { platform: 'facebook', postId: data.id }
 }
 
-export async function publishToInstagram({ postState }) {
-  // Instagram has no text-only posts and the media-container publish flow is not
-  // implemented yet. Fail loudly instead of silently pretending the post went out,
-  // which previously made multi-platform posts look like they only reached Facebook.
-  const hasMedia = Boolean(
-    postState?.imageDataUrl?.startsWith?.('data:') || postState?.imageUrl,
+/** Resolve the IG Business account ID linked to the Page this token controls. */
+async function resolveInstagramUserId(pageToken) {
+  const res = await fetch(
+    `https://graph.facebook.com/v21.0/me?fields=instagram_business_account&access_token=${encodeURIComponent(pageToken)}`,
   )
-  if (hasMedia) {
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || data.error) {
+    throw new Error(formatMetaError(data) || 'Could not read the Instagram account from the Page.')
+  }
+  const igId = data.instagram_business_account?.id
+  if (!igId) {
     throw new Error(
-      'Instagram publishing is not available yet. Disable Instagram for this post.',
+      'No Instagram Business account is linked to this Facebook Page. In Meta settings, link an Instagram Business/Creator account to the Page, and ensure the token has instagram_basic + instagram_content_publish.',
     )
   }
-  throw new Error(
-    'Instagram requires an image or video, text-only posts cannot be published. Disable Instagram for this post.',
-  )
+  return igId
+}
+
+/** Poll the media container until it finishes processing (images are usually instant). */
+async function waitForContainer(creationId, pageToken, attempts = 6) {
+  for (let i = 0; i < attempts; i++) {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${creationId}?fields=status_code&access_token=${encodeURIComponent(pageToken)}`,
+    )
+    const data = await res.json().catch(() => ({}))
+    if (data.status_code === 'FINISHED') return
+    if (data.status_code === 'ERROR') {
+      throw new Error('Instagram could not process the image (is the URL public and a supported format?).')
+    }
+    await new Promise((r) => setTimeout(r, 1500))
+  }
+}
+
+export async function publishToInstagram({ message, pageToken, imageUrl }) {
+  // IG has no text-only posts; without a public image URL there's nothing to publish.
+  if (!imageUrl) {
+    throw new Error(
+      'Instagram requires an image, text-only posts cannot be published. Attach an image or disable Instagram for this post.',
+    )
+  }
+
+  const igUserId = await resolveInstagramUserId(pageToken)
+
+  // 1) Create a media container pointing at the public image URL.
+  const createRes = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image_url: imageUrl, caption: message, access_token: pageToken }),
+  })
+  const createData = await createRes.json().catch(() => ({}))
+  if (!createRes.ok || createData.error) {
+    throw new Error(createData.error?.message || 'Instagram media container creation failed')
+  }
+  const creationId = createData.id
+
+  await waitForContainer(creationId, pageToken)
+
+  // 2) Publish the container.
+  const pubRes = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media_publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creation_id: creationId, access_token: pageToken }),
+  })
+  const pubData = await pubRes.json().catch(() => ({}))
+  if (!pubRes.ok || pubData.error) {
+    throw new Error(pubData.error?.message || 'Instagram publish failed')
+  }
+  return { platform: 'instagram', postId: pubData.id }
 }

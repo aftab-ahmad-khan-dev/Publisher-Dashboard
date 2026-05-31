@@ -61,6 +61,7 @@ async function processScheduled(doc) {
       platforms: doc.platforms,
       postState,
       config,
+      workspaceId: doc.workspaceId,
     })
 
     if (!outcome.ok) {
