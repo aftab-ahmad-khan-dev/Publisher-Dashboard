@@ -1,4 +1,7 @@
-const LINKEDIN_VERSION = '202402'
+// LinkedIn pins each monthly REST version for ~12 months then sunsets it, so a
+// hardcoded value eventually returns "Requested version YYYYMM01 is not active".
+// Keep this within the trailing ~12 months; override via env when it ages out.
+const LINKEDIN_VERSION = process.env.LINKEDIN_API_VERSION?.trim() || '202601'
 
 function parseLinkedInError(status, raw) {
   let data = {}
