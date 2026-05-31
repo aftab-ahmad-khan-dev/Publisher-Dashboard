@@ -37,6 +37,7 @@ export default function ApiConfigPage() {
     saveQuoraConfig,
     savePinterestConfig,
     saveThreadsConfig,
+    saveDefaultsConfig,
     saveGmailConfig,
     testPlatformConnection,
     requestNotificationPermission,
@@ -958,6 +959,37 @@ export default function ApiConfigPage() {
                   className='btn-secondary w-full py-1.5 text-xs'
                 >
                   Request permission
+                </button>
+              </div>
+            </section>
+
+            <section className='surface-panel rounded-xl p-4'>
+              <h3 className='text-sm font-semibold text-white'>Scheduling defaults</h3>
+              <p className='mt-1 text-[11px] text-slate-500'>
+                Default time of day used for the next open slot and bulk uploads.
+              </p>
+              <div className='mt-3 space-y-2'>
+                <Field
+                  label='Default schedule time'
+                  type='time'
+                  value={form.defaults?.scheduleTime || '12:00'}
+                  onChange={(v) =>
+                    setForm((f) => ({
+                      ...f,
+                      defaults: { ...f.defaults, scheduleTime: v },
+                    }))
+                  }
+                  className='w-full'
+                />
+                <button
+                  type='button'
+                  onClick={async () => {
+                    await saveDefaultsConfig(form.defaults)
+                    showToast('Scheduling defaults saved')
+                  }}
+                  className='btn-secondary w-full py-1.5 text-xs'
+                >
+                  Save defaults
                 </button>
               </div>
             </section>

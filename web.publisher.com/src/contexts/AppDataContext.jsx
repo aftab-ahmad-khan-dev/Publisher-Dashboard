@@ -5,7 +5,7 @@ import {
   subscribeSocket,
   simulateSocketPublish,
 } from '../lib/notifications'
-import { parseDatetimeLocal } from '../lib/scheduleUtils'
+import { parseDatetimeLocal, datetimeLocalToISO } from '../lib/scheduleUtils'
 import { serializePostState, mergeDraftSave } from '../lib/draftUtils'
 import { withDerivedConnectionFlags } from '../lib/connections'
 import { mergeApiConfigWithEnv } from '../lib/envConfig'
@@ -32,10 +32,12 @@ import {
   saveQuoraRemote,
   savePinterestRemote,
   saveThreadsRemote,
+  saveDefaultsRemote,
   saveGmailRemote,
   saveDraftRemote,
   deleteDraftRemote,
   deleteScheduledRemote,
+  updateScheduledRemote,
   scheduleBulkRemote,
   subscribeRealtime,
 } from '../lib/backendApi'
@@ -48,6 +50,7 @@ import {
   quoraPayloadForSave,
   pinterestPayloadForSave,
   threadsPayloadForSave,
+  defaultsPayloadForSave,
   gmailPayloadForSave,
   readLocalStoredConfig,
   needsMetaMigration,
@@ -91,6 +94,7 @@ const DEFAULT_API_CONFIG = {
   },
   webhookUrl: '',
   notificationsEnabled: true,
+  defaults: { scheduleTime: '12:00' },
 }
 
 function loadApiConfigLocal() {
@@ -369,6 +373,24 @@ export function AppDataProvider({ children }) {
       }
       try {
         const res = await saveGmailRemote(gmailPayloadForSave(gmail))
+        applyConfigResponse(res.config)
+        return res
+      } catch (err) {
+        showToast(err.message, 'error')
+        throw err
+      }
+    },
+    [live, applyConfigResponse, showToast],
+  )
+
+  const saveDefaultsConfig = useCallback(
+    async (defaults) => {
+      if (!live) {
+        setApiConfig((c) => withDerivedConnectionFlags({ ...c, defaults: { ...c.defaults, ...defaults } }))
+        return { ok: true }
+      }
+      try {
+        const res = await saveDefaultsRemote(defaultsPayloadForSave(defaults))
         applyConfigResponse(res.config)
         return res
       } catch (err) {
@@ -674,8 +696,9 @@ export function AppDataProvider({ children }) {
         }
       }
 
+      const [defHour, defMinute] = (apiConfig.defaults?.scheduleTime || '12:00').split(':').map(Number)
       const items = payloadPosts.map((post) => {
-        const scheduled = computeScheduleDate(startDate, post.dayNum)
+        const scheduled = computeScheduleDate(startDate, post.dayNum, defHour, defMinute)
         return {
           id: crypto.randomUUID(),
           body: post.body,
@@ -715,6 +738,41 @@ export function AppDataProvider({ children }) {
       setQueue(next)
       localStorage.setItem(STORAGE_KEYS.scheduledQueue, JSON.stringify(next))
       showToast('Scheduled post removed')
+    },
+    [live, queue, showToast, refreshFromServer],
+  )
+
+  const editScheduled = useCallback(
+    async (id, { body, platforms, scheduledAt, timezone } = {}) => {
+      // scheduledAt comes in as a naive datetime-local string; convert to a
+      // real UTC instant so the backend stores the exact moment intended.
+      const iso = scheduledAt ? datetimeLocalToISO(scheduledAt) : undefined
+      if (live) {
+        try {
+          await updateScheduledRemote(id, { body, platforms, scheduledAt: iso, timezone })
+          await refreshFromServer()
+          showToast('Scheduled post updated')
+          return { ok: true }
+        } catch (err) {
+          showToast(err.message, 'error')
+          return { ok: false, error: err.message }
+        }
+      }
+      const next = queue.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              ...(body !== undefined ? { body } : {}),
+              ...(platforms !== undefined ? { platforms } : {}),
+              ...(iso ? { scheduledAt: iso } : {}),
+              ...(timezone ? { timezone } : {}),
+            }
+          : item,
+      )
+      setQueue(next)
+      localStorage.setItem(STORAGE_KEYS.scheduledQueue, JSON.stringify(next))
+      showToast('Scheduled post updated')
+      return { ok: true }
     },
     [live, queue, showToast, refreshFromServer],
   )
@@ -793,12 +851,14 @@ export function AppDataProvider({ children }) {
         saveQuoraConfig,
         savePinterestConfig,
         saveThreadsConfig,
+        saveDefaultsConfig,
         saveGmailConfig,
         testPlatformConnection,
         publishNow,
         schedulePost,
         scheduleBulkPosts,
         cancelScheduled,
+        editScheduled,
         saveDraft,
         deleteDraft,
         getDraftById,

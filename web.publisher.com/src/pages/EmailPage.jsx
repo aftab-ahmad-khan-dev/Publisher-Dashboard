@@ -20,6 +20,7 @@ import RecipientCsvUpload from '../components/RecipientCsvUpload'
 import { downloadTextFile } from '../lib/recipientFile'
 import PageHeader from '../components/PageHeader'
 import PageShell, { PageBody, PageScroll } from '../components/PageShell'
+import Modal from '../components/Modal'
 
 const SAMPLE_RECIPIENTS = `email,name,company,niche
 sarah@acmecorp.com,Sarah Chen,Acme Corp,SaaS
@@ -64,6 +65,7 @@ export default function EmailPage() {
   const [selectedId, setSelectedId] = useState(null)
   const [detail, setDetail] = useState(null)
   const [loadingList, setLoadingList] = useState(false)
+  const [viewingRecipient, setViewingRecipient] = useState(null)
 
   const recipients = useMemo(() => parseRecipients(recipientsRaw), [recipientsRaw])
 
@@ -398,8 +400,8 @@ export default function EmailPage() {
               {recipients.length} unique recipient{recipients.length === 1 ? '' : 's'}
             </p>
             {recipients.length > 0 && (
-              <div className="mt-2 max-h-32 overflow-y-auto rounded-lg border border-white/[0.06]">
-                <table className="w-full text-left text-[10px]">
+              <div className="mt-2 max-h-32 overflow-x-auto overflow-y-auto rounded-lg border border-white/[0.06]">
+                <table className="w-full min-w-[360px] text-left text-[10px]">
                   <thead className="bg-black/30 text-slate-500">
                     <tr>
                       <th className="px-2 py-1">Email</th>
@@ -540,7 +542,7 @@ export default function EmailPage() {
                 </p>
               </div>
               <p className="mt-2 text-[10px] text-slate-600">
-                Template with merge tags — each recipient receives a personalized version.
+                Template with merge tags — click any recipient below to see the exact email they received.
               </p>
             </section>
           )}
@@ -548,19 +550,24 @@ export default function EmailPage() {
           {detail?.recipients && (
             <section className="surface-panel rounded-xl p-4">
               <h2 className="text-sm font-semibold text-white">Recipient delivery</h2>
-              <div className="mt-2 max-h-[320px] overflow-y-auto">
-                <table className="w-full text-left text-[11px]">
+              <div className="mt-2 max-h-[320px] overflow-x-auto overflow-y-auto">
+                <table className="w-full min-w-[420px] text-left text-[11px]">
                   <thead className="sticky top-0 bg-[#0a0c12] text-slate-500">
                     <tr>
                       <th className="py-1 pr-2">Email</th>
                       <th className="py-1 pr-2">Company</th>
                       <th className="py-1 pr-2">Status</th>
-                      <th className="py-1">Opens</th>
+                      <th className="py-1 pr-2">Opens</th>
+                      <th className="py-1"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {detail.recipients.map((r) => (
-                      <tr key={r.id} className="border-t border-white/[0.04] text-slate-400">
+                      <tr
+                        key={r.id}
+                        onClick={() => setViewingRecipient(r)}
+                        className="cursor-pointer border-t border-white/[0.04] text-slate-400 transition-colors hover:bg-white/[0.03]"
+                      >
                         <td className="py-1.5 pr-2 truncate max-w-[120px]">{r.email}</td>
                         <td className="py-1.5 pr-2 truncate max-w-[80px] text-slate-500">{r.company || r.niche || '—'}</td>
                         <td className="py-1.5 pr-2">
@@ -576,7 +583,8 @@ export default function EmailPage() {
                             {r.status}
                           </span>
                         </td>
-                        <td className="py-1.5">{r.openCount || (r.openedAt ? 1 : 0)}</td>
+                        <td className="py-1.5 pr-2">{r.openCount || (r.openedAt ? 1 : 0)}</td>
+                        <td className="py-1.5 text-right text-violet-300">View</td>
                       </tr>
                     ))}
                   </tbody>
@@ -600,6 +608,78 @@ export default function EmailPage() {
           )}
         </PageScroll>
       </PageBody>
+
+      <SentEmailModal
+        recipient={viewingRecipient}
+        campaign={detail?.campaign}
+        onClose={() => setViewingRecipient(null)}
+      />
     </PageShell>
+  )
+}
+
+/** Shows the exact personalized email a recipient received. Falls back to a
+ *  best-effort merge of the template for campaigns sent before render storage. */
+function SentEmailModal({ recipient, campaign, onClose }) {
+  if (!recipient) return null
+
+  const data = {
+    ...(recipient.mergeData || {}),
+    email: recipient.email,
+    name: recipient.name,
+    company: recipient.company,
+    niche: recipient.niche,
+  }
+  const hasStored = !!(recipient.renderedSubject || recipient.renderedText || recipient.renderedHtml)
+
+  const subject = hasStored
+    ? recipient.renderedSubject
+    : mergeTemplate(campaign?.subject || '', data)
+
+  const templateBody =
+    campaign?.textBody?.trim() || campaign?.htmlBody?.replace(/<[^>]+>/g, '').trim() || ''
+  const body = hasStored
+    ? recipient.renderedText || recipient.renderedHtml?.replace(/<[^>]+>/g, '').trim() || ''
+    : mergeTemplate(templateBody, data)
+
+  return (
+    <Modal open={!!recipient} onClose={onClose} title="Sent email">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <span className="font-medium text-white">{recipient.email}</span>
+          {recipient.company && <span>· {recipient.company}</span>}
+          <span
+            className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              hasStored
+                ? 'bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/25'
+                : 'bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/25'
+            }`}
+          >
+            {hasStored ? 'Exact copy sent' : 'Reconstructed from template'}
+          </span>
+        </div>
+
+        <div>
+          <p className="field-label">Subject</p>
+          <p className="text-sm font-medium text-white">{subject || '—'}</p>
+        </div>
+
+        <div>
+          <p className="field-label">Body</p>
+          <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-white/[0.06] bg-black/20 p-3">
+            <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-200">
+              {body || 'No body content'}
+            </p>
+          </div>
+        </div>
+
+        {!hasStored && (
+          <p className="text-[10px] text-slate-600">
+            This campaign was sent before per-recipient copies were stored, so spintax choices
+            may differ from what was actually delivered. Newly sent campaigns show the exact copy.
+          </p>
+        )}
+      </div>
+    </Modal>
   )
 }

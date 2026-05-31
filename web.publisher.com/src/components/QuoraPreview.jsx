@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
-export default function QuoraPreview({ enabled, body }) {
-  const [collapsed, setCollapsed] = useState(true)
+export default function QuoraPreview({ enabled, body, defaultCollapsed = true }) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
   const text = body?.trim() || ''
 
   if (!enabled) {

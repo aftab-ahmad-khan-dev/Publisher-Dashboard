@@ -91,6 +91,12 @@ export async function runCampaignSend(campaignId, workspaceId) {
             sanitizePublishedText(mergeTemplate(tpl.htmlBody, data)) ||
             text.replace(/\n/g, '<br>\n')
 
+          // Persist the personalized content as actually composed (pre tracking
+          // pixel) so the campaign detail view can show what each recipient got.
+          recipient.renderedSubject = subject
+          recipient.renderedText = text
+          recipient.renderedHtml = html
+
           if (campaign.trackOpens && recipient.trackingId) {
             const trackUrl = `${trackBase}/${recipient.trackingId}.gif`
             html = injectTrackingPixel(html, trackUrl)

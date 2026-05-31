@@ -63,6 +63,15 @@ export function configFromServer(server) {
     },
     webhookUrl: server.webhookUrl || '',
     notificationsEnabled: server.notificationsEnabled ?? true,
+    defaults: {
+      scheduleTime: server.defaults?.scheduleTime || '12:00',
+    },
+  }
+}
+
+export function defaultsPayloadForSave(defaults) {
+  return {
+    scheduleTime: defaults?.scheduleTime?.trim() || '12:00',
   }
 }
 

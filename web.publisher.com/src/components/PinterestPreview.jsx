@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
-export default function PinterestPreview({ enabled, body, imagePreviewUrl }) {
-  const [collapsed, setCollapsed] = useState(true)
+export default function PinterestPreview({ enabled, body, imagePreviewUrl, defaultCollapsed = true }) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
   const text = body?.trim() || ''
   const title = (text.split('\n')[0] || 'New Pin').slice(0, 100)
 

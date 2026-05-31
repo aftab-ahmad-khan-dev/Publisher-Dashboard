@@ -5,6 +5,9 @@ import PageHeader from '../components/PageHeader'
 import PageShell, { PageScroll } from '../components/PageShell'
 import ViewToggle from '../components/ViewToggle'
 import { ScheduledPostListCard, ScheduledPostGridCard } from '../components/ScheduledPostCard'
+import EditScheduledModal from '../components/EditScheduledModal'
+import ConfirmDialog from '../components/ConfirmDialog'
+import PostPreviewModal from '../components/PostPreviewModal'
 
 const VIEW_KEY = 'pulse_scheduled_view'
 
@@ -17,8 +20,11 @@ function loadView() {
 }
 
 export default function ScheduledPage() {
-  const { queue, cancelScheduled } = useAppData()
+  const { queue, cancelScheduled, editScheduled } = useAppData()
   const [view, setView] = useState(loadView)
+  const [previewing, setPreviewing] = useState(null)
+  const [editing, setEditing] = useState(null)
+  const [deleting, setDeleting] = useState(null)
 
   const setViewAndPersist = (v) => {
     setView(v)
@@ -55,7 +61,9 @@ export default function ScheduledPage() {
               <ScheduledPostGridCard
                 key={item.id}
                 item={item}
-                onCancel={cancelScheduled}
+                onPreview={setPreviewing}
+                onEdit={setEditing}
+                onDelete={setDeleting}
                 style={{ animationDelay: `${i * 30}ms` }}
               />
             ))}
@@ -66,13 +74,38 @@ export default function ScheduledPage() {
               <ScheduledPostListCard
                 key={item.id}
                 item={item}
-                onCancel={cancelScheduled}
+                onPreview={setPreviewing}
+                onEdit={setEditing}
+                onDelete={setDeleting}
                 style={{ animationDelay: `${i * 30}ms` }}
               />
             ))}
           </ul>
         )}
       </PageScroll>
+
+      <PostPreviewModal
+        open={!!previewing}
+        item={previewing}
+        onClose={() => setPreviewing(null)}
+      />
+
+      <EditScheduledModal
+        open={!!editing}
+        item={editing}
+        onClose={() => setEditing(null)}
+        onSave={(updates) => editScheduled(editing.id, updates)}
+      />
+
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => cancelScheduled(deleting.id)}
+        title="Delete scheduled post?"
+        message="This post will be removed from your queue and won't be published. This can't be undone."
+        confirmLabel="Delete post"
+        destructive
+      />
     </PageShell>
   )
 }

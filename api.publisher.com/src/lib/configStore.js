@@ -60,6 +60,9 @@ const DEFAULT_CONFIG = {
   },
   webhookUrl: '',
   notificationsEnabled: true,
+  defaults: {
+    scheduleTime: '12:00',
+  },
 }
 
 const META_SECRET_FIELDS = ['appSecret', 'pageToken']
@@ -186,6 +189,9 @@ function docToConfig(doc) {
     gmail: doc.gmail || DEFAULT_CONFIG.gmail,
     webhookUrl: doc.webhookUrl ?? '',
     notificationsEnabled: doc.notificationsEnabled ?? true,
+    defaults: {
+      scheduleTime: doc.defaults?.scheduleTime || DEFAULT_CONFIG.defaults.scheduleTime,
+    },
   }
 }
 
@@ -231,6 +237,9 @@ function fillFromEnv(config) {
     },
     webhookUrl: config.webhookUrl || env.webhookUrl,
     notificationsEnabled: config.notificationsEnabled,
+    defaults: {
+      scheduleTime: config.defaults?.scheduleTime || DEFAULT_CONFIG.defaults.scheduleTime,
+    },
   }
 }
 
@@ -258,6 +267,9 @@ export async function saveWorkspaceConfig(workspaceId, config) {
     gmail: mergeSection(prev.gmail, config.gmail || {}, GMAIL_SECRET_FIELDS),
     webhookUrl: config.webhookUrl ?? prev.webhookUrl,
     notificationsEnabled: config.notificationsEnabled ?? prev.notificationsEnabled,
+    defaults: {
+      scheduleTime: config.defaults?.scheduleTime ?? prev.defaults?.scheduleTime,
+    },
   })
 
   await ApiConfig.findOneAndUpdate(
@@ -273,6 +285,7 @@ export async function saveWorkspaceConfig(workspaceId, config) {
       gmail: next.gmail,
       webhookUrl: next.webhookUrl,
       notificationsEnabled: next.notificationsEnabled,
+      defaults: next.defaults,
     },
     { upsert: true, new: true },
   )
@@ -337,6 +350,14 @@ export async function saveThreadsConfig(workspaceId, threadsPatch) {
   })
 }
 
+export async function saveDefaultsConfig(workspaceId, defaultsPatch) {
+  const prev = await getWorkspaceConfig(workspaceId)
+  return saveWorkspaceConfig(workspaceId, {
+    ...prev,
+    defaults: { ...prev.defaults, ...defaultsPatch },
+  })
+}
+
 export async function saveLinkedInTokens(workspaceId, tokens) {
   return saveLinkedInConfig(workspaceId, tokens)
 }
@@ -365,6 +386,9 @@ export function resolveConfig(stored, bodyConfig) {
     gmail: mergeSection(stored.gmail, bodyConfig.gmail || {}, GMAIL_SECRET_FIELDS),
     webhookUrl: bodyConfig.webhookUrl ?? stored.webhookUrl,
     notificationsEnabled: bodyConfig.notificationsEnabled ?? stored.notificationsEnabled,
+    defaults: {
+      scheduleTime: bodyConfig.defaults?.scheduleTime ?? stored.defaults?.scheduleTime,
+    },
   })
 }
 
@@ -373,6 +397,9 @@ export function toClientConfig(config) {
   return {
     webhookUrl: config.webhookUrl,
     notificationsEnabled: config.notificationsEnabled,
+    defaults: {
+      scheduleTime: config.defaults?.scheduleTime || '12:00',
+    },
     meta: {
       appId: config.meta.appId || '',
       appSecret: '',

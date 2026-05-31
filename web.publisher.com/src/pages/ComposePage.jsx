@@ -13,6 +13,7 @@ export default function ComposePage() {
   const app = useAppData()
   const location = useLocation()
   const [draftSaving, setDraftSaving] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
 
   useEffect(() => {
     app.requestNotificationPermission()
@@ -29,7 +30,7 @@ export default function ComposePage() {
   }, [location.state?.draftId])
 
   const handleScheduleSuccess = (updatedQueue) => {
-    post.setScheduledAt(getNextScheduleSlot(updatedQueue))
+    post.setScheduledAt(getNextScheduleSlot(updatedQueue, app.apiConfig?.defaults?.scheduleTime))
   }
 
   const handleSaveDraft = async () => {
@@ -75,6 +76,13 @@ export default function ComposePage() {
       )}
 
       <PageBody className="flex min-h-0 flex-1 flex-col gap-2 lg:flex-row lg:gap-3">
+        <button
+          type="button"
+          onClick={() => setShowPreview((s) => !s)}
+          className="btn-secondary shrink-0 py-2 text-xs lg:hidden"
+        >
+          {showPreview ? 'Hide preview' : 'Show preview'}
+        </button>
         <PageScroll className="lg:w-[58%]">
           <div className="surface-panel h-full rounded-xl p-3 sm:p-4">
             <ComposerPanel
@@ -105,7 +113,7 @@ export default function ComposePage() {
           </div>
         </PageScroll>
 
-        <PageScroll className="hidden lg:block lg:w-[42%]">
+        <PageScroll className={`${showPreview ? 'block' : 'hidden'} lg:block lg:w-[42%]`}>
           <PreviewPanel state={post.state} compact />
         </PageScroll>
       </PageBody>

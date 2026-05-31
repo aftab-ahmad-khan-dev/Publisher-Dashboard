@@ -4,10 +4,11 @@ import {
   setDateOnDatetimeLocal,
   setTimeOnDatetimeLocal,
   formatScheduleDisplay,
-  DEFAULT_SCHEDULE_HOUR,
+  parseScheduleTime,
+  DEFAULT_SCHEDULE_TIME,
 } from '../lib/scheduleUtils'
 
-const TIME_OPTIONS = [
+const BASE_TIME_OPTIONS = [
   { label: '12:00 PM', hour: 12, minute: 0 },
   { label: '9:00 AM', hour: 9, minute: 0 },
   { label: '10:00 AM', hour: 10, minute: 0 },
@@ -20,12 +21,34 @@ const TIME_OPTIONS = [
   { label: '6:00 PM', hour: 18, minute: 0 },
 ]
 
-export default function DateTimePicker({ value, onChange, minDate, hint, timezone }) {
+function labelFor(hour, minute) {
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const h12 = hour % 12 === 0 ? 12 : hour % 12
+  return `${h12}:${String(minute).padStart(2, '0')} ${period}`
+}
+
+export default function DateTimePicker({
+  value,
+  onChange,
+  minDate,
+  hint,
+  timezone,
+  defaultScheduleTime = DEFAULT_SCHEDULE_TIME,
+}) {
   const parsed = parseDatetimeLocal(value)
   const dateValue = value?.split('T')[0] || ''
+  const [defHour, defMinute] = parseScheduleTime(defaultScheduleTime)
   const timeKey = parsed
     ? `${parsed.getHours()}:${parsed.getMinutes()}`
-    : `${DEFAULT_SCHEDULE_HOUR}:0`
+    : `${defHour}:${defMinute}`
+
+  // Make sure the configured default time is always selectable in the dropdown.
+  const TIME_OPTIONS = useMemo(() => {
+    if (BASE_TIME_OPTIONS.some((t) => t.hour === defHour && t.minute === defMinute)) {
+      return BASE_TIME_OPTIONS
+    }
+    return [{ label: labelFor(defHour, defMinute), hour: defHour, minute: defMinute }, ...BASE_TIME_OPTIONS]
+  }, [defHour, defMinute])
 
   const minDateOnly = minDate?.split('T')[0]
 
@@ -61,7 +84,7 @@ export default function DateTimePicker({ value, onChange, minDate, hint, timezon
             <CalendarIcon />
           </span>
         </div>
-        <div className="relative w-[140px] shrink-0">
+        <div className="relative w-28 shrink-0 sm:w-[140px]">
           <select
             value={timeKey}
             onChange={handleTimeChange}

@@ -3,6 +3,7 @@ import { useAppData } from '../contexts/AppDataContext'
 import { PlatformIconGroup } from '../components/PlatformIcon'
 import PageHeader from '../components/PageHeader'
 import PageShell, { PageBody } from '../components/PageShell'
+import PostPreviewModal from '../components/PostPreviewModal'
 import { formatScheduledISO } from '../lib/scheduleUtils'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -18,6 +19,7 @@ function dateKey(d) {
 export default function CalendarPage() {
   const { queue } = useAppData()
   const [cursor, setCursor] = useState(() => new Date())
+  const [previewing, setPreviewing] = useState(null)
 
   const year = cursor.getFullYear()
   const month = cursor.getMonth()
@@ -55,8 +57,8 @@ export default function CalendarPage() {
     <PageShell>
       <PageHeader title="Calendar" subtitle={`${queue.length} scheduled · 12:00 PM`} />
 
-      <PageBody className="grid min-h-0 flex-1 grid-cols-1 gap-2 lg:grid-cols-3 lg:gap-3">
-        <div className="surface-panel flex min-h-0 flex-col overflow-hidden rounded-xl p-3 lg:col-span-2 lg:p-4">
+      <PageBody className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-y-auto lg:grid-cols-3 lg:gap-3 lg:overflow-hidden">
+        <div className="surface-panel flex flex-col rounded-xl p-3 lg:col-span-2 lg:min-h-0 lg:overflow-hidden lg:p-4">
           <div className="mb-2 flex shrink-0 items-center justify-between">
             <h3 className="font-display text-base font-bold text-white">
               {MONTHS[month]} <span className="text-slate-500">{year}</span>
@@ -95,7 +97,7 @@ export default function CalendarPage() {
                   key={key}
                   type="button"
                   onClick={() => setCursor(day)}
-                  className={`calendar-day flex min-h-0 flex-col rounded-lg p-1 text-left transition-all ${
+                  className={`calendar-day flex min-h-[2.75rem] flex-col rounded-lg p-1 text-left transition-all lg:min-h-0 ${
                     isSelected
                       ? 'bg-violet-600/25 ring-1 ring-fuchsia-500/50'
                       : posts.length
@@ -117,7 +119,7 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        <div className="surface-panel flex min-h-0 flex-col overflow-hidden rounded-xl p-3 lg:p-4">
+        <div className="surface-panel flex flex-col rounded-xl p-3 lg:min-h-0 lg:overflow-hidden lg:p-4">
           <h3 className="shrink-0 font-display text-sm font-bold text-white">
             {cursor.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
           </h3>
@@ -130,21 +132,30 @@ export default function CalendarPage() {
               </li>
             ) : (
               selectedPosts.map((item) => (
-                <li
-                  key={item.id}
-                  className="rounded-lg border border-white/[0.07] bg-black/20 p-2.5"
-                >
-                  <PlatformIconGroup platforms={item.platforms} size="xs" />
-                  <p className="mt-1.5 line-clamp-2 text-xs text-slate-300">{item.body}</p>
-                  <p className="mt-1 text-[10px] text-violet-300">
-                    {formatScheduledISO(item.scheduledAt, item.timezone)}
-                  </p>
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewing(item)}
+                    className="w-full rounded-lg border border-white/[0.07] bg-black/20 p-2.5 text-left transition-colors hover:border-violet-500/30 hover:bg-white/[0.04]"
+                  >
+                    <PlatformIconGroup platforms={item.platforms} size="xs" />
+                    <p className="mt-1.5 line-clamp-2 text-xs text-slate-300">{item.body}</p>
+                    <p className="mt-1 text-[10px] text-violet-300">
+                      {formatScheduledISO(item.scheduledAt, item.timezone)}
+                    </p>
+                  </button>
                 </li>
               ))
             )}
           </ul>
         </div>
       </PageBody>
+
+      <PostPreviewModal
+        open={!!previewing}
+        item={previewing}
+        onClose={() => setPreviewing(null)}
+      />
     </PageShell>
   )
 }

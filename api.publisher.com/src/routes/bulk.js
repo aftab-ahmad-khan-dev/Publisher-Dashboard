@@ -28,6 +28,10 @@ router.post('/bulk/schedule', async (req, res, next) => {
     }
 
     const [sy, sm, sd] = (startDate || new Date().toISOString().slice(0, 10)).split('-').map(Number)
+    // Default time of day comes from the workspace's scheduling defaults ("HH:MM").
+    const [defHour, defMinute] = (config.defaults?.scheduleTime || `${DEFAULT_SCHEDULE_HOUR}:${DEFAULT_SCHEDULE_MINUTE}`)
+      .split(':')
+      .map(Number)
     const created = []
 
     for (const post of posts) {
@@ -41,7 +45,7 @@ router.post('/bulk/schedule', async (req, res, next) => {
       }
 
       const dayNum = Number(post.dayNum) || 1
-      const scheduled = new Date(sy, sm - 1, sd, DEFAULT_SCHEDULE_HOUR, DEFAULT_SCHEDULE_MINUTE, 0, 0)
+      const scheduled = new Date(sy, sm - 1, sd, defHour, defMinute, 0, 0)
       scheduled.setDate(scheduled.getDate() + (dayNum - 1))
 
       if (scheduled <= new Date()) {

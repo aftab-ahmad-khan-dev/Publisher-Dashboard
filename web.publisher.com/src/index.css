@@ -208,7 +208,7 @@ body {
 }
 
 .publish-panel {
-  @apply rounded-2xl border border-white/[0.06] bg-black/20 p-5;
+  @apply rounded-2xl p-5;
 }
 
 /* Stats */
@@ -296,7 +296,7 @@ body {
 }
 
 .btn-draft {
-  @apply inline-flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/25 bg-gradient-to-r from-amber-500/10 to-amber-600/5 px-5 py-2.5 text-sm font-semibold text-amber-100 transition-all hover:border-amber-400/40 hover:from-amber-500/15 disabled:opacity-60;
+  @apply inline-flex w-full items-center justify-center gap-2 rounded-xl border-0 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-slate-200 transition-all hover:bg-white/[0.08] disabled:opacity-60;
 }
 
 .view-toggle {

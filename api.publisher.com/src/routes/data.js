@@ -11,6 +11,7 @@ import {
   saveQuoraConfig,
   savePinterestConfig,
   saveThreadsConfig,
+  saveDefaultsConfig,
   toClientConfig,
   stripPlaceholderSecrets,
 } from '../lib/configStore.js'
@@ -118,6 +119,16 @@ router.put('/config/threads', async (req, res, next) => {
   }
 })
 
+router.put('/config/defaults', async (req, res, next) => {
+  try {
+    const defaults = req.body?.defaults || req.body
+    const config = await saveDefaultsConfig(req.workspaceId, defaults)
+    res.json({ ok: true, config: toClientConfig(config), message: 'Scheduling defaults saved to database' })
+  } catch (err) {
+    next(err)
+  }
+})
+
 router.get('/drafts', async (req, res, next) => {
   try {
     const drafts = await Draft.find({ workspaceId: req.workspaceId }).sort({ updatedAt: -1 }).lean()
@@ -164,6 +175,62 @@ router.get('/scheduled', async (req, res, next) => {
       .sort({ scheduledAt: 1 })
       .lean()
     res.json({ ok: true, scheduled: scheduled.map(mapScheduled) })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.put('/scheduled/:id', async (req, res, next) => {
+  try {
+    const { body, platforms, scheduledAt, timezone } = req.body || {}
+    const doc = await ScheduledPost.findOne({
+      _id: req.params.id,
+      workspaceId: req.workspaceId,
+    })
+    if (!doc) return res.status(404).json({ ok: false, error: 'Not found' })
+    // A post mid-publish (or already published/cancelled) can't be edited.
+    if (!['scheduled', 'failed'].includes(doc.status)) {
+      return res
+        .status(409)
+        .json({ ok: false, error: `Cannot edit a post that is ${doc.status}.` })
+    }
+
+    if (typeof body === 'string') {
+      if (!body.trim()) {
+        return res.status(400).json({ ok: false, error: 'Post body is required.' })
+      }
+      doc.body = body
+      doc.postState = { ...(doc.postState || {}), body }
+      doc.markModified('postState')
+    }
+
+    if (Array.isArray(platforms)) {
+      if (!platforms.length) {
+        return res
+          .status(400)
+          .json({ ok: false, error: 'Select at least one platform.' })
+      }
+      doc.platforms = platforms
+    }
+
+    if (scheduledAt) {
+      // Frontend sends a real UTC ISO instant (see datetimeLocalToISO).
+      const when = new Date(scheduledAt)
+      if (Number.isNaN(when.getTime()) || when <= new Date()) {
+        return res
+          .status(400)
+          .json({ ok: false, error: 'Scheduled time must be in the future.' })
+      }
+      doc.scheduledAt = when
+    }
+
+    if (timezone) doc.timezone = timezone
+
+    // Editing re-arms the post: a previously failed post becomes pending again.
+    doc.status = 'scheduled'
+    doc.error = undefined
+    await doc.save()
+    res.json({ ok: true, scheduled: mapScheduled(doc) })
   } catch (err) {
     next(err)
   }
@@ -225,6 +292,10 @@ function mapScheduled(d) {
     error: d.error,
     bulkTitle: ps.bulkTitle,
     imagePreview: ps.imagePreview,
+    // Extra fields so the post can be previewed accurately per platform.
+    hashtags: ps.hashtags,
+    imageType: ps.imageType,
+    cropHint: ps.cropHint,
   }
 }
 

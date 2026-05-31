@@ -106,6 +106,10 @@ export async function saveThreadsRemote(threads) {
   return apiFetch("/config/threads", { method: "PUT", body: { threads } });
 }
 
+export async function saveDefaultsRemote(defaults) {
+  return apiFetch("/config/defaults", { method: "PUT", body: { defaults } });
+}
+
 export function linkedInOAuthUrl() {
   return oauthUrl("/auth/linkedin");
 }
@@ -168,6 +172,10 @@ export async function deleteDraftRemote(id) {
 
 export async function deleteScheduledRemote(id) {
   return apiFetch(`/scheduled/${id}`, { method: "DELETE" });
+}
+
+export async function updateScheduledRemote(id, payload) {
+  return apiFetch(`/scheduled/${id}`, { method: "PUT", body: payload });
 }
 
 export async function scheduleBulkRemote(payload) {

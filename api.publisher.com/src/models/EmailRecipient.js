@@ -16,6 +16,11 @@ const emailRecipientSchema = new mongoose.Schema(
     },
     trackingId: { type: String, index: true },
     gmailMessageId: String,
+    // The actual personalized content sent to this recipient (merge tags filled,
+    // spintax resolved). Captured at send time so it can be viewed afterward.
+    renderedSubject: String,
+    renderedText: String,
+    renderedHtml: String,
     error: String,
     sentAt: Date,
     openedAt: Date,

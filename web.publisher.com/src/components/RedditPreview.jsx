@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { redditTitleFromBody } from '../lib/contentPolicy'
 
-export default function RedditPreview({ enabled, body }) {
-  const [collapsed, setCollapsed] = useState(true)
+export default function RedditPreview({ enabled, body, defaultCollapsed = true }) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
   const title = redditTitleFromBody(body)
   const text = body?.trim() || ''
 

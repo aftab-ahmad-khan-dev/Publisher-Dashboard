@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import DateTimePicker from './DateTimePicker'
+import { useAppData } from '../contexts/AppDataContext'
 import {
   getNextScheduleSlot,
   formatScheduleDisplay,
@@ -57,26 +58,29 @@ export default function PublishControls({
   editingDraftId,
   draftSaving,
 }) {
+  const { apiConfig } = useAppData()
+  const defaultScheduleTime = apiConfig?.defaults?.scheduleTime || '12:00'
+
   const minDatetime = useMemo(() => {
     const d = new Date(Date.now() + 60000)
     return toDatetimeLocalValue(d)
   }, [])
 
   const nextSlotHint = useMemo(() => {
-    const next = getNextScheduleSlot(queue)
+    const next = getNextScheduleSlot(queue, defaultScheduleTime)
     return `Next open slot: ${formatScheduleDisplay(next, { showRelative: true })}`
-  }, [queue])
+  }, [queue, defaultScheduleTime])
 
   useEffect(() => {
     if (state.publishMode === 'scheduled' && !state.scheduledAt) {
-      setScheduledAt(getNextScheduleSlot(queue))
+      setScheduledAt(getNextScheduleSlot(queue, defaultScheduleTime))
     }
-  }, [state.publishMode, state.scheduledAt, queue, setScheduledAt])
+  }, [state.publishMode, state.scheduledAt, queue, setScheduledAt, defaultScheduleTime])
 
   const handleScheduleMode = () => {
     setPublishMode('scheduled')
     if (!state.scheduledAt) {
-      setScheduledAt(getNextScheduleSlot(queue))
+      setScheduledAt(getNextScheduleSlot(queue, defaultScheduleTime))
     }
   }
 
@@ -130,6 +134,7 @@ export default function PublishControls({
             minDate={minDatetime}
             hint={nextSlotHint}
             timezone={state.timezone}
+            defaultScheduleTime={defaultScheduleTime}
           />
 
           <div>

@@ -9,8 +9,9 @@ export default function LinkedInPreview({
   imageType,
   showImage,
   cropHint,
+  defaultCollapsed = true,
 }) {
-  const [collapsed, setCollapsed] = useState(true)
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
   const ratio = CROP_HINTS.find((c) => c.id === cropHint)?.ratio ?? '1.91 / 1'
   const fullText = [body, hashtags].filter(Boolean).join('\n\n')
 

@@ -1,7 +1,7 @@
 import { PlatformIconGroup } from './PlatformIcon'
 import { formatScheduledISO } from '../lib/scheduleUtils'
 
-export function ScheduledPostListCard({ item, onCancel, style }) {
+export function ScheduledPostListCard({ item, onPreview, onEdit, onDelete, style }) {
   const timeLabel =
     formatScheduledISO(item.scheduledAt, item.timezone).split(',').pop()?.trim() || '12:00 PM'
 
@@ -22,19 +22,35 @@ export function ScheduledPostListCard({ item, onCancel, style }) {
           </p>
           <p className="mt-1 text-xs text-slate-500">{item.timezone}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => onCancel(item.id)}
-          className="shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold text-rose-400 ring-1 ring-rose-500/25 transition-colors hover:bg-rose-500/10"
-        >
-          Cancel
-        </button>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            onClick={() => onPreview(item)}
+            className="rounded-xl px-2.5 py-1 text-xs font-semibold text-slate-300 ring-1 ring-white/15 transition-colors hover:bg-white/5 sm:px-3 sm:py-1.5"
+          >
+            Preview
+          </button>
+          <button
+            type="button"
+            onClick={() => onEdit(item)}
+            className="rounded-xl px-2.5 py-1 text-xs font-semibold text-violet-300 ring-1 ring-violet-500/25 transition-colors hover:bg-violet-500/10 sm:px-3 sm:py-1.5"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(item)}
+            className="rounded-xl px-2.5 py-1 text-xs font-semibold text-rose-400 ring-1 ring-rose-500/25 transition-colors hover:bg-rose-500/10 sm:px-3 sm:py-1.5"
+          >
+            Delete
+          </button>
+        </div>
       </div>
     </li>
   )
 }
 
-export function ScheduledPostGridCard({ item, onCancel, style }) {
+export function ScheduledPostGridCard({ item, onPreview, onEdit, onDelete, style }) {
   return (
     <li className="scheduled-grid-card group flex flex-col" style={style}>
       <div className="flex items-start justify-between gap-2">
@@ -57,11 +73,27 @@ export function ScheduledPostGridCard({ item, onCancel, style }) {
 
       <button
         type="button"
-        onClick={() => onCancel(item.id)}
-        className="mt-4 w-full rounded-xl py-2 text-xs font-semibold text-rose-400 ring-1 ring-rose-500/25 transition-colors hover:bg-rose-500/10"
+        onClick={() => onPreview(item)}
+        className="mt-4 w-full rounded-xl py-2 text-xs font-semibold text-slate-300 ring-1 ring-white/15 transition-colors hover:bg-white/5"
       >
-        Cancel
+        Preview
       </button>
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          onClick={() => onEdit(item)}
+          className="flex-1 rounded-xl py-2 text-xs font-semibold text-violet-300 ring-1 ring-violet-500/25 transition-colors hover:bg-violet-500/10"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(item)}
+          className="flex-1 rounded-xl py-2 text-xs font-semibold text-rose-400 ring-1 ring-rose-500/25 transition-colors hover:bg-rose-500/10"
+        >
+          Delete
+        </button>
+      </div>
     </li>
   )
 }

@@ -45,6 +45,10 @@ const apiConfigSchema = new mongoose.Schema(
     },
     webhookUrl: String,
     notificationsEnabled: { type: Boolean, default: true },
+    // User-configurable scheduling defaults. scheduleTime is "HH:MM" (24-hour).
+    defaults: {
+      scheduleTime: { type: String, default: '12:00' },
+    },
   },
   { timestamps: true },
 )

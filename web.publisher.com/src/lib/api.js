@@ -180,9 +180,12 @@ export async function scheduleToPlatforms(postState, apiConfig) {
   }
 
   if (isLivePublishing()) {
+    const { datetimeLocalToISO } = await import('./scheduleUtils.js')
     return postBackend('/schedule', {
       postState,
-      scheduledAt: postState.scheduledAt,
+      // Send a real UTC instant, not the naive "...T12:00" wall-clock string —
+      // otherwise the backend parses it as UTC and the time shifts by the TZ offset.
+      scheduledAt: datetimeLocalToISO(postState.scheduledAt),
       enabled,
       apiConfig,
       timezone: postState.timezone,

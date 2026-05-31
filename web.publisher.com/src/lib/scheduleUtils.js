@@ -1,8 +1,18 @@
 export const DEFAULT_SCHEDULE_HOUR = 12
 export const DEFAULT_SCHEDULE_MINUTE = 0
+export const DEFAULT_SCHEDULE_TIME = '12:00'
 
 function pad(n) {
   return String(n).padStart(2, '0')
+}
+
+/** Parse a "HH:MM" string into [hour, minute], falling back to the 12:00 default. */
+export function parseScheduleTime(time) {
+  const [h, m] = String(time || DEFAULT_SCHEDULE_TIME).split(':').map(Number)
+  return [
+    Number.isFinite(h) ? h : DEFAULT_SCHEDULE_HOUR,
+    Number.isFinite(m) ? m : DEFAULT_SCHEDULE_MINUTE,
+  ]
 }
 
 export function dateOnlyKey(date) {
@@ -14,21 +24,22 @@ export function getOccupiedDateKeys(queue = []) {
   return new Set(queue.map((item) => dateOnlyKey(new Date(item.scheduledAt))))
 }
 
-/** Next open calendar day at 12:00 PM (skips dates that already have a scheduled post). */
-export function getNextScheduleSlot(queue = []) {
+/** Next open calendar day at the configured default time (skips occupied dates). */
+export function getNextScheduleSlot(queue = [], defaultScheduleTime = DEFAULT_SCHEDULE_TIME) {
+  const [hour, minute] = parseScheduleTime(defaultScheduleTime)
   const occupied = getOccupiedDateKeys(queue)
   const candidate = new Date()
-  candidate.setHours(DEFAULT_SCHEDULE_HOUR, DEFAULT_SCHEDULE_MINUTE, 0, 0)
+  candidate.setHours(hour, minute, 0, 0)
 
   const now = new Date()
   if (candidate <= now) {
     candidate.setDate(candidate.getDate() + 1)
-    candidate.setHours(DEFAULT_SCHEDULE_HOUR, DEFAULT_SCHEDULE_MINUTE, 0, 0)
+    candidate.setHours(hour, minute, 0, 0)
   }
 
   while (occupied.has(dateOnlyKey(candidate))) {
     candidate.setDate(candidate.getDate() + 1)
-    candidate.setHours(DEFAULT_SCHEDULE_HOUR, DEFAULT_SCHEDULE_MINUTE, 0, 0)
+    candidate.setHours(hour, minute, 0, 0)
   }
 
   return toDatetimeLocalValue(candidate)
@@ -45,6 +56,18 @@ export function parseDatetimeLocal(value) {
   const [y, m, d] = datePart.split('-').map(Number)
   const [hh, mm] = (timePart || '12:00').split(':').map(Number)
   return new Date(y, m - 1, d, hh, mm, 0, 0)
+}
+
+/**
+ * Convert a naive datetime-local string ("2026-06-01T12:00") into a real UTC
+ * ISO string, interpreting the wall-clock time in the browser's local timezone.
+ * Use this before sending to the backend so the instant is unambiguous — the
+ * backend's `new Date(isoString)` then parses the exact same moment, instead of
+ * mistaking a timezone-less string for UTC (which shifted noon by the TZ offset).
+ */
+export function datetimeLocalToISO(value) {
+  const date = parseDatetimeLocal(value)
+  return date ? date.toISOString() : null
 }
 
 export function formatScheduleDisplay(value, options = {}) {
