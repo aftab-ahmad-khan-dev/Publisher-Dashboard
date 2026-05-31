@@ -55,14 +55,14 @@ app.get("/api/email/open/:trackingId.gif", async (req, res) => {
 app.get("/api/media/:id", async (req, res) => {
   try {
     await ensureDbConnected();
-    const media = await Media.findById(req.params.id).lean();
-    if (!media?.data) return res.status(404).end();
-    const buf = Buffer.isBuffer(media.data)
-      ? media.data
-      : Buffer.from(media.data.buffer || media.data);
+    // No .lean(): a Mongoose doc returns `data` as a real Buffer. With .lean() it
+    // comes back as a BSON Binary, which serializes to garbage and makes Instagram
+    // reject the image as "Only photo or video can be accepted as media type".
+    const media = await Media.findById(req.params.id);
+    if (!media?.data?.length) return res.status(404).end();
     res.set("Content-Type", media.contentType || "image/jpeg");
     res.set("Cache-Control", "public, max-age=86400");
-    return res.send(buf);
+    return res.send(Buffer.from(media.data));
   } catch {
     return res.status(404).end();
   }
