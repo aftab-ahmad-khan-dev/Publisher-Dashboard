@@ -6,6 +6,10 @@ import HashtagManager from './HashtagManager'
 import PublishControls from './PublishControls'
 import ScheduleQueue from './ScheduleQueue'
 import { containsForbiddenDash } from '../lib/contentSanitize'
+import { PLATFORM_META } from '../lib/constants'
+
+/** Platforms that cannot publish without an attached image or video. */
+const MEDIA_REQUIRED_PLATFORMS = ['instagram', 'pinterest']
 
 export default function ComposerPanel({
   state,
@@ -32,9 +36,23 @@ export default function ComposerPanel({
   showQueue = true,
   queue = [],
 }) {
+  const mediaRequiredWithoutImage = state.image
+    ? []
+    : MEDIA_REQUIRED_PLATFORMS.filter((p) => state.platforms[p]).map(
+        (p) => PLATFORM_META[p]?.label || p,
+      )
+
   return (
     <div className="space-y-3">
       <PlatformSelector platforms={state.platforms} togglePlatform={togglePlatform} />
+
+      {mediaRequiredWithoutImage.length > 0 && (
+        <p className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-[11px] text-amber-300/95">
+          {mediaRequiredWithoutImage.join(' and ')}{' '}
+          {mediaRequiredWithoutImage.length > 1 ? 'require' : 'requires'} an image or video.
+          Without one, this post will only reach your other platforms.
+        </p>
+      )}
 
       <CommunityContentGuide body={state.body} platforms={state.platforms} />
 

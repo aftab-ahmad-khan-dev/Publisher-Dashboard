@@ -5,7 +5,23 @@ import {
   saveLinkedInTokens,
 } from './configStore.js'
 
-const SCOPES = ['openid', 'profile', 'w_member_social', 'w_organization_social', 'r_organization_social']
+// Profile posting only needs these; they map to the "Sign In with OpenID Connect"
+// + "Share on LinkedIn" products every app can get. openid+profile are required to
+// resolve the member URN via /v2/userinfo.
+const BASE_SCOPES = ['openid', 'profile', 'w_member_social']
+// Org scopes require the "Community Management API" product. Requesting them when the
+// app isn't approved makes LinkedIn reject the WHOLE authorization (unauthorized_scope_error),
+// so only add them when org posting is actually configured.
+const ORG_SCOPES = ['w_organization_social', 'r_organization_social']
+
+function resolveScopes(config) {
+  const orgUrn = config.linkedin?.orgUrn?.trim() || ''
+  const hasRealOrg =
+    /^urn:li:organization:\d+$/i.test(orgUrn) && !/^urn:li:organization:12345$/i.test(orgUrn)
+  const wantsOrg =
+    hasRealOrg || /^(1|true|yes)$/i.test(process.env.LINKEDIN_ENABLE_ORG_SCOPES?.trim() || '')
+  return wantsOrg ? [...BASE_SCOPES, ...ORG_SCOPES] : BASE_SCOPES
+}
 
 const pendingStates = new Map()
 
@@ -43,7 +59,7 @@ export function startLinkedInAuth(workspaceId) {
       client_id: clientId,
       redirect_uri: redirectUri,
       state,
-      scope: SCOPES.join(' '),
+      scope: resolveScopes(config).join(' '),
     })
 
     return `https://www.linkedin.com/oauth/v2/authorization?${params}`

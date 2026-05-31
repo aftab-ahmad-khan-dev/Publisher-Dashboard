@@ -18,9 +18,7 @@ export async function publishToAllPlatforms({ platforms, postState, config }) {
           await publishToFacebook({ message: text, pageToken: config.meta.pageToken }),
         )
       } else if (platform === 'instagram') {
-        results.push(
-          await publishToInstagram({ message: text, pageToken: config.meta.pageToken }),
-        )
+        results.push(await publishToInstagram({ postState }))
       } else if (platform === 'linkedin') {
         if (!canPublishLinkedIn(config.linkedin)) {
           throw new Error(

@@ -14,8 +14,8 @@ function parseLinkedInError(status, raw) {
     return (
       'LinkedIn rejected the access token. Generate a new token for app “Publisher” (Client ID must match), ' +
       'paste the full string with Copy access token, then Save LinkedIn now. ' +
-      'For company posts use scopes w_organization_social + r_organization_social and a real urn:li:organization:ID. ' +
-      'For profile posts use w_member_social (leave Org URN blank or remove placeholder 12345).'
+      'For profile posts the token needs scopes openid + profile + w_member_social (the first two are required to look up your member URN); leave Org URN blank or remove placeholder 12345. ' +
+      'For company posts also add w_organization_social + r_organization_social and a real urn:li:organization:ID.'
     )
   }
   return message
@@ -58,7 +58,7 @@ export async function resolveLinkedInAuthor(accessToken, orgUrn) {
   const useOrg = isValidOrganizationUrn(orgUrn)
 
   if (useOrg) {
-    return { author: org, mode: 'organization', userinfo }
+    return { author: orgUrn.trim(), mode: 'organization', userinfo }
   }
 
   const person = personUrnFromUserinfo(userinfo)
