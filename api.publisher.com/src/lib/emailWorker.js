@@ -7,6 +7,7 @@ import { mergeTemplate } from './emailMerge.js'
 import { sanitizePublishedText } from './contentSanitize.js'
 import { broadcastEvent } from './events.js'
 import { logger } from './logger.js'
+import { apiPublicBase } from './publicUrl.js'
 
 const TRANSPARENT_GIF = Buffer.from(
   'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
@@ -16,7 +17,8 @@ const TRANSPARENT_GIF = Buffer.from(
 export { TRANSPARENT_GIF }
 
 function trackingBaseUrl() {
-  const api = process.env.API_PUBLIC_URL?.trim() || process.env.WEB_URL?.replace('5173', '3001')?.trim()
+  const api =
+    apiPublicBase() || process.env.WEB_URL?.replace('5173', '3001')?.trim()?.replace(/\/+$/, '')
   return `${api || 'http://localhost:3001'}/api/email/open`
 }
 

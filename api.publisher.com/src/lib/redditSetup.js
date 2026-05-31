@@ -1,3 +1,5 @@
+import { apiPublicBase } from './publicUrl.js'
+
 const PLACEHOLDER_RE =
   /^(your_client_id|your_client_secret|your_refresh_token|your_subreddit|your_user_agent)$/i
 
@@ -43,7 +45,7 @@ export function resolveRedditCredentials(config = {}) {
 
 export function getRedditEnvSetup(config = {}) {
   const creds = resolveRedditCredentials(config)
-  const publicBase = process.env.API_PUBLIC_URL?.trim()?.replace(/\/$/, '')
+  const publicBase = apiPublicBase()
   const redirectUri =
     (publicBase && `${publicBase}/api/auth/reddit/callback`) ||
     process.env.REDDIT_REDIRECT_URI?.trim()?.replace(/\/$/, '') ||

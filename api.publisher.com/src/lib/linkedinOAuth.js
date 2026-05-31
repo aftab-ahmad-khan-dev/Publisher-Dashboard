@@ -4,6 +4,7 @@ import {
   saveLinkedInConfig,
   saveLinkedInTokens,
 } from './configStore.js'
+import { apiPublicBase } from './publicUrl.js'
 
 // Profile posting only needs these; they map to the "Sign In with OpenID Connect"
 // + "Share on LinkedIn" products every app can get. openid+profile are required to
@@ -37,8 +38,7 @@ function getClientCredentials(config) {
     clientSecret:
       config.linkedin.clientSecret?.trim() || process.env.LINKEDIN_CLIENT_SECRET?.trim(),
     redirectUri:
-      (process.env.API_PUBLIC_URL?.trim()?.replace(/\/$/, '') &&
-        `${process.env.API_PUBLIC_URL.trim().replace(/\/$/, '')}/api/auth/linkedin/callback`) ||
+      (apiPublicBase() && `${apiPublicBase()}/api/auth/linkedin/callback`) ||
       process.env.LINKEDIN_REDIRECT_URI?.trim() ||
       'http://localhost:3001/api/auth/linkedin/callback',
   }

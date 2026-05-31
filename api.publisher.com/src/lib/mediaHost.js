@@ -1,4 +1,5 @@
 import { Media } from '../models/Media.js'
+import { apiPublicBase } from './publicUrl.js'
 
 /**
  * Instagram requires a PUBLIC image URL (it can't take an upload or base64). We
@@ -15,7 +16,7 @@ export async function resolvePublicImageUrl({ postState, workspaceId }) {
   const dataUrl = postState?.imageDataUrl
   if (!dataUrl?.startsWith('data:image/')) return null
 
-  const base = process.env.API_PUBLIC_URL?.trim()?.replace(/\/$/, '')
+  const base = apiPublicBase()
   if (!base) {
     throw new Error(
       'API_PUBLIC_URL must be set so Instagram can fetch the image. Set it to the public API URL.',

@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { getWorkspaceConfig, saveGmailTokens } from './configStore.js'
 import { logger } from './logger.js'
+import { apiPublicBase } from './publicUrl.js'
 
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
@@ -15,7 +16,7 @@ const DEFAULT_LOCAL_REDIRECT = DEFAULT_127_REDIRECT
 
 /** Build a callback URL from API_PUBLIC_URL (the deployed domain) when set. */
 function publicCallback(path) {
-  const base = process.env.API_PUBLIC_URL?.trim()?.replace(/\/$/, '')
+  const base = apiPublicBase()
   return base ? `${base}${path}` : null
 }
 
