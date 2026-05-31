@@ -499,7 +499,7 @@ export function AppDataProvider({ children }) {
 
       if (result.warnings?.length) {
         showToast(
-          `Published with warnings: ${result.warnings.map((w) => w.platform).join(', ')}`,
+          result.warnings.map((w) => `${w.platform}: ${w.error}`).join(' | '),
           'error',
         )
       }

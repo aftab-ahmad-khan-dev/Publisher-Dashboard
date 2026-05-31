@@ -6,6 +6,7 @@ import { publishToQuora } from './quora.js'
 import { publishToPinterest } from './pinterest.js'
 import { publishToThreads } from './threads.js'
 import { resolvePublicImageUrl } from '../mediaHost.js'
+import { logger } from '../logger.js'
 
 export async function publishToAllPlatforms({ platforms, postState, config, workspaceId }) {
   const results = []
@@ -55,6 +56,7 @@ export async function publishToAllPlatforms({ platforms, postState, config, work
         results.push(await publishToThreads({ text, postState, threads: config.threads }))
       }
     } catch (err) {
+      logger.warn('Platform publish failed', { platform, error: err.message })
       errors.push({ platform, error: err.message })
     }
   }
