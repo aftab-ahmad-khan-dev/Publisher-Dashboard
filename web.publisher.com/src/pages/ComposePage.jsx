@@ -54,6 +54,13 @@ export default function ComposePage() {
         subtitle="Compose · preview · publish"
         action={
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowPreview((s) => !s)}
+              className="btn-secondary px-2 py-1 text-[10px] lg:hidden"
+            >
+              {showPreview ? 'Hide preview' : 'Preview'}
+            </button>
             {post.editingDraftId && (
               <button type="button" onClick={() => post.resetComposer()} className="btn-secondary px-2 py-1 text-[10px]">
                 New
@@ -76,13 +83,6 @@ export default function ComposePage() {
       )}
 
       <PageBody className="flex min-h-0 flex-1 flex-col gap-2 lg:flex-row lg:gap-3">
-        <button
-          type="button"
-          onClick={() => setShowPreview((s) => !s)}
-          className="btn-secondary shrink-0 py-2 text-xs lg:hidden"
-        >
-          {showPreview ? 'Hide preview' : 'Show preview'}
-        </button>
         <PageScroll className="lg:w-[58%]">
           <div className="surface-panel h-full rounded-xl p-3 sm:p-4">
             <ComposerPanel
