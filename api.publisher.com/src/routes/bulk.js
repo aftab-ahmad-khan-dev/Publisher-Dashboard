@@ -62,6 +62,8 @@ router.post('/bulk/schedule', async (req, res, next) => {
         bulkTitle: post.title,
         bulkPostNum: post.postNum,
         bulkDayNum: dayNum,
+        // Canonical field used by publishers; keep imagePreview for existing UI cards.
+        imageDataUrl: post.imageDataUrl || null,
         imagePreview: post.imageDataUrl || null,
         imageMeta: post.imageMeta || null,
         timezone: timezone || 'UTC',

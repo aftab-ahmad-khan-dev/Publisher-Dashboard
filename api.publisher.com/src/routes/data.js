@@ -236,6 +236,41 @@ router.put('/scheduled/:id', async (req, res, next) => {
   }
 })
 
+router.post('/scheduled/fix-media', async (req, res, next) => {
+  try {
+    const docs = await ScheduledPost.find({
+      workspaceId: req.workspaceId,
+      status: { $in: ['scheduled', 'failed'] },
+    })
+
+    let scanned = 0
+    let fixed = 0
+    for (const doc of docs) {
+      scanned += 1
+      const ps = doc.postState || {}
+      if (ps.imageDataUrl) continue
+
+      const preview = typeof ps.imagePreview === 'string' ? ps.imagePreview.trim() : ''
+      const previewUrl = typeof ps.imagePreviewUrl === 'string' ? ps.imagePreviewUrl.trim() : ''
+      const candidate = preview || previewUrl
+      if (!candidate.startsWith('data:image/')) continue
+
+      doc.postState = {
+        ...ps,
+        imageDataUrl: candidate,
+        imagePreview: ps.imagePreview || candidate,
+      }
+      doc.markModified('postState')
+      await doc.save()
+      fixed += 1
+    }
+
+    res.json({ ok: true, scanned, fixed })
+  } catch (err) {
+    next(err)
+  }
+})
+
 router.delete('/scheduled/:id', async (req, res, next) => {
   try {
     const doc = await ScheduledPost.findOneAndUpdate(

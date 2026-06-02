@@ -11,6 +11,22 @@ import { resetDbConnection } from './dbInit.js'
 
 let timer = null
 
+function coerceScheduledImageData(postState = {}) {
+  if (postState?.imageDataUrl) return postState
+
+  const fromPreview = typeof postState.imagePreview === 'string' ? postState.imagePreview.trim() : ''
+  const fromPreviewUrl =
+    typeof postState.imagePreviewUrl === 'string' ? postState.imagePreviewUrl.trim() : ''
+  const candidate = fromPreview || fromPreviewUrl
+  if (!candidate.startsWith('data:image/')) return postState
+
+  return {
+    ...postState,
+    imageDataUrl: candidate,
+    imagePreview: postState.imagePreview || candidate,
+  }
+}
+
 export function startScheduler() {
   if (timer) return
   timer = setInterval(() => {
@@ -48,6 +64,13 @@ export async function runDuePosts() {
 
 async function processScheduled(doc) {
   try {
+    const upgradedState = coerceScheduledImageData(doc.postState || {})
+    if (upgradedState !== doc.postState) {
+      doc.postState = upgradedState
+      doc.markModified('postState')
+      await doc.save()
+    }
+
     doc.status = 'publishing'
     await doc.save()
 

@@ -8,23 +8,34 @@ import { publishToThreads } from './threads.js'
 import { resolvePublicImageUrl } from '../mediaHost.js'
 import { logger } from '../logger.js'
 
+function normalizePostMedia(postState) {
+  if (!postState) return postState
+  if (postState.imageDataUrl) return postState
+  if (!postState.imagePreview) return postState
+  return { ...postState, imageDataUrl: postState.imagePreview }
+}
+
 export async function publishToAllPlatforms({ platforms, postState, config, workspaceId }) {
   const results = []
   const errors = []
+  const normalizedPostState = normalizePostMedia(postState)
 
   for (const platform of platforms) {
     try {
-      const text = buildPostText(postState, platform)
+      const text = buildPostText(normalizedPostState, platform)
       if (platform === 'facebook') {
         results.push(
           await publishToFacebook({
             message: text,
             pageToken: config.meta.pageToken,
-            postState,
+            postState: normalizedPostState,
           }),
         )
       } else if (platform === 'instagram') {
-        const imageUrl = await resolvePublicImageUrl({ postState, workspaceId })
+        const imageUrl = await resolvePublicImageUrl({
+          postState: normalizedPostState,
+          workspaceId,
+        })
         results.push(
           await publishToInstagram({
             message: text,
@@ -43,17 +54,37 @@ export async function publishToAllPlatforms({ platforms, postState, config, work
             text,
             orgUrn: config.linkedin.orgUrn,
             accessToken: config.linkedin.accessToken,
-            postState,
+            postState: normalizedPostState,
           }),
         )
       } else if (platform === 'reddit') {
-        results.push(await publishToReddit({ text, postState, reddit: config.reddit }))
+        results.push(
+          await publishToReddit({ text, postState: normalizedPostState, reddit: config.reddit }),
+        )
       } else if (platform === 'quora') {
-        results.push(await publishToQuora({ text, quora: config.quora, postState }))
+        results.push(
+          await publishToQuora({
+            text,
+            quora: config.quora,
+            postState: normalizedPostState,
+          }),
+        )
       } else if (platform === 'pinterest') {
-        results.push(await publishToPinterest({ text, postState, pinterest: config.pinterest }))
+        results.push(
+          await publishToPinterest({
+            text,
+            postState: normalizedPostState,
+            pinterest: config.pinterest,
+          }),
+        )
       } else if (platform === 'threads') {
-        results.push(await publishToThreads({ text, postState, threads: config.threads }))
+        results.push(
+          await publishToThreads({
+            text,
+            postState: normalizedPostState,
+            threads: config.threads,
+          }),
+        )
       }
     } catch (err) {
       logger.warn('Platform publish failed', { platform, error: err.message })
