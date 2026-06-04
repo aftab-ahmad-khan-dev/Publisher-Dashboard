@@ -21,6 +21,30 @@ export async function testThreadsConnection(threads) {
 }
 
 /**
+ * Poll an image container until Threads finishes downloading/processing the image.
+ * Publishing before it's FINISHED drops the image (the post goes out text-only) or
+ * errors — TEXT containers are instant so this only matters for IMAGE posts.
+ * Status endpoint: GET /{container-id}?fields=status,error_message.
+ */
+async function waitForThreadsContainer(containerId, token, attempts = 15) {
+  for (let i = 0; i < attempts; i++) {
+    const res = await fetch(
+      `${API}/${containerId}?fields=status,error_message&access_token=${encodeURIComponent(token)}`,
+    )
+    const data = await res.json().catch(() => ({}))
+    if (data.status === 'FINISHED') return
+    if (data.status === 'ERROR' || data.status === 'EXPIRED') {
+      throw new Error(
+        data.error_message ||
+          `Threads could not process the image (status ${data.status}). Is the URL public and a supported format?`,
+      )
+    }
+    await new Promise((r) => setTimeout(r, 2000))
+  }
+  throw new Error('Threads image is still processing after 30s. Try again or use a smaller image.')
+}
+
+/**
  * Publish a post to Threads — two-step: create a media container, then publish it.
  * Pass a public `imageUrl` for an image post; omit it for text-only. Threads can't
  * accept base64/uploads, so the caller must resolve a public URL first.
@@ -51,6 +75,11 @@ export async function publishToThreads({ text, imageUrl, threads }) {
   const createData = await createRes.json().catch(() => ({}))
   if (!createRes.ok || createData.error) {
     throw new Error(createData.error?.message || `Threads container failed (${createRes.status})`)
+  }
+
+  // An image container must finish processing before publish, or the image is dropped.
+  if (imageUrl) {
+    await waitForThreadsContainer(createData.id, token)
   }
 
   // 2) Publish container
