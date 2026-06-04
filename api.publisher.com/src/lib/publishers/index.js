@@ -35,6 +35,7 @@ export async function publishToAllPlatforms({ platforms, postState, config, work
         const imageUrl = await resolvePublicImageUrl({
           postState: normalizedPostState,
           workspaceId,
+          platform: 'instagram',
         })
         results.push(
           await publishToInstagram({
@@ -78,10 +79,17 @@ export async function publishToAllPlatforms({ platforms, postState, config, work
           }),
         )
       } else if (platform === 'threads') {
+        // Threads, like Instagram, needs a public image URL — base64/uploads
+        // aren't accepted. Resolve the scheduled post's image the same way.
+        const imageUrl = await resolvePublicImageUrl({
+          postState: normalizedPostState,
+          workspaceId,
+          platform: 'threads',
+        })
         results.push(
           await publishToThreads({
             text,
-            postState: normalizedPostState,
+            imageUrl,
             threads: config.threads,
           }),
         )

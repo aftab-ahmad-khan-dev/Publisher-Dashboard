@@ -21,10 +21,12 @@ export async function testThreadsConnection(threads) {
 }
 
 /**
- * Publish a text post to Threads — two-step: create a media container, then publish it.
+ * Publish a post to Threads — two-step: create a media container, then publish it.
+ * Pass a public `imageUrl` for an image post; omit it for text-only. Threads can't
+ * accept base64/uploads, so the caller must resolve a public URL first.
  * Threads API docs: POST /{user-id}/threads then POST /{user-id}/threads_publish.
  */
-export async function publishToThreads({ text, postState, threads }) {
+export async function publishToThreads({ text, imageUrl, threads }) {
   if (!isThreadsConfigured(threads)) {
     throw new Error('Threads needs an access token and your Threads user ID in API Config.')
   }
@@ -37,7 +39,6 @@ export async function publishToThreads({ text, postState, threads }) {
     text: text.slice(0, 500),
     access_token: token,
   })
-  const imageUrl = postState?.imageUrl || ''
   if (imageUrl) {
     createParams.set('media_type', 'IMAGE')
     createParams.set('image_url', imageUrl)

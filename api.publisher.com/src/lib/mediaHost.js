@@ -2,13 +2,14 @@ import { Media } from '../models/Media.js'
 import { apiPublicBase } from './publicUrl.js'
 
 /**
- * Instagram requires a PUBLIC image URL (it can't take an upload or base64). We
- * persist the composer's data-URL image and return a URL served by /api/media/:id.
- * Returns null when there's no usable image (caller decides if that's an error).
+ * Instagram and Threads require a PUBLIC image URL (they can't take an upload or
+ * base64). We persist the composer's data-URL image and return a URL served by
+ * /api/media/:id. Returns null when there's no usable image (caller decides if
+ * that's an error). `platform` selects which per-platform image toggle to honour.
  */
-export async function resolvePublicImageUrl({ postState, workspaceId }) {
+export async function resolvePublicImageUrl({ postState, workspaceId, platform = 'instagram' }) {
   // Respect the per-platform image toggle.
-  if (postState?.imageVisibility?.instagram === false) return null
+  if (postState?.imageVisibility?.[platform] === false) return null
 
   // Already a public URL (e.g. bulk uploads) — use it directly.
   if (postState?.imageUrl) return postState.imageUrl
@@ -19,7 +20,7 @@ export async function resolvePublicImageUrl({ postState, workspaceId }) {
   const base = apiPublicBase()
   if (!base) {
     throw new Error(
-      'API_PUBLIC_URL must be set so Instagram can fetch the image. Set it to the public API URL.',
+      `API_PUBLIC_URL must be set so ${platform} can fetch the image. Set it to the public API URL.`,
     )
   }
 
