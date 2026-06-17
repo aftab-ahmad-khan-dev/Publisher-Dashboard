@@ -46,7 +46,7 @@ export default function ComposerPanel({
       )
 
   return (
-    <div className="space-y-3">
+    <div className="composer-stack">
       <PlatformSelector platforms={state.platforms} togglePlatform={togglePlatform} />
 
       {mediaRequiredWithoutImage.length > 0 && (
@@ -95,12 +95,6 @@ export default function ComposerPanel({
           setCropHint={setCropHint}
           toggleImageVisibility={toggleImageVisibility}
         />
-      )}
-
-      {isPollEnabled(state) && (
-        <p className="rounded-lg border border-violet-500/20 bg-violet-500/[0.05] px-3 py-2 text-[11px] text-violet-200/90">
-          Image upload is disabled while a poll is active.
-        </p>
       )}
 
       <HashtagManager

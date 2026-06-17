@@ -90,11 +90,20 @@ body {
     rgba(0, 0, 0, 0.15) 100%
   );
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.35) inset,
-    0 24px 64px -24px rgba(0, 0, 0, 0.65),
-    0 0 80px -20px rgba(168, 85, 247, 0.08);
+  box-shadow: 0 24px 64px -24px rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(20px);
+}
+
+.composer-stack {
+  @apply flex w-full min-w-0 flex-col gap-3;
+}
+
+.composer-section {
+  @apply w-full min-w-0 rounded-xl border border-white/10 bg-white/[0.02];
+}
+
+.composer-section-active {
+  @apply border-violet-500/25 bg-violet-500/[0.03];
 }
 
 .glass-panel {
@@ -155,7 +164,7 @@ body {
 
 /* Buttons */
 .btn-primary {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-600 via-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white shadow-xl shadow-fuchsia-600/20 transition-all duration-200 hover:scale-[1.01] hover:shadow-fuchsia-500/35 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-60;
+  @apply inline-flex max-w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-600 via-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-600/15 transition-colors duration-200 hover:shadow-fuchsia-500/25 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-60;
 }
 
 .btn-secondary {
@@ -172,7 +181,7 @@ body {
 
 /* Inputs */
 .input-premium {
-  @apply w-full rounded-xl border border-white/[0.09] bg-[#0c0e16]/80 px-4 py-3 text-sm text-white placeholder:text-slate-600 transition-all duration-200 hover:border-white/15 focus:border-fuchsia-500/45 focus:bg-[#0e1018] focus:ring-2 focus:ring-fuchsia-500/15;
+  @apply max-w-full rounded-xl border border-white/[0.09] bg-[#0c0e16]/80 px-4 py-3 text-sm text-white placeholder:text-slate-600 transition-colors duration-200 hover:border-white/15 focus:border-fuchsia-500/45 focus:bg-[#0e1018] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-fuchsia-500/20;
 }
 
 /* DateTime picker */
@@ -208,7 +217,7 @@ body {
 }
 
 .publish-panel {
-  @apply rounded-2xl p-5;
+  @apply mt-1 border-t border-white/[0.06] pt-4;
 }
 
 /* Stats */
