@@ -7,6 +7,7 @@ import { publishToPinterest } from './pinterest.js'
 import { publishToThreads } from './threads.js'
 import { resolvePublicImageUrl } from '../mediaHost.js'
 import { logger } from '../logger.js'
+import { isPollEnabled, platformSupportsPoll } from '../pollPolicy.js'
 
 function normalizePostMedia(postState) {
   if (!postState) return postState
@@ -19,9 +20,19 @@ export async function publishToAllPlatforms({ platforms, postState, config, work
   const results = []
   const errors = []
   const normalizedPostState = normalizePostMedia(postState)
+  const pollMode = isPollEnabled(normalizedPostState)
 
   for (const platform of platforms) {
     try {
+      if (pollMode && !platformSupportsPoll(platform)) {
+        errors.push({
+          platform,
+          error: `${platform} does not support polls. Skipped.`,
+          skipped: true,
+        })
+        continue
+      }
+
       const text = buildPostText(normalizedPostState, platform)
       if (platform === 'facebook') {
         results.push(

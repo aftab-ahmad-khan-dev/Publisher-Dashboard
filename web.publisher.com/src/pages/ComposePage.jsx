@@ -98,6 +98,7 @@ export default function ComposePage() {
               setPublishMode={post.setPublishMode}
               setScheduledAt={post.setScheduledAt}
               setTimezone={post.setTimezone}
+              setPoll={post.setPoll}
               hashtagCounts={post.hashtagCounts}
               getFullLength={post.getFullLength}
               publishStatus={app.publishStatus}

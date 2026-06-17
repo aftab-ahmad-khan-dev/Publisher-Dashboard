@@ -15,8 +15,15 @@ export function ScheduledPostListCard({ item, onPreview, onEdit, onDelete, style
               {timeLabel}
             </span>
             <PlatformIconGroup platforms={item.platforms} size="md" />
+            {item.poll?.enabled && (
+              <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
+                Poll
+              </span>
+            )}
           </div>
-          <p className="mt-3 text-base leading-relaxed text-slate-100 line-clamp-3">{item.body}</p>
+          <p className="mt-3 text-base leading-relaxed text-slate-100 line-clamp-3">
+            {item.poll?.enabled ? item.poll.question || item.body : item.body}
+          </p>
           <p className="mt-3 text-sm font-medium text-white">
             {formatScheduledISO(item.scheduledAt, item.timezone)}
           </p>
@@ -62,9 +69,16 @@ export function ScheduledPostGridCard({ item, onPreview, onEdit, onDelete, style
             ?.trim() || '12:00 PM'}
         </span>
         <PlatformIconGroup platforms={item.platforms} size="sm" />
+        {item.poll?.enabled && (
+          <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
+            Poll
+          </span>
+        )}
       </div>
 
-      <p className="mt-3 flex-1 line-clamp-4 text-sm leading-relaxed text-slate-200">{item.body}</p>
+      <p className="mt-3 flex-1 line-clamp-4 text-sm leading-relaxed text-slate-200">
+        {item.poll?.enabled ? item.poll.question || item.body : item.body}
+      </p>
 
       <p className="mt-3 text-xs font-medium text-white line-clamp-2">
         {formatScheduledISO(item.scheduledAt, item.timezone)}

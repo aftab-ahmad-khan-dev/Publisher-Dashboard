@@ -1,4 +1,5 @@
 import { containsForbiddenDash, sanitizePublishedText } from './contentSanitize.js'
+import { isPollEnabled } from './pollPolicy.js'
 
 export const COMMUNITY_PLATFORMS = ['reddit', 'quora']
 
@@ -102,7 +103,10 @@ export function analyzeCommunityContent(body, { platforms = [] } = {}) {
   return { ok, tone, score, issues, needsCommunity }
 }
 
-export function validateCommunityPublish(body, platforms) {
+export function validateCommunityPublish(body, platforms, postState) {
+  if (isPollEnabled(postState)) {
+    return { ok: true, analysis: { ok: true, tone: 'neutral', score: 100, issues: [], needsCommunity: false } }
+  }
   const analysis = analyzeCommunityContent(body, { platforms })
   if (!analysis.needsCommunity || analysis.ok) {
     return { ok: true, analysis }

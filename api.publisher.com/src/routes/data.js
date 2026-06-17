@@ -310,6 +310,7 @@ function mapDraft(d) {
     scheduledAt: d.scheduledAt,
     timezone: d.timezone,
     imageMeta: d.imageMeta,
+    poll: d.poll || null,
     createdAt: d.createdAt?.toISOString?.() || d.createdAt,
     updatedAt: d.updatedAt?.toISOString?.() || d.updatedAt,
   }
@@ -331,6 +332,7 @@ function mapScheduled(d) {
     hashtags: ps.hashtags,
     imageType: ps.imageType,
     cropHint: ps.cropHint,
+    poll: ps.poll || null,
   }
 }
 

@@ -60,6 +60,7 @@ import {
 } from '../lib/configUtils'
 import { validateCommunityPublish } from '../lib/contentPolicy'
 import { sanitizePostState, sanitizePublishedText } from '../lib/contentSanitize'
+import { validatePollClient, isPollEnabled } from '../lib/pollUtils'
 import { showToast } from '../lib/toast'
 import { useAuth } from './AuthContext'
 
@@ -488,12 +489,18 @@ export function AppDataProvider({ children }) {
         showToast('Enable at least one platform to publish.', 'error')
         return
       }
-      if (!postState.body.trim()) {
+      if (!postState.body.trim() && !isPollEnabled(postState)) {
         showToast('Write something before publishing.', 'error')
         return
       }
 
-      const communityCheck = validateCommunityPublish(postState.body, enabled)
+      const pollCheck = validatePollClient(postState)
+      if (!pollCheck.ok) {
+        showToast(pollCheck.error, 'error')
+        return
+      }
+
+      const communityCheck = validateCommunityPublish(postState.body, enabled, postState)
       if (!communityCheck.ok) {
         showToast(communityCheck.error, 'error')
         return
@@ -568,7 +575,7 @@ export function AppDataProvider({ children }) {
         showToast('Enable at least one platform to schedule.', 'error')
         return { ok: false }
       }
-      if (!postState.body.trim()) {
+      if (!postState.body.trim() && !isPollEnabled(postState)) {
         showToast('Write something before scheduling.', 'error')
         return { ok: false }
       }
@@ -577,7 +584,13 @@ export function AppDataProvider({ children }) {
         return { ok: false }
       }
 
-      const communityCheck = validateCommunityPublish(postState.body, enabled)
+      const pollCheck = validatePollClient(postState)
+      if (!pollCheck.ok) {
+        showToast(pollCheck.error, 'error')
+        return { ok: false }
+      }
+
+      const communityCheck = validateCommunityPublish(postState.body, enabled, postState)
       if (!communityCheck.ok) {
         showToast(communityCheck.error, 'error')
         return { ok: false }

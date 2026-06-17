@@ -49,7 +49,10 @@ export default function PlatformSelector({ platforms, togglePlatform }) {
             <PlatformIcon platform={key} size="md" className="!ring-0" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">{meta.label}</p>
-              <p className="truncate text-xs text-slate-500">{meta.suite}</p>
+              <p className="truncate text-xs text-slate-500">
+                {meta.suite}
+                {meta.supportsPoll ? ' · Polls' : ''}
+              </p>
             </div>
             <Toggle enabled={enabled} onChange={() => togglePlatform(key)} accent={accent} />
           </div>

@@ -30,5 +30,12 @@ export function sanitizePostState(postState) {
       tag: sanitizePublishedText(h.tag),
     }))
   }
+  if (postState.poll?.enabled) {
+    next.poll = {
+      ...postState.poll,
+      question: sanitizePublishedText(postState.poll.question),
+      options: (postState.poll.options || []).map((o) => sanitizePublishedText(o)),
+    }
+  }
   return next
 }

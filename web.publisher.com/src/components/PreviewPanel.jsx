@@ -59,10 +59,11 @@ export default function PreviewPanel({ state, compact = false }) {
         imageType={state.imageType}
         showImage={state.imageVisibility.linkedin}
         cropHint={state.cropHint}
+        poll={state.poll}
         compact={compact}
       />
 
-      <RedditPreview enabled={state.platforms.reddit} body={state.body} />
+      <RedditPreview enabled={state.platforms.reddit} body={state.body} poll={state.poll} />
 
       <PinterestPreview
         enabled={state.platforms.pinterest}

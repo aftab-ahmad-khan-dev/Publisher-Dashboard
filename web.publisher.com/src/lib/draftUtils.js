@@ -1,4 +1,5 @@
 import { DEFAULT_PLATFORMS, DEFAULT_IMAGE_VISIBILITY } from './constants'
+import { DEFAULT_POLL } from './pollUtils'
 
 export function draftTitleFromBody(body) {
   const trimmed = body.trim()
@@ -25,6 +26,15 @@ export function serializePostState(state, existingId = null) {
     timezone: state.timezone,
     imageMeta: state.image
       ? { name: state.image.name, type: state.image.type, size: state.image.size }
+      : null,
+    poll: state.poll
+      ? {
+          enabled: Boolean(state.poll.enabled),
+          question: state.poll.question || '',
+          options: [...(state.poll.options || [])],
+          allowMultiple: Boolean(state.poll.allowMultiple),
+          durationDays: state.poll.durationDays || 3,
+        }
       : null,
     updatedAt: now,
     createdAt: existingId ? undefined : now,
@@ -58,6 +68,13 @@ export function draftToComposerState(draft) {
     publishMode: draft.publishMode || 'now',
     scheduledAt: draft.scheduledAt || '',
     timezone: draft.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    poll: draft.poll
+      ? {
+          ...DEFAULT_POLL,
+          ...draft.poll,
+          options: [...(draft.poll.options || DEFAULT_POLL.options)],
+        }
+      : { ...DEFAULT_POLL },
   }
 }
 

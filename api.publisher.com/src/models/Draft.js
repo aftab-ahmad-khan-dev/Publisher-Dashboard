@@ -14,6 +14,7 @@ const draftSchema = new mongoose.Schema(
     scheduledAt: String,
     timezone: String,
     imageMeta: mongoose.Schema.Types.Mixed,
+    poll: mongoose.Schema.Types.Mixed,
   },
   { timestamps: true },
 )

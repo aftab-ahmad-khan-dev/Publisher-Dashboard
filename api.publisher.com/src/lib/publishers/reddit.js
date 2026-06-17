@@ -1,5 +1,6 @@
 import { redditTitleFromBody } from '../contentPolicy.js'
 import { resolveRedditCredentials } from '../redditSetup.js'
+import { normalizePoll } from '../pollPolicy.js'
 
 export function isRedditConfigured(reddit) {
   const creds = resolveRedditCredentials({ reddit })
@@ -69,9 +70,50 @@ export async function publishToReddit({ text, postState, reddit }) {
   }
 
   const creds = resolveRedditCredentials({ reddit })
-  const title = postState?.redditTitle?.trim() || redditTitleFromBody(text)
+  const poll = normalizePoll(postState)
   const { accessToken, userAgent } = await redditAccessToken(creds)
   const sr = creds.subreddit.replace(/^r\//, '')
+
+  if (poll) {
+    const title = poll.question || postState?.redditTitle?.trim() || redditTitleFromBody(text)
+    const duration = Math.min(7, Math.max(1, poll.durationDays || 3))
+    const res = await fetch('https://oauth.reddit.com/api/submit', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'User-Agent': userAgent,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        sr,
+        kind: 'poll',
+        title,
+        text: text || '',
+        poll_options: poll.options.join(','),
+        poll_duration: String(duration),
+        api_type: 'json',
+      }),
+    })
+
+    const data = await res.json().catch(() => ({}))
+    const errors = data?.json?.errors
+    if (!res.ok || errors?.length) {
+      const msg = errors?.[0]?.[1] || data.message || `Reddit poll submit failed (${res.status})`
+      throw new Error(msg)
+    }
+
+    return {
+      platform: 'reddit',
+      ok: true,
+      url: data?.json?.data?.url,
+      title,
+      subreddit: sr,
+      mode: 'poll',
+      options: poll.options,
+    }
+  }
+
+  const title = postState?.redditTitle?.trim() || redditTitleFromBody(text)
 
   const res = await fetch('https://oauth.reddit.com/api/submit', {
     method: 'POST',

@@ -4,6 +4,9 @@ export const AUTH_PASSWORD = 'Morgan'
 
 export const COMMUNITY_PLATFORMS = ['reddit', 'quora']
 
+/** Platforms with native poll publishing in this app. */
+export const POLL_PLATFORMS = ['linkedin', 'reddit']
+
 export const PLATFORM_ORDER = ['instagram', 'facebook', 'linkedin', 'reddit', 'pinterest', 'threads']
 
 export const DEFAULT_PLATFORMS = {
@@ -49,6 +52,7 @@ export const PLATFORM_META = {
     color: 'bg-[#0A66C2]',
     solid: '#0A66C2',
     suite: 'Professional',
+    supportsPoll: true,
   },
   reddit: {
     key: 'reddit',
@@ -58,6 +62,7 @@ export const PLATFORM_META = {
     solid: '#FF4500',
     suite: 'Community',
     community: true,
+    supportsPoll: true,
     policyHint: 'Share experiences, guides, and honest takes, not ads or link spam.',
   },
   quora: {

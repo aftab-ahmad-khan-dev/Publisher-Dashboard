@@ -1,6 +1,8 @@
 // LinkedIn pins each monthly REST version for ~12 months then sunsets it, so a
 // hardcoded value eventually returns "Requested version YYYYMM01 is not active".
 // Keep this within the trailing ~12 months; override via env when it ages out.
+import { normalizePoll } from '../pollPolicy.js'
+
 const LINKEDIN_VERSION = process.env.LINKEDIN_API_VERSION?.trim() || '202601'
 
 function parseLinkedInError(status, raw) {
@@ -143,18 +145,12 @@ export async function publishToLinkedIn({ text, orgUrn, accessToken, postState }
   }
 
   const { author, mode } = await resolveLinkedInAuthor(token, orgUrn)
-
-  // Optionally attach an image (respect the per-platform image toggle).
-  const wantImage = postState?.imageVisibility?.linkedin !== false
-  const dataUrl = wantImage ? postState?.imageDataUrl : null
-  let imageUrn = null
-  if (dataUrl?.startsWith('data:image/')) {
-    imageUrn = await uploadLinkedInImage({ token, author, dataUrl })
-  }
+  const poll = normalizePoll(postState)
+  let postMode = 'text'
 
   const body = {
     author,
-    commentary: text,
+    commentary: text || poll?.question || '',
     visibility: 'PUBLIC',
     distribution: {
       feedDistribution: 'MAIN_FEED',
@@ -164,8 +160,28 @@ export async function publishToLinkedIn({ text, orgUrn, accessToken, postState }
     lifecycleState: 'PUBLISHED',
     isReshareDisabledByAuthor: false,
   }
-  if (imageUrn) {
-    body.content = { media: { id: imageUrn } }
+
+  if (poll) {
+    postMode = 'poll'
+    body.content = {
+      poll: {
+        question: poll.question,
+        options: poll.options.map((option) => ({ text: option })),
+        settings: {
+          duration: poll.linkedInDuration,
+          voteSelectionType: poll.allowMultiple ? 'MULTIPLE_VOTE' : 'SINGLE_VOTE',
+        },
+      },
+    }
+  } else {
+    // Optionally attach an image (respect the per-platform image toggle).
+    const wantImage = postState?.imageVisibility?.linkedin !== false
+    const dataUrl = wantImage ? postState?.imageDataUrl : null
+    if (dataUrl?.startsWith('data:image/')) {
+      const imageUrn = await uploadLinkedInImage({ token, author, dataUrl })
+      body.content = { media: { id: imageUrn } }
+      postMode = 'image'
+    }
   }
 
   const res = await fetch('https://api.linkedin.com/rest/posts', {
@@ -196,5 +212,6 @@ export async function publishToLinkedIn({ text, orgUrn, accessToken, postState }
     platform: 'linkedin',
     postId,
     authorMode: mode,
+    mode: postMode,
   }
 }

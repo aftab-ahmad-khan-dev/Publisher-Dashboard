@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { redditTitleFromBody } from '../lib/contentPolicy'
 
-export default function RedditPreview({ enabled, body, defaultCollapsed = true }) {
+export default function RedditPreview({ enabled, body, poll, defaultCollapsed = true }) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
-  const title = redditTitleFromBody(body)
-  const text = body?.trim() || ''
+  const pollEnabled = Boolean(poll?.enabled)
+  const pollQuestion = (poll?.question || body || '').trim()
+  const pollOptions = (poll?.options || []).map((o) => o.trim()).filter(Boolean)
+  const title = pollEnabled ? pollQuestion : redditTitleFromBody(body)
+  const text = pollEnabled ? body?.trim() || '' : body?.trim() || ''
 
   if (!enabled) {
     return (
@@ -26,6 +29,21 @@ export default function RedditPreview({ enabled, body, defaultCollapsed = true }
           {text && (
             <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-[#D7DADC]">{text}</p>
           )}
+          {pollEnabled && pollOptions.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {pollOptions.map((option) => (
+                <div
+                  key={option}
+                  className="rounded-md border border-[#343536] bg-[#272729] px-3 py-2 text-xs text-[#D7DADC]"
+                >
+                  {option}
+                </div>
+              ))}
+              <p className="text-[10px] text-[#818384]">
+                Poll · {poll.durationDays || 3} day{(poll.durationDays || 3) === 1 ? '' : 's'}
+              </p>
+            </div>
+          )}
         </div>
         <div className="flex gap-4 border-t border-[#343536] px-3 py-2 text-[10px] font-bold text-[#818384]">
           <span>↑ Vote</span>
@@ -33,7 +51,9 @@ export default function RedditPreview({ enabled, body, defaultCollapsed = true }
           <span>Share</span>
         </div>
       </div>
-      <p className="mt-2 text-[10px] text-slate-500">Self-post · title from first line · no hashtag block</p>
+      <p className="mt-2 text-[10px] text-slate-500">
+        {pollEnabled ? 'Poll post · single choice via Reddit API' : 'Self-post · title from first line · no hashtag block'}
+      </p>
     </PreviewShell>
   )
 }

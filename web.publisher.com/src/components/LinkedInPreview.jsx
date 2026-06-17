@@ -9,11 +9,15 @@ export default function LinkedInPreview({
   imageType,
   showImage,
   cropHint,
+  poll,
   defaultCollapsed = true,
 }) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
   const ratio = CROP_HINTS.find((c) => c.id === cropHint)?.ratio ?? '1.91 / 1'
   const fullText = [body, hashtags].filter(Boolean).join('\n\n')
+  const pollEnabled = Boolean(poll?.enabled)
+  const pollQuestion = (poll?.question || body || '').trim()
+  const pollOptions = (poll?.options || []).map((o) => o.trim()).filter(Boolean)
 
   if (!enabled) {
     return (
@@ -43,10 +47,31 @@ export default function LinkedInPreview({
             <p className="text-xs text-[#666666]">3h · 🌐</p>
           </div>
         </div>
-        {fullText && (
+        {fullText && !pollEnabled && (
           <p className="whitespace-pre-wrap px-4 pb-3 text-sm leading-relaxed">{fullText}</p>
         )}
-        {showImage && imagePreviewUrl && (
+        {pollEnabled && (
+          <div className="px-4 pb-3">
+            {fullText && (
+              <p className="mb-3 whitespace-pre-wrap text-sm leading-relaxed">{fullText}</p>
+            )}
+            <p className="text-sm font-semibold">{pollQuestion || 'Poll question'}</p>
+            <div className="mt-2 space-y-2">
+              {pollOptions.map((option) => (
+                <div
+                  key={option}
+                  className="rounded-full border border-[#0A66C2]/30 px-3 py-2 text-sm text-[#0A66C2]"
+                >
+                  {option}
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-[#666666]">
+              {poll.allowMultiple ? 'Multiple choice' : 'Single choice'} · {poll.durationDays || 3} days
+            </p>
+          </div>
+        )}
+        {!pollEnabled && showImage && imagePreviewUrl && (
           <div className="bg-[#F3F2EF]" style={{ aspectRatio: ratio }}>
             {imageType === 'video' ? (
               <video src={imagePreviewUrl} className="h-full w-full object-cover" muted />

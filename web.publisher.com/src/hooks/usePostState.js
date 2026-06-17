@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { draftToComposerState } from '../lib/draftUtils'
 import { DEFAULT_PLATFORMS, DEFAULT_IMAGE_VISIBILITY } from '../lib/constants'
+import { DEFAULT_POLL } from '../lib/pollUtils'
 
 const DEFAULT_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 
@@ -16,6 +17,7 @@ const INITIAL_STATE = {
   publishMode: 'now',
   scheduledAt: '',
   timezone: DEFAULT_TIMEZONE,
+  poll: { ...DEFAULT_POLL },
 }
 
 export const PLATFORM_LIMITS = {
@@ -150,6 +152,10 @@ export function usePostState() {
     setState((s) => ({ ...s, timezone }))
   }, [])
 
+  const setPoll = useCallback((poll) => {
+    setState((s) => ({ ...s, poll: { ...s.poll, ...poll } }))
+  }, [])
+
   const hashtagCounts = useMemo(() => {
     const counts = { instagram: 0, facebook: 0, linkedin: 0, reddit: 0, pinterest: 0, threads: 0 }
     state.hashtags.forEach((h) => {
@@ -210,6 +216,7 @@ export function usePostState() {
     setPublishMode,
     setScheduledAt,
     setTimezone,
+    setPoll,
     hashtagCounts,
     getBodyForPlatform,
     getFullLength,

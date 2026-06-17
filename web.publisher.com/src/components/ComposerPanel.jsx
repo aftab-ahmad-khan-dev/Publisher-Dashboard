@@ -7,6 +7,8 @@ import PublishControls from './PublishControls'
 import ScheduleQueue from './ScheduleQueue'
 import { containsForbiddenDash } from '../lib/contentSanitize'
 import { PLATFORM_META } from '../lib/constants'
+import PollEditor from './PollEditor'
+import { isPollEnabled } from '../lib/pollUtils'
 
 /** Platforms that cannot publish without an attached image or video. */
 const MEDIA_REQUIRED_PLATFORMS = ['instagram', 'pinterest']
@@ -24,6 +26,7 @@ export default function ComposerPanel({
   setPublishMode,
   setScheduledAt,
   setTimezone,
+  setPoll,
   hashtagCounts,
   getFullLength,
   publishStatus,
@@ -79,16 +82,26 @@ export default function ComposerPanel({
         )}
       </div>
 
-      <ImageUploader
-        image={state.image}
-        imagePreviewUrl={state.imagePreviewUrl}
-        imageType={state.imageType}
-        cropHint={state.cropHint}
-        imageVisibility={state.imageVisibility}
-        setImage={setImage}
-        setCropHint={setCropHint}
-        toggleImageVisibility={toggleImageVisibility}
-      />
+      <PollEditor poll={state.poll} platforms={state.platforms} setPoll={setPoll} />
+
+      {!isPollEnabled(state) && (
+        <ImageUploader
+          image={state.image}
+          imagePreviewUrl={state.imagePreviewUrl}
+          imageType={state.imageType}
+          cropHint={state.cropHint}
+          imageVisibility={state.imageVisibility}
+          setImage={setImage}
+          setCropHint={setCropHint}
+          toggleImageVisibility={toggleImageVisibility}
+        />
+      )}
+
+      {isPollEnabled(state) && (
+        <p className="rounded-lg border border-violet-500/20 bg-violet-500/[0.05] px-3 py-2 text-[11px] text-violet-200/90">
+          Image upload is disabled while a poll is active.
+        </p>
+      )}
 
       <HashtagManager
         hashtags={state.hashtags}

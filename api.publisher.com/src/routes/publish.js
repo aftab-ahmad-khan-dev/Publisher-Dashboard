@@ -22,6 +22,7 @@ import {
 } from "../lib/platforms.js";
 import { validateCommunityPublish } from "../lib/contentPolicy.js";
 import { sanitizePostState } from "../lib/contentSanitize.js";
+import { validatePoll, hasPostContent } from "../lib/pollPolicy.js";
 import { testMetaConnection } from "../lib/publishers/meta.js";
 import { testLinkedInConnection } from "../lib/publishers/linkedin.js";
 import { testRedditConnection } from "../lib/publishers/reddit.js";
@@ -149,15 +150,20 @@ router.post("/publish", async (req, res, next) => {
     if (!platforms?.length) {
       return res.status(400).json({ ok: false, error: "No platforms selected." });
     }
-    if (!postState?.body?.trim()) {
-      return res.status(400).json({ ok: false, error: "Post body is required." });
+    if (!hasPostContent(postState)) {
+      return res.status(400).json({ ok: false, error: "Post body or poll is required." });
+    }
+
+    const pollCheck = validatePoll(postState, platforms);
+    if (!pollCheck.ok) {
+      return res.status(400).json({ ok: false, error: pollCheck.error });
     }
 
     let config = await getWorkspaceConfig(req.workspaceId);
     config = await refreshLinkedInTokenIfNeeded(req.workspaceId);
     config = resolveConfig(config, bodyConfig);
 
-    const communityCheck = validateCommunityPublish(postState.body, platforms);
+    const communityCheck = validateCommunityPublish(postState.body, platforms, postState);
     if (!communityCheck.ok) {
       return res
         .status(400)
@@ -207,7 +213,7 @@ router.post("/publish", async (req, res, next) => {
 
     const record = await PublishedPost.create({
       workspaceId: req.workspaceId,
-      body: postState.body,
+      body: postState.body || pollCheck.poll?.question || '',
       platforms,
       publishedAt: new Date(),
       platformResults: outcome.results,
@@ -255,8 +261,13 @@ router.post("/schedule", async (req, res, next) => {
     if (!platforms?.length) {
       return res.status(400).json({ ok: false, error: "No platforms selected." });
     }
-    if (!postState?.body?.trim()) {
-      return res.status(400).json({ ok: false, error: "Post body is required." });
+    if (!hasPostContent(postState)) {
+      return res.status(400).json({ ok: false, error: "Post body or poll is required." });
+    }
+
+    const pollCheck = validatePoll(postState, platforms);
+    if (!pollCheck.ok) {
+      return res.status(400).json({ ok: false, error: pollCheck.error });
     }
 
     const when = new Date(scheduledAt || postState.scheduledAt);
@@ -270,7 +281,7 @@ router.post("/schedule", async (req, res, next) => {
     config = await refreshLinkedInTokenIfNeeded(req.workspaceId);
     config = resolveConfig(config, bodyConfig);
 
-    const communityCheck = validateCommunityPublish(postState.body, platforms);
+    const communityCheck = validateCommunityPublish(postState.body, platforms, postState);
     if (!communityCheck.ok) {
       return res
         .status(400)
@@ -308,7 +319,7 @@ router.post("/schedule", async (req, res, next) => {
 
     const doc = await ScheduledPost.create({
       workspaceId: req.workspaceId,
-      body: postState.body,
+      body: postState.body || pollCheck.poll?.question || '',
       platforms,
       scheduledAt: when,
       timezone: timezone || postState.timezone,
