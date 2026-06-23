@@ -9,9 +9,7 @@ const HEADER_PATTERNS = [
 ]
 
 function matchHeader(line) {
-  // NFKC folds "fancy" Unicode (math bold/italic/sans, e.g. 𝗗𝗮𝘆 𝟭) back to plain
-  // ASCII so headers pasted from LinkedIn-style styled text still match.
-  const trimmed = line.normalize('NFKC').trim()
+  const trimmed = line.trim()
   if (!trimmed) return null
   for (const re of HEADER_PATTERNS) {
     const m = trimmed.match(re)
