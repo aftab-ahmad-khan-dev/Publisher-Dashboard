@@ -12,7 +12,9 @@ const HEADER_PATTERNS = [
 const OPTION_RE = /^\s*(?:[-*•]|\d+[.)])\s+(.+)$/
 
 function matchPollHeader(line) {
-  const trimmed = line.trim()
+  // NFKC folds "fancy" Unicode (math bold/italic/sans, e.g. 𝗣𝗼𝗹𝗹 𝟭) back to plain
+  // ASCII so headers pasted from styled text still match.
+  const trimmed = line.normalize('NFKC').trim()
   for (const re of HEADER_PATTERNS) {
     const m = trimmed.match(re)
     if (m) {
