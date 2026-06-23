@@ -7,7 +7,6 @@ export default function LinkedInPreview({
   hashtags,
   imagePreviewUrl,
   imageType,
-  imageCount = 0,
   showImage,
   cropHint,
   poll,
@@ -73,16 +72,11 @@ export default function LinkedInPreview({
           </div>
         )}
         {!pollEnabled && showImage && imagePreviewUrl && (
-          <div className="relative bg-[#F3F2EF]" style={{ aspectRatio: ratio }}>
+          <div className="bg-[#F3F2EF]" style={{ aspectRatio: ratio }}>
             {imageType === 'video' ? (
               <video src={imagePreviewUrl} className="h-full w-full object-cover" muted />
             ) : (
               <img src={imagePreviewUrl} alt="" className="h-full w-full object-cover" />
-            )}
-            {imageCount > 1 && (
-              <span className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">
-                1/{imageCount}
-              </span>
             )}
           </div>
         )}

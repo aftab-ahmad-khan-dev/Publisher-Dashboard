@@ -1,27 +1,36 @@
-import { useRef, useState } from 'react'
-import { CROP_HINTS, MAX_IMAGES } from '../hooks/usePostState'
+import { useRef, useState, useCallback } from 'react'
+import { CROP_HINTS } from '../hooks/usePostState'
 
 const ACCEPT = 'image/jpeg,image/png,image/gif,video/mp4'
 
 export default function ImageUploader({
-  images,
+  image,
+  imagePreviewUrl,
+  imageType,
   cropHint,
   imageVisibility,
-  addImages,
-  removeImage,
-  moveImage,
+  setImage,
   setCropHint,
   toggleImageVisibility,
 }) {
   const inputRef = useRef(null)
   const [dragOver, setDragOver] = useState(false)
 
-  const atLimit = images.length >= MAX_IMAGES
+  const handleFiles = useCallback(
+    (files) => {
+      const file = files?.[0]
+      if (!file) return
+      const valid =
+        file.type.startsWith('image/') || file.type === 'video/mp4'
+      if (valid) setImage(file)
+    },
+    [setImage],
+  )
 
   const onDrop = (e) => {
     e.preventDefault()
     setDragOver(false)
-    addImages(e.dataTransfer.files)
+    handleFiles(e.dataTransfer.files)
   }
 
   const ratio =
@@ -29,30 +38,11 @@ export default function ImageUploader({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
-          Media attachment
-        </label>
-        {images.length > 0 && (
-          <span className="text-[11px] text-slate-500">
-            {images.length} / {MAX_IMAGES}
-          </span>
-        )}
-      </div>
+      <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
+        Media attachment
+      </label>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept={ACCEPT}
-        multiple
-        className="hidden"
-        onChange={(e) => {
-          addImages(e.target.files)
-          e.target.value = ''
-        }}
-      />
-
-      {images.length === 0 ? (
+      {!imagePreviewUrl ? (
         <div
           onDragOver={(e) => {
             e.preventDefault()
@@ -83,104 +73,51 @@ export default function ImageUploader({
           <p className="text-sm font-medium text-slate-300">
             Drop media here or click to upload
           </p>
-          <p className="mt-1 text-xs text-slate-500">
-            JPG, PNG, GIF, MP4 · up to {MAX_IMAGES} for a carousel
-          </p>
+          <p className="mt-1 text-xs text-slate-500">JPG, PNG, GIF, MP4</p>
+          <input
+            ref={inputRef}
+            type="file"
+            accept={ACCEPT}
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
         </div>
       ) : (
         <div className="space-y-3">
           <div
-            onDragOver={(e) => {
-              e.preventDefault()
-              if (!atLimit) setDragOver(true)
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={onDrop}
-            className={`grid grid-cols-3 gap-2 rounded-xl border-2 border-dashed p-2 transition-colors sm:grid-cols-4 ${
-              dragOver ? 'border-[#1877F2] bg-[#1877F2]/10' : 'border-transparent'
-            }`}
+            className="relative overflow-hidden rounded-xl border border-white/10 bg-black/40"
+            style={{ aspectRatio: ratio }}
           >
-            {images.map((img, index) => (
-              <div
-                key={img.id}
-                className="group relative overflow-hidden rounded-lg border border-white/10 bg-black/40"
-                style={{ aspectRatio: ratio }}
-              >
-                {img.type === 'video' ? (
-                  <video src={img.previewUrl} className="h-full w-full object-cover" muted playsInline />
-                ) : (
-                  <img src={img.previewUrl} alt={`Upload ${index + 1}`} className="h-full w-full object-cover" />
-                )}
-
-                <span className="absolute top-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                  {index + 1}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => removeImage(img.id)}
-                  className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
-                  aria-label={`Remove image ${index + 1}`}
-                >
-                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-
-                <div className="absolute inset-x-1 bottom-1 flex items-center justify-between opacity-0 transition-opacity group-hover:opacity-100">
-                  <button
-                    type="button"
-                    onClick={() => moveImage(img.id, -1)}
-                    disabled={index === 0}
-                    className="rounded bg-black/60 px-1.5 py-0.5 text-white hover:bg-black/80 disabled:opacity-30"
-                    aria-label="Move left"
-                  >
-                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveImage(img.id, 1)}
-                    disabled={index === images.length - 1}
-                    className="rounded bg-black/60 px-1.5 py-0.5 text-white hover:bg-black/80 disabled:opacity-30"
-                    aria-label="Move right"
-                  >
-                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-
-                {img.type === 'video' && (
-                  <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white group-hover:opacity-0">
-                    MP4
-                  </span>
-                )}
-              </div>
-            ))}
-
-            {!atLimit && (
-              <button
-                type="button"
-                onClick={() => inputRef.current?.click()}
-                className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-600 bg-slate-900/30 text-slate-500 transition-colors hover:border-slate-500 hover:bg-slate-800/40"
-                style={{ aspectRatio: ratio }}
-                aria-label="Add more media"
-              >
-                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
-                </svg>
-                <span className="mt-1 text-[10px]">Add</span>
-              </button>
+            {imageType === 'video' ? (
+              <video
+                src={imagePreviewUrl}
+                className="h-full w-full object-cover"
+                muted
+                playsInline
+              />
+            ) : (
+              <img
+                src={imagePreviewUrl}
+                alt="Upload preview"
+                className="h-full w-full object-cover"
+              />
             )}
+            {imageType === 'video' && (
+              <span className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
+                MP4
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setImage(null)}
+              className="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"
+              aria-label="Remove media"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-
-          {images.length > 1 && (
-            <p className="text-[11px] text-slate-500">
-              Posts as a carousel. First image leads; drag-free reorder with the arrows.
-            </p>
-          )}
 
           <div className="flex flex-wrap gap-2">
             {CROP_HINTS.map((hint) => (
@@ -235,6 +172,9 @@ export default function ImageUploader({
               </label>
             ))}
           </div>
+          <p className="text-xs text-slate-500 truncate">
+            {image?.name} · {(image?.size / 1024).toFixed(0)} KB
+          </p>
         </div>
       )}
     </div>

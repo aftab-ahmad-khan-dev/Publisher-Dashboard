@@ -5,13 +5,11 @@ import { DEFAULT_POLL } from '../lib/pollUtils'
 
 const DEFAULT_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 
-// Instagram/Threads carousels top out at 10/20 items; cap at 10 for all platforms.
-export const MAX_IMAGES = 10
-
 const INITIAL_STATE = {
   body: '',
-  // Carousel: ordered list of { id, file, previewUrl, type } entries.
-  images: [],
+  image: null,
+  imagePreviewUrl: null,
+  imageType: null,
   cropHint: 'square',
   imageVisibility: { ...DEFAULT_IMAGE_VISIBILITY },
   hashtags: [],
@@ -43,15 +41,6 @@ function normalizeTag(raw) {
   return trimmed.startsWith('#') ? trimmed : `#${trimmed}`
 }
 
-function makeImageEntry(file) {
-  return {
-    id: crypto.randomUUID(),
-    file,
-    previewUrl: URL.createObjectURL(file),
-    type: file.type.startsWith('video/') ? 'video' : 'image',
-  }
-}
-
 export function usePostState() {
   const [state, setState] = useState(INITIAL_STATE)
   const [editingDraftId, setEditingDraftId] = useState(null)
@@ -60,44 +49,24 @@ export function usePostState() {
     setState((s) => ({ ...s, body }))
   }, [])
 
-  const addImages = useCallback((files) => {
-    const incoming = Array.from(files || []).filter(
-      (f) => f.type.startsWith('image/') || f.type === 'video/mp4',
-    )
-    if (!incoming.length) return
+  const setImage = useCallback((file) => {
     setState((s) => {
-      const room = MAX_IMAGES - s.images.length
-      if (room <= 0) return s
-      const added = incoming.slice(0, room).map(makeImageEntry)
-      return { ...s, images: [...s.images, ...added] }
-    })
-  }, [])
-
-  const removeImage = useCallback((id) => {
-    setState((s) => {
-      const target = s.images.find((im) => im.id === id)
-      if (target) URL.revokeObjectURL(target.previewUrl)
-      return { ...s, images: s.images.filter((im) => im.id !== id) }
-    })
-  }, [])
-
-  const moveImage = useCallback((id, delta) => {
-    setState((s) => {
-      const idx = s.images.findIndex((im) => im.id === id)
-      if (idx < 0) return s
-      const next = idx + delta
-      if (next < 0 || next >= s.images.length) return s
-      const images = [...s.images]
-      const [moved] = images.splice(idx, 1)
-      images.splice(next, 0, moved)
-      return { ...s, images }
-    })
-  }, [])
-
-  const clearImages = useCallback(() => {
-    setState((s) => {
-      s.images.forEach((im) => URL.revokeObjectURL(im.previewUrl))
-      return { ...s, images: [] }
+      if (s.imagePreviewUrl) URL.revokeObjectURL(s.imagePreviewUrl)
+      if (!file) {
+        return {
+          ...s,
+          image: null,
+          imagePreviewUrl: null,
+          imageType: null,
+        }
+      }
+      const isVideo = file.type.startsWith('video/')
+      return {
+        ...s,
+        image: file,
+        imagePreviewUrl: URL.createObjectURL(file),
+        imageType: isVideo ? 'video' : 'image',
+      }
     })
   }, [])
 
@@ -221,8 +190,8 @@ export function usePostState() {
 
   const resetComposer = useCallback(() => {
     setState((s) => {
-      s.images.forEach((im) => URL.revokeObjectURL(im.previewUrl))
-      return { ...INITIAL_STATE, images: [], timezone: s.timezone }
+      if (s.imagePreviewUrl) URL.revokeObjectURL(s.imagePreviewUrl)
+      return { ...INITIAL_STATE, timezone: s.timezone }
     })
     setEditingDraftId(null)
   }, [])
@@ -237,10 +206,7 @@ export function usePostState() {
     resetComposer,
     clearEditingDraft,
     setBody,
-    addImages,
-    removeImage,
-    moveImage,
-    clearImages,
+    setImage,
     setCropHint,
     toggleImageVisibility,
     togglePlatform,
