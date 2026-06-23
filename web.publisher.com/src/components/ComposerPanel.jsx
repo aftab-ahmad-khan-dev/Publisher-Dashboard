@@ -16,7 +16,9 @@ const MEDIA_REQUIRED_PLATFORMS = ['instagram', 'pinterest']
 export default function ComposerPanel({
   state,
   setBody,
-  setImage,
+  addImages,
+  removeImage,
+  moveImage,
   setCropHint,
   toggleImageVisibility,
   togglePlatform,
@@ -39,7 +41,7 @@ export default function ComposerPanel({
   showQueue = true,
   queue = [],
 }) {
-  const mediaRequiredWithoutImage = state.image
+  const mediaRequiredWithoutImage = state.images.length
     ? []
     : MEDIA_REQUIRED_PLATFORMS.filter((p) => state.platforms[p]).map(
         (p) => PLATFORM_META[p]?.label || p,
@@ -86,12 +88,12 @@ export default function ComposerPanel({
 
       {!isPollEnabled(state) && (
         <ImageUploader
-          image={state.image}
-          imagePreviewUrl={state.imagePreviewUrl}
-          imageType={state.imageType}
+          images={state.images}
           cropHint={state.cropHint}
           imageVisibility={state.imageVisibility}
-          setImage={setImage}
+          addImages={addImages}
+          removeImage={removeImage}
+          moveImage={moveImage}
           setCropHint={setCropHint}
           toggleImageVisibility={toggleImageVisibility}
         />

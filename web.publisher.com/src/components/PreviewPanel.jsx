@@ -13,10 +13,12 @@ function getHashtagString(hashtags, platform) {
 }
 
 export default function PreviewPanel({ state, compact = false }) {
+  const firstImage = state.images[0]
+  const imageCount = state.images.length
   const previewKey = [
     state.body,
     state.hashtags.map((h) => `${h.tag}-${Object.entries(h.platforms).map(([k, v]) => `${k}:${v}`).join('-')}`).join(','),
-    state.imagePreviewUrl,
+    state.images.map((im) => im.id).join(','),
     state.cropHint,
     JSON.stringify(state.imageVisibility),
     JSON.stringify(state.platforms),
@@ -33,8 +35,9 @@ export default function PreviewPanel({ state, compact = false }) {
         enabled={state.platforms.instagram}
         body={state.body}
         hashtags={getHashtagString(state.hashtags, 'instagram')}
-        imagePreviewUrl={state.imagePreviewUrl}
-        imageType={state.imageType}
+        imagePreviewUrl={firstImage?.previewUrl}
+        imageType={firstImage?.type}
+        imageCount={imageCount}
         showImage={state.imageVisibility.instagram}
         cropHint={state.cropHint}
         compact={compact}
@@ -44,8 +47,9 @@ export default function PreviewPanel({ state, compact = false }) {
         enabled={state.platforms.facebook}
         body={state.body}
         hashtags={getHashtagString(state.hashtags, 'facebook')}
-        imagePreviewUrl={state.imagePreviewUrl}
-        imageType={state.imageType}
+        imagePreviewUrl={firstImage?.previewUrl}
+        imageType={firstImage?.type}
+        imageCount={imageCount}
         showImage={state.imageVisibility.facebook}
         cropHint={state.cropHint}
         compact={compact}
@@ -55,8 +59,9 @@ export default function PreviewPanel({ state, compact = false }) {
         enabled={state.platforms.linkedin}
         body={state.body}
         hashtags={getHashtagString(state.hashtags, 'linkedin')}
-        imagePreviewUrl={state.imagePreviewUrl}
-        imageType={state.imageType}
+        imagePreviewUrl={firstImage?.previewUrl}
+        imageType={firstImage?.type}
+        imageCount={imageCount}
         showImage={state.imageVisibility.linkedin}
         cropHint={state.cropHint}
         poll={state.poll}
@@ -68,7 +73,8 @@ export default function PreviewPanel({ state, compact = false }) {
       <PinterestPreview
         enabled={state.platforms.pinterest}
         body={state.body}
-        imagePreviewUrl={state.imagePreviewUrl}
+        imagePreviewUrl={firstImage?.previewUrl}
+        imageCount={imageCount}
       />
 
       <ThreadsPreview enabled={state.platforms.threads} body={state.body} />

@@ -76,23 +76,80 @@ function dataUrlToBlob(dataUrl) {
   return new Blob([Buffer.from(b64 || '', 'base64')], { type: contentType })
 }
 
+/** Collect a post's images as an ordered array, tolerating legacy single-image fields. */
+function collectImageDataUrls(postState) {
+  if (Array.isArray(postState?.imageDataUrls) && postState.imageDataUrls.length) {
+    return postState.imageDataUrls.filter(Boolean)
+  }
+  return postState?.imageDataUrl ? [postState.imageDataUrl] : []
+}
+
+/** Upload one photo to the Page unpublished and return its photo id (for carousels). */
+async function uploadFacebookPhoto({ pageToken, dataUrl, imageUrl }) {
+  const url = `https://graph.facebook.com/v21.0/me/photos`
+  let res
+  if (imageUrl) {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: imageUrl, published: false, access_token: pageToken }),
+    })
+  } else {
+    const form = new FormData()
+    form.append('source', dataUrlToBlob(dataUrl), 'image.jpg')
+    form.append('published', 'false')
+    form.append('access_token', pageToken)
+    res = await fetch(url, { method: 'POST', body: form })
+  }
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || data.error) {
+    throw new Error(data.error?.message || 'Facebook photo upload failed')
+  }
+  return data.id
+}
+
 export async function publishToFacebook({ message, pageToken, postState }) {
-  // Respect the per-platform image toggle; default to including the image when present.
+  // Respect the per-platform image toggle; default to including images when present.
   const wantImage = postState?.imageVisibility?.facebook !== false
-  const dataUrl = wantImage ? postState?.imageDataUrl : null
+  const dataUrls = wantImage ? collectImageDataUrls(postState) : []
   const imageUrl = wantImage ? postState?.imageUrl : null
 
-  if (dataUrl && /^data:video\//i.test(dataUrl)) {
+  if (dataUrls.some((u) => /^data:video\//i.test(u))) {
     throw new Error(
       'Facebook video publishing is not supported yet. Attach an image or remove the video.',
     )
   }
 
-  // With an image we must post to /me/photos (a /me/feed text post drops the image).
+  // Multiple images → upload each unpublished, then a single feed post that
+  // attaches them all (Facebook renders this as a multi-photo post).
+  if (dataUrls.length > 1) {
+    const mediaFbids = []
+    for (const dataUrl of dataUrls) {
+      mediaFbids.push(await uploadFacebookPhoto({ pageToken, dataUrl }))
+    }
+    const res = await fetch(`https://graph.facebook.com/v21.0/me/feed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        attached_media: mediaFbids.map((id) => ({ media_fbid: id })),
+        published: true,
+        access_token: pageToken,
+      }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || data.error) {
+      throw new Error(data.error?.message || 'Facebook photo publish failed')
+    }
+    return { platform: 'facebook', postId: data.id }
+  }
+
+  // Single image → post to /me/photos (a /me/feed text post drops the image).
+  const dataUrl = dataUrls[0]
   if (dataUrl || imageUrl) {
     const url = `https://graph.facebook.com/v21.0/me/photos`
     let res
-    if (imageUrl) {
+    if (imageUrl && !dataUrl) {
       res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -165,9 +222,38 @@ async function waitForContainer(creationId, pageToken, attempts = 6) {
   }
 }
 
-export async function publishToInstagram({ message, pageToken, imageUrl }) {
+/** Create an IG media container with the given fields; returns its creation id. */
+async function createInstagramContainer(igUserId, pageToken, fields) {
+  const res = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...fields, access_token: pageToken }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || data.error) {
+    throw new Error(data.error?.message || 'Instagram media container creation failed')
+  }
+  return data.id
+}
+
+/** Publish an already-finished IG container; returns the published media id. */
+async function publishInstagramContainer(igUserId, pageToken, creationId) {
+  const res = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media_publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creation_id: creationId, access_token: pageToken }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || data.error) {
+    throw new Error(data.error?.message || 'Instagram publish failed')
+  }
+  return data.id
+}
+
+export async function publishToInstagram({ message, pageToken, imageUrls }) {
+  const urls = (Array.isArray(imageUrls) ? imageUrls : imageUrls ? [imageUrls] : []).filter(Boolean)
   // IG has no text-only posts; without a public image URL there's nothing to publish.
-  if (!imageUrl) {
+  if (!urls.length) {
     throw new Error(
       'Instagram requires an image, text-only posts cannot be published. Attach an image or disable Instagram for this post.',
     )
@@ -175,29 +261,36 @@ export async function publishToInstagram({ message, pageToken, imageUrl }) {
 
   const igUserId = await resolveInstagramUserId(pageToken)
 
-  // 1) Create a media container pointing at the public image URL.
-  const createRes = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image_url: imageUrl, caption: message, access_token: pageToken }),
-  })
-  const createData = await createRes.json().catch(() => ({}))
-  if (!createRes.ok || createData.error) {
-    throw new Error(createData.error?.message || 'Instagram media container creation failed')
+  // Single image: one container, then publish.
+  if (urls.length === 1) {
+    const creationId = await createInstagramContainer(igUserId, pageToken, {
+      image_url: urls[0],
+      caption: message,
+    })
+    await waitForContainer(creationId, pageToken)
+    const postId = await publishInstagramContainer(igUserId, pageToken, creationId)
+    return { platform: 'instagram', postId }
   }
-  const creationId = createData.id
 
-  await waitForContainer(creationId, pageToken)
-
-  // 2) Publish the container.
-  const pubRes = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media_publish`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ creation_id: creationId, access_token: pageToken }),
-  })
-  const pubData = await pubRes.json().catch(() => ({}))
-  if (!pubRes.ok || pubData.error) {
-    throw new Error(pubData.error?.message || 'Instagram publish failed')
+  // Carousel (2–10 items): a child container per image, then a CAROUSEL parent.
+  const childIds = []
+  for (const url of urls.slice(0, 10)) {
+    childIds.push(
+      await createInstagramContainer(igUserId, pageToken, {
+        image_url: url,
+        is_carousel_item: true,
+      }),
+    )
   }
-  return { platform: 'instagram', postId: pubData.id }
+  for (const childId of childIds) {
+    await waitForContainer(childId, pageToken)
+  }
+  const parentId = await createInstagramContainer(igUserId, pageToken, {
+    media_type: 'CAROUSEL',
+    children: childIds.join(','),
+    caption: message,
+  })
+  await waitForContainer(parentId, pageToken)
+  const postId = await publishInstagramContainer(igUserId, pageToken, parentId)
+  return { platform: 'instagram', postId, mode: 'carousel' }
 }

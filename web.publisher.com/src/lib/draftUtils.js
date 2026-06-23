@@ -24,8 +24,13 @@ export function serializePostState(state, existingId = null) {
     publishMode: state.publishMode,
     scheduledAt: state.scheduledAt || '',
     timezone: state.timezone,
-    imageMeta: state.image
-      ? { name: state.image.name, type: state.image.type, size: state.image.size }
+    imageMeta: state.images?.[0]?.file
+      ? {
+          name: state.images[0].file.name,
+          type: state.images[0].file.type,
+          size: state.images[0].file.size,
+          count: state.images.length,
+        }
       : null,
     poll: state.poll
       ? {
@@ -58,9 +63,8 @@ export function mergeDraftSave(drafts, payload, existingId) {
 export function draftToComposerState(draft) {
   return {
     body: draft.body || '',
-    image: null,
-    imagePreviewUrl: null,
-    imageType: null,
+    // Image binaries aren't persisted in drafts; the user re-attaches on load.
+    images: [],
     cropHint: draft.cropHint || 'square',
     imageVisibility: draft.imageVisibility || { ...DEFAULT_IMAGE_VISIBILITY },
     hashtags: draft.hashtags || [],

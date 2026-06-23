@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function PinterestPreview({ enabled, body, imagePreviewUrl, defaultCollapsed = true }) {
+export default function PinterestPreview({ enabled, body, imagePreviewUrl, imageCount = 0, defaultCollapsed = true }) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
   const text = body?.trim() || ''
   const title = (text.split('\n')[0] || 'New Pin').slice(0, 100)
@@ -26,7 +26,10 @@ export default function PinterestPreview({ enabled, body, imagePreviewUrl, defau
           {text && <p className="mt-1 line-clamp-2 text-xs text-slate-600">{text}</p>}
         </div>
       </div>
-      <p className="mt-2 text-[10px] text-slate-500">Pin · image required · title from first line</p>
+      <p className="mt-2 text-[10px] text-slate-500">
+        Pin · image required · title from first line
+        {imageCount > 1 && ' · uses the first image only'}
+      </p>
     </PreviewShell>
   )
 }

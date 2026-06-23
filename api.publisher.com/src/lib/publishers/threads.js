@@ -44,53 +44,85 @@ async function waitForThreadsContainer(containerId, token, attempts = 15) {
   throw new Error('Threads image is still processing after 30s. Try again or use a smaller image.')
 }
 
+/** Create a Threads container from the given params; returns its creation id. */
+async function createThreadsContainer(userId, token, params) {
+  const res = await fetch(`${API}/${userId}/threads`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ ...params, access_token: token }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || data.error) {
+    throw new Error(data.error?.message || `Threads container failed (${res.status})`)
+  }
+  return data.id
+}
+
+/** Publish an already-prepared Threads container; returns the published post id. */
+async function publishThreadsContainer(userId, token, creationId) {
+  const res = await fetch(`${API}/${userId}/threads_publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ creation_id: creationId, access_token: token }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || data.error) {
+    throw new Error(data.error?.message || `Threads publish failed (${res.status})`)
+  }
+  return data.id
+}
+
 /**
  * Publish a post to Threads — two-step: create a media container, then publish it.
- * Pass a public `imageUrl` for an image post; omit it for text-only. Threads can't
- * accept base64/uploads, so the caller must resolve a public URL first.
+ * Pass public `imageUrls` for image posts; omit/empty for text-only. Threads can't
+ * accept base64/uploads, so the caller must resolve public URLs first. Multiple
+ * images post as a carousel (child IMAGE containers + a CAROUSEL parent).
  * Threads API docs: POST /{user-id}/threads then POST /{user-id}/threads_publish.
  */
-export async function publishToThreads({ text, imageUrl, threads }) {
+export async function publishToThreads({ text, imageUrls, threads }) {
   if (!isThreadsConfigured(threads)) {
     throw new Error('Threads needs an access token and your Threads user ID in API Config.')
   }
   const token = threads.accessToken.trim()
   const userId = threads.userId.trim()
+  const urls = (Array.isArray(imageUrls) ? imageUrls : imageUrls ? [imageUrls] : []).filter(Boolean)
+  const caption = (text || '').slice(0, 500)
 
-  // 1) Create container
-  const createParams = new URLSearchParams({
-    media_type: 'TEXT',
-    text: text.slice(0, 500),
-    access_token: token,
-  })
-  if (imageUrl) {
-    createParams.set('media_type', 'IMAGE')
-    createParams.set('image_url', imageUrl)
+  // Carousel (2–20 items): child IMAGE containers, then a CAROUSEL parent.
+  if (urls.length > 1) {
+    const childIds = []
+    for (const url of urls.slice(0, 20)) {
+      const childId = await createThreadsContainer(userId, token, {
+        media_type: 'IMAGE',
+        image_url: url,
+        is_carousel_item: 'true',
+      })
+      await waitForThreadsContainer(childId, token)
+      childIds.push(childId)
+    }
+    const parentId = await createThreadsContainer(userId, token, {
+      media_type: 'CAROUSEL',
+      text: caption,
+      children: childIds.join(','),
+    })
+    await waitForThreadsContainer(parentId, token)
+    const postId = await publishThreadsContainer(userId, token, parentId)
+    return { platform: 'threads', ok: true, postId, mode: 'carousel' }
   }
-  const createRes = await fetch(`${API}/${userId}/threads`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: createParams,
-  })
-  const createData = await createRes.json().catch(() => ({}))
-  if (!createRes.ok || createData.error) {
-    throw new Error(createData.error?.message || `Threads container failed (${createRes.status})`)
+
+  // Single image or text-only.
+  const params = { media_type: 'TEXT', text: caption }
+  if (urls.length === 1) {
+    params.media_type = 'IMAGE'
+    params.image_url = urls[0]
   }
+  const creationId = await createThreadsContainer(userId, token, params)
 
   // An image container must finish processing before publish, or the image is dropped.
-  if (imageUrl) {
-    await waitForThreadsContainer(createData.id, token)
+  if (urls.length === 1) {
+    await waitForThreadsContainer(creationId, token)
   }
 
-  // 2) Publish container
-  const pubRes = await fetch(`${API}/${userId}/threads_publish`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ creation_id: createData.id, access_token: token }),
-  })
-  const pubData = await pubRes.json().catch(() => ({}))
-  if (!pubRes.ok || pubData.error) {
-    throw new Error(pubData.error?.message || `Threads publish failed (${pubRes.status})`)
-  }
-  return { platform: 'threads', ok: true, postId: pubData.id, mode: 'api' }
+  const postId = await publishThreadsContainer(userId, token, creationId)
+  return { platform: 'threads', ok: true, postId, mode: 'api' }
 }

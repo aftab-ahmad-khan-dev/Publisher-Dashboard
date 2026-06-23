@@ -15,6 +15,7 @@ export default function InstagramPreview({
   hashtags,
   imagePreviewUrl,
   imageType,
+  imageCount = 0,
   showImage,
   cropHint,
   defaultCollapsed = true,
@@ -60,11 +61,26 @@ export default function InstagramPreview({
             <span className="text-xs font-semibold text-white">yourbrand</span>
           </div>
           {showImage && imagePreviewUrl && (
-            <div className="bg-black" style={{ aspectRatio: ratio }}>
+            <div className="relative bg-black" style={{ aspectRatio: ratio }}>
               {imageType === 'video' ? (
                 <video src={imagePreviewUrl} className="h-full w-full object-cover" muted />
               ) : (
                 <img src={imagePreviewUrl} alt="" className="h-full w-full object-cover" />
+              )}
+              {imageCount > 1 && (
+                <>
+                  <span className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">
+                    1/{imageCount}
+                  </span>
+                  <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1">
+                    {Array.from({ length: Math.min(imageCount, 10) }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`h-1.5 w-1.5 rounded-full ${i === 0 ? 'bg-white' : 'bg-white/40'}`}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           )}

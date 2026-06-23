@@ -73,7 +73,7 @@ export function validatePollClient(state) {
     }
   }
 
-  if (state.image) {
+  if (state.images?.length) {
     return { ok: false, error: 'Remove the image to publish a poll, or disable the poll.' }
   }
 

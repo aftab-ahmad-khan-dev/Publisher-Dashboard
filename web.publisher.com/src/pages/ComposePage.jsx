@@ -105,7 +105,9 @@ export default function ComposePage() {
             <ComposerPanel
               state={post.state}
               setBody={post.setBody}
-              setImage={post.setImage}
+              addImages={post.addImages}
+              removeImage={post.removeImage}
+              moveImage={post.moveImage}
               setCropHint={post.setCropHint}
               toggleImageVisibility={post.toggleImageVisibility}
               togglePlatform={post.togglePlatform}

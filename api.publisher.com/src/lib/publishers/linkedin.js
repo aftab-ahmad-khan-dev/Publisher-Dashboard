@@ -174,13 +174,31 @@ export async function publishToLinkedIn({ text, orgUrn, accessToken, postState }
       },
     }
   } else {
-    // Optionally attach an image (respect the per-platform image toggle).
+    // Optionally attach images (respect the per-platform image toggle).
     const wantImage = postState?.imageVisibility?.linkedin !== false
-    const dataUrl = wantImage ? postState?.imageDataUrl : null
-    if (dataUrl?.startsWith('data:image/')) {
-      const imageUrn = await uploadLinkedInImage({ token, author, dataUrl })
+    const dataUrls = (
+      wantImage
+        ? Array.isArray(postState?.imageDataUrls) && postState.imageDataUrls.length
+          ? postState.imageDataUrls
+          : postState?.imageDataUrl
+            ? [postState.imageDataUrl]
+            : []
+        : []
+    ).filter((u) => typeof u === 'string' && u.startsWith('data:image/'))
+
+    if (dataUrls.length === 1) {
+      const imageUrn = await uploadLinkedInImage({ token, author, dataUrl: dataUrls[0] })
       body.content = { media: { id: imageUrn } }
       postMode = 'image'
+    } else if (dataUrls.length > 1) {
+      const imageUrns = []
+      for (const dataUrl of dataUrls) {
+        imageUrns.push(await uploadLinkedInImage({ token, author, dataUrl }))
+      }
+      body.content = {
+        multiImage: { images: imageUrns.map((id) => ({ id, altText: '' })) },
+      }
+      postMode = 'multiImage'
     }
   }
 

@@ -5,15 +5,32 @@ import { publishToReddit } from './reddit.js'
 import { publishToQuora } from './quora.js'
 import { publishToPinterest } from './pinterest.js'
 import { publishToThreads } from './threads.js'
-import { resolvePublicImageUrl } from '../mediaHost.js'
+import { resolvePublicImageUrls } from '../mediaHost.js'
 import { logger } from '../logger.js'
 import { isPollEnabled, platformSupportsPoll } from '../pollPolicy.js'
 
 function normalizePostMedia(postState) {
   if (!postState) return postState
-  if (postState.imageDataUrl) return postState
-  if (!postState.imagePreview) return postState
-  return { ...postState, imageDataUrl: postState.imagePreview }
+  let next = postState
+
+  // Canonical carousel field is `imageDataUrls` (array). Derive it from the legacy
+  // single-image fields (`imageDataUrl`, then bulk `imagePreview`) when absent.
+  if (!Array.isArray(next.imageDataUrls) || !next.imageDataUrls.length) {
+    const single = next.imageDataUrl || next.imagePreview
+    if (single) next = { ...next, imageDataUrls: [single] }
+  }
+
+  // Keep `imageDataUrl` pointing at the first image so single-image publishers
+  // (Pinterest, legacy Facebook/LinkedIn paths) keep working unchanged.
+  if (
+    Array.isArray(next.imageDataUrls) &&
+    next.imageDataUrls.length &&
+    !next.imageDataUrl
+  ) {
+    next = { ...next, imageDataUrl: next.imageDataUrls[0] }
+  }
+
+  return next
 }
 
 export async function publishToAllPlatforms({ platforms, postState, config, workspaceId }) {
@@ -43,7 +60,7 @@ export async function publishToAllPlatforms({ platforms, postState, config, work
           }),
         )
       } else if (platform === 'instagram') {
-        const imageUrl = await resolvePublicImageUrl({
+        const imageUrls = await resolvePublicImageUrls({
           postState: normalizedPostState,
           workspaceId,
           platform: 'instagram',
@@ -52,7 +69,7 @@ export async function publishToAllPlatforms({ platforms, postState, config, work
           await publishToInstagram({
             message: text,
             pageToken: config.meta.pageToken,
-            imageUrl,
+            imageUrls,
           }),
         )
       } else if (platform === 'linkedin') {
@@ -90,9 +107,9 @@ export async function publishToAllPlatforms({ platforms, postState, config, work
           }),
         )
       } else if (platform === 'threads') {
-        // Threads, like Instagram, needs a public image URL — base64/uploads
-        // aren't accepted. Resolve the scheduled post's image the same way.
-        const imageUrl = await resolvePublicImageUrl({
+        // Threads, like Instagram, needs public image URLs — base64/uploads
+        // aren't accepted. Resolve the scheduled post's images the same way.
+        const imageUrls = await resolvePublicImageUrls({
           postState: normalizedPostState,
           workspaceId,
           platform: 'threads',
@@ -100,7 +117,7 @@ export async function publishToAllPlatforms({ platforms, postState, config, work
         results.push(
           await publishToThreads({
             text,
-            imageUrl,
+            imageUrls,
             threads: config.threads,
           }),
         )

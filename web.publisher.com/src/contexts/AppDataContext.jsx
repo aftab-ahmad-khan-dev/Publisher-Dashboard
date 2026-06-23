@@ -115,17 +115,28 @@ function loadApiConfigLocal() {
 const AppDataContext = createContext(null)
 
 /**
- * The composer holds the image as a File, which JSON.stringify drops to `{}` on the
- * way to the API. Convert it to a compressed data URL the backend can actually post.
+ * The composer holds images as File objects, which JSON.stringify drops to `{}` on
+ * the way to the API. Compress each to a data URL the backend can actually post.
+ * Strips the non-serializable `images` array and returns `imageDataUrls` (plus
+ * `imageDataUrl` = first, so single-image backend paths keep working). Videos are
+ * preview-only and not uploaded, matching prior behaviour.
  */
 async function withImageData(postState) {
-  const file = postState?.image
-  if (!file || !file.type?.startsWith('image/')) return postState
-  try {
-    return { ...postState, imageDataUrl: await compressImageFile(file) }
-  } catch {
-    return postState
+  const { images, ...rest } = postState || {}
+  const files = (Array.isArray(images) ? images : [])
+    .map((im) => im?.file)
+    .filter((f) => f && f.type?.startsWith('image/'))
+  if (!files.length) return rest
+  const urls = []
+  for (const file of files) {
+    try {
+      urls.push(await compressImageFile(file))
+    } catch {
+      // Skip an image we can't process rather than failing the whole post.
+    }
   }
+  if (!urls.length) return rest
+  return { ...rest, imageDataUrls: urls, imageDataUrl: urls[0] }
 }
 
 export function AppDataProvider({ children }) {
