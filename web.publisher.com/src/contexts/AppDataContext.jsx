@@ -39,6 +39,7 @@ import {
   deleteScheduledRemote,
   updateScheduledRemote,
   scheduleBulkRemote,
+  scheduleBulkPollsRemote,
   subscribeRealtime,
 } from '../lib/backendApi'
 import { compressImageFile, computeScheduleDate } from '../lib/bulkParse'
@@ -746,6 +747,85 @@ export function AppDataProvider({ children }) {
     [live, queue, showToast, refreshFromServer],
   )
 
+  const scheduleBulkPolls = useCallback(
+    async ({ polls, platforms, startDate, timezone, durationDays, allowMultiple }) => {
+      if (!polls?.length) {
+        showToast('No polls to schedule.', 'error')
+        return { ok: false }
+      }
+      if (!platforms?.length) {
+        showToast('Enable at least one poll platform (LinkedIn or Reddit).', 'error')
+        return { ok: false }
+      }
+
+      setPublishStatus('loading')
+
+      // Reddit only supports single-choice voting, so force it off when Reddit is on.
+      const multiple = Boolean(allowMultiple) && !platforms.includes('reddit')
+      const payloadPolls = polls.map((poll) => ({
+        pollNum: poll.pollNum,
+        dayNum: poll.dayNum,
+        title: poll.title,
+        question: sanitizePublishedText(poll.question || ''),
+        options: (poll.options || []).map((o) => sanitizePublishedText(o)).filter(Boolean),
+        allowMultiple: multiple,
+        durationDays,
+      }))
+
+      if (live) {
+        try {
+          const result = await scheduleBulkPollsRemote({
+            polls: payloadPolls,
+            platforms,
+            startDate,
+            timezone,
+          })
+          await refreshFromServer()
+          setPublishStatus('success')
+          showToast(`Scheduled ${result.count} polls — noon each day`)
+          setTimeout(() => setPublishStatus('idle'), 2500)
+          return { ok: true, count: result.count }
+        } catch (err) {
+          setPublishStatus('idle')
+          const msg = err.message?.includes('503') || err.message?.includes('Database')
+            ? 'Database unavailable — check API terminal and MongoDB connection.'
+            : err.message
+          showToast(msg, 'error')
+          return { ok: false }
+        }
+      }
+
+      const [defHour, defMinute] = (apiConfig.defaults?.scheduleTime || '12:00').split(':').map(Number)
+      const items = payloadPolls.map((poll) => {
+        const scheduled = computeScheduleDate(startDate, poll.dayNum, defHour, defMinute)
+        return {
+          id: crypto.randomUUID(),
+          body: poll.question,
+          platforms,
+          scheduledAt: scheduled.toISOString(),
+          timezone,
+          status: 'scheduled',
+          bulkTitle: poll.title,
+          poll: {
+            enabled: true,
+            question: poll.question,
+            options: poll.options,
+            allowMultiple: poll.allowMultiple,
+            durationDays: poll.durationDays,
+          },
+        }
+      })
+      const nextQueue = [...items, ...queue]
+      setQueue(nextQueue)
+      localStorage.setItem(STORAGE_KEYS.scheduledQueue, JSON.stringify(nextQueue))
+      setPublishStatus('success')
+      showToast(`Saved ${items.length} polls locally (demo mode)`, 'error')
+      setTimeout(() => setPublishStatus('idle'), 2500)
+      return { ok: true, count: items.length }
+    },
+    [live, queue, showToast, refreshFromServer, apiConfig],
+  )
+
   const cancelScheduled = useCallback(
     async (id) => {
       if (live) {
@@ -882,6 +962,7 @@ export function AppDataProvider({ children }) {
         publishNow,
         schedulePost,
         scheduleBulkPosts,
+        scheduleBulkPolls,
         cancelScheduled,
         editScheduled,
         saveDraft,

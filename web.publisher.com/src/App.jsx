@@ -24,6 +24,7 @@ import CalendarPage from './pages/CalendarPage'
 import ApiConfigPage from './pages/ApiConfigPage'
 import GuidePage from './pages/GuidePage'
 import BulkUploadPage from './pages/BulkUploadPage'
+import BulkPollsPage from './pages/BulkPollsPage'
 import EmailPage from './pages/EmailPage'
 import AppToaster from './components/AppToaster'
 import BrandLogo from './components/BrandLogo'
@@ -69,6 +70,7 @@ function AppRoutes() {
             <Route element={<DashboardLayout />}>
               <Route path="compose" element={<ComposePage />} />
               <Route path="bulk" element={<BulkUploadPage />} />
+              <Route path="bulk-polls" element={<BulkPollsPage />} />
               <Route path="email" element={<EmailPage />} />
               <Route path="drafts" element={<DraftsPage />} />
               <Route path="scheduled" element={<ScheduledPage />} />

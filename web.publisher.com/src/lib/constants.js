@@ -99,6 +99,7 @@ export const NAV_ITEMS = [
   { path: '/compose', label: 'Compose', icon: 'compose' },
   { path: '/email', label: 'Bulk Email', icon: 'email' },
   { path: '/bulk', label: 'Bulk Upload', icon: 'bulk' },
+  { path: '/bulk-polls', label: 'Bulk Polls', icon: 'poll' },
   { path: '/drafts', label: 'Drafts', icon: 'drafts' },
   { path: '/scheduled', label: 'Scheduled', icon: 'scheduled' },
   { path: '/calendar', label: 'Calendar', icon: 'calendar' },

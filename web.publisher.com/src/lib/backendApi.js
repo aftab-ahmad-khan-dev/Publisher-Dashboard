@@ -181,3 +181,7 @@ export async function updateScheduledRemote(id, payload) {
 export async function scheduleBulkRemote(payload) {
   return apiFetch("/bulk/schedule", { method: "POST", body: payload });
 }
+
+export async function scheduleBulkPollsRemote(payload) {
+  return apiFetch("/bulk/schedule-polls", { method: "POST", body: payload });
+}
