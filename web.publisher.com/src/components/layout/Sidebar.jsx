@@ -13,9 +13,6 @@ const ICONS = {
   bulk: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
   ),
-  poll: (
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M5 20V10m7 10V4m7 16v-6M3 20h18" />
-  ),
   email: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
   ),

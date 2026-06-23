@@ -5,7 +5,6 @@ import { validateCommunityPublish } from '../lib/contentPolicy.js'
 import { sanitizePublishedText } from '../lib/contentSanitize.js'
 import { isRedditConfigured, isQuoraConfigured } from '../lib/platforms.js'
 import { getWorkspaceConfig } from '../lib/configStore.js'
-import { validatePoll, platformSupportsPoll } from '../lib/pollPolicy.js'
 
 const router = Router()
 
@@ -88,95 +87,6 @@ router.post('/bulk/schedule', async (req, res, next) => {
         title: post.title,
         dayNum,
         postNum: post.postNum,
-      })
-    }
-
-    res.json({ ok: true, count: created.length, scheduled: created })
-  } catch (err) {
-    next(err)
-  }
-})
-
-router.post('/bulk/schedule-polls', async (req, res, next) => {
-  try {
-    const { polls, platforms, timezone, startDate } = req.body || {}
-
-    if (!Array.isArray(polls) || polls.length === 0) {
-      return res.status(400).json({ ok: false, error: 'No polls to schedule.' })
-    }
-
-    // Polls only publish on LinkedIn and Reddit; drop anything else.
-    const pollPlatforms = (platforms || []).filter(platformSupportsPoll)
-    if (!pollPlatforms.length) {
-      return res
-        .status(400)
-        .json({ ok: false, error: 'Select a poll platform (LinkedIn or Reddit).' })
-    }
-
-    const config = await getWorkspaceConfig(req.workspaceId)
-    if (pollPlatforms.includes('reddit') && !isRedditConfigured(config.reddit)) {
-      return res.status(400).json({ ok: false, error: 'Reddit is not configured in API Config.' })
-    }
-
-    const [sy, sm, sd] = (startDate || new Date().toISOString().slice(0, 10)).split('-').map(Number)
-    const [defHour, defMinute] = (config.defaults?.scheduleTime || `${DEFAULT_SCHEDULE_HOUR}:${DEFAULT_SCHEDULE_MINUTE}`)
-      .split(':')
-      .map(Number)
-    const created = []
-
-    for (const poll of polls) {
-      const question = sanitizePublishedText(poll.question || '')
-      const options = (poll.options || []).map((o) => sanitizePublishedText(o)).filter(Boolean)
-      const durationDays = Number(poll.durationDays) || 3
-      // Reddit only supports single-choice voting — force it off when Reddit is targeted.
-      const allowMultiple = Boolean(poll.allowMultiple) && !pollPlatforms.includes('reddit')
-
-      const postState = {
-        body: question || '',
-        platforms: Object.fromEntries(pollPlatforms.map((p) => [p, true])),
-        bulkTitle: poll.title,
-        bulkPollNum: poll.pollNum,
-        bulkDayNum: poll.dayNum,
-        poll: { enabled: true, question, options, allowMultiple, durationDays },
-        timezone: timezone || 'UTC',
-      }
-
-      const check = validatePoll(postState, pollPlatforms)
-      if (!check.ok) {
-        return res.status(400).json({
-          ok: false,
-          error: `Poll ${poll.pollNum || poll.dayNum}: ${check.error}`,
-        })
-      }
-
-      const dayNum = Number(poll.dayNum) || 1
-      const scheduled = new Date(sy, sm - 1, sd, defHour, defMinute, 0, 0)
-      scheduled.setDate(scheduled.getDate() + (dayNum - 1))
-
-      // "From current": auto-schedule one poll per day starting today. If the first
-      // day's slot has already passed (e.g. it's afternoon), publish it shortly from
-      // now rather than rejecting — later days keep their one-per-day spacing.
-      const now = new Date()
-      const when = scheduled <= now ? new Date(now.getTime() + 60 * 1000) : scheduled
-
-      const doc = await ScheduledPost.create({
-        workspaceId: req.workspaceId,
-        body: question || poll.title || 'Poll',
-        platforms: pollPlatforms,
-        scheduledAt: when,
-        timezone: timezone || 'UTC',
-        status: 'scheduled',
-        postState,
-      })
-
-      created.push({
-        id: doc._id.toString(),
-        body: doc.body,
-        platforms: doc.platforms,
-        scheduledAt: doc.scheduledAt.toISOString(),
-        title: poll.title,
-        dayNum,
-        pollNum: poll.pollNum,
       })
     }
 
