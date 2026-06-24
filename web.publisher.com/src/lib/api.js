@@ -8,9 +8,11 @@ import {
   isThreadsConfigured,
 } from './connections'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '') || ''
+import { getApiBaseUrl } from './apiBaseUrl.js'
 
-/** True when publish/schedule calls a backend at VITE_API_BASE_URL instead of simulating. */
+const API_BASE = getApiBaseUrl()
+
+/** True when publish/schedule calls a backend instead of simulating. */
 export function isLivePublishing() {
   return Boolean(API_BASE)
 }

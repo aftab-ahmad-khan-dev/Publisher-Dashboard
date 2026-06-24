@@ -107,6 +107,7 @@ export function validatePoll(postState, platforms = []) {
 
   const hasImage =
     Boolean(postState?.imageDataUrl) ||
+    Boolean(postState?.imageMediaId) ||
     Boolean(postState?.imagePreview) ||
     Boolean(postState?.imageUrl) ||
     Boolean(postState?.image)

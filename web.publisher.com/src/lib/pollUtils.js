@@ -1,3 +1,10 @@
+import {
+  addDaysToDate,
+  formatScheduleDisplay,
+  parseDatetimeLocal,
+  toDatetimeLocalValue,
+} from './scheduleUtils'
+
 export const POLL_PLATFORMS = ['linkedin', 'reddit']
 
 export const LINKEDIN_POLL_MAX_OPTIONS = 4
@@ -17,6 +24,31 @@ export const DEFAULT_POLL = {
   options: ['', ''],
   allowMultiple: false,
   durationDays: 3,
+}
+
+export function getPollWindow(state) {
+  if (!isPollEnabled(state)) return null
+
+  const durationDays = Number(state.poll?.durationDays) || 3
+  let start
+  if (state.publishMode === 'scheduled' && state.scheduledAt) {
+    start = parseDatetimeLocal(state.scheduledAt)
+  } else {
+    start = new Date()
+  }
+  if (!start || !Number.isFinite(start.getTime())) return null
+
+  const end = addDaysToDate(start, durationDays)
+  return {
+    durationDays,
+    start,
+    end,
+    startLabel: formatScheduleDisplay(toDatetimeLocalValue(start), {
+      timezone: state.timezone,
+      showRelative: state.publishMode !== 'scheduled',
+    }),
+    endLabel: formatScheduleDisplay(toDatetimeLocalValue(end), { timezone: state.timezone }),
+  }
 }
 
 export function platformSupportsPoll(platform) {
@@ -73,7 +105,7 @@ export function validatePollClient(state) {
     }
   }
 
-  if (state.image) {
+  if (state.image || state.mediaItems?.length) {
     return { ok: false, error: 'Remove the image to publish a poll, or disable the poll.' }
   }
 

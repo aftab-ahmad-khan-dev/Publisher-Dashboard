@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { getAuth } from '@clerk/express'
 import { Draft } from '../models/Draft.js'
 import { ScheduledPost } from '../models/ScheduledPost.js'
 import { PublishedPost } from '../models/PublishedPost.js'
@@ -15,15 +16,24 @@ import {
   toClientConfig,
   stripPlaceholderSecrets,
 } from '../lib/configStore.js'
+import { consolidateUserWorkspacesOnce } from '../lib/workspaceMigration.js'
 
 const router = Router()
 
 router.get('/bootstrap', async (req, res, next) => {
   try {
+    let auth = null
+    try {
+      auth = getAuth(req)
+    } catch {
+      auth = null
+    }
+    await consolidateUserWorkspacesOnce(auth?.userId)
+
     const [config, drafts, scheduled, published] = await Promise.all([
       getWorkspaceConfig(req.workspaceId),
       Draft.find({ workspaceId: req.workspaceId }).sort({ updatedAt: -1 }).lean(),
-      ScheduledPost.find({ workspaceId: req.workspaceId, status: { $in: ['scheduled', 'publishing'] } })
+      ScheduledPost.find({ workspaceId: req.workspaceId, status: { $in: ['scheduled', 'publishing', 'failed'] } })
         .sort({ scheduledAt: 1 })
         .lean(),
       PublishedPost.find({ workspaceId: req.workspaceId }).sort({ publishedAt: -1 }).limit(50).lean(),
@@ -271,6 +281,21 @@ router.post('/scheduled/fix-media', async (req, res, next) => {
   }
 })
 
+router.delete('/scheduled', async (req, res, next) => {
+  try {
+    const result = await ScheduledPost.updateMany(
+      {
+        workspaceId: req.workspaceId,
+        status: { $in: ['scheduled', 'failed'] },
+      },
+      { status: 'cancelled' },
+    )
+    res.json({ ok: true, removed: result.modifiedCount || 0 })
+  } catch (err) {
+    next(err)
+  }
+})
+
 router.delete('/scheduled/:id', async (req, res, next) => {
   try {
     const doc = await ScheduledPost.findOneAndUpdate(
@@ -327,7 +352,8 @@ function mapScheduled(d) {
     status: d.status,
     error: d.error,
     bulkTitle: ps.bulkTitle,
-    imagePreview: ps.imagePreview,
+    imagePreview: ps.imagePreview || ps.imageUrl,
+    imageUrl: ps.imageUrl,
     // Extra fields so the post can be previewed accurately per platform.
     hashtags: ps.hashtags,
     imageType: ps.imageType,

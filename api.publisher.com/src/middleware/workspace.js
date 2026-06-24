@@ -13,12 +13,18 @@ function normalize(value) {
     .slice(0, 64)
 }
 
+/** Canonical content tenant for a signed-in Clerk user (stable across org switches). */
+export function contentWorkspaceId(clerkUserId) {
+  if (!clerkUserId) return undefined
+  return `user_${clerkUserId}`.toLowerCase().slice(0, 64)
+}
+
 /**
  * Derive the tenant for this request.
  *
- * With Clerk configured, the workspace is the *verified* active organization
- * (or a personal `user_<id>` workspace) read from the session token — never a
- * client-supplied header, so one tenant cannot read another's data.
+ * With Clerk, publishing data always lives under `user_<clerkUserId>` so switching
+ * organizations in the UI never hides drafts, scheduled posts, or API config.
+ * The active org (if any) is exposed separately as `req.orgId` for display/roles.
  *
  * Without Clerk (local dev / no secret key), we fall back to the legacy header
  * so the app keeps working single-tenant.
@@ -31,17 +37,15 @@ export function workspaceMiddleware(req, _res, next) {
     } catch {
       auth = null
     }
-    if (auth?.orgId) {
-      req.workspaceId = auth.orgId.toLowerCase().slice(0, 64)
-      return next()
+
+    req.clerkUserId = auth?.userId || undefined
+    req.orgId = auth?.orgId ? auth.orgId.toLowerCase().slice(0, 64) : undefined
+    req.workspaceId = contentWorkspaceId(auth?.userId)
+
+    if (!req.workspaceId) {
+      // OAuth provider callback routes resolve tenant from signed `state` instead.
+      req.workspaceId = undefined
     }
-    if (auth?.userId) {
-      req.workspaceId = `user_${auth.userId}`.toLowerCase().slice(0, 64)
-      return next()
-    }
-    // No identity (e.g. OAuth provider callback): leave unset — callback
-    // routes resolve their tenant from the signed OAuth `state` instead.
-    req.workspaceId = undefined
     return next()
   }
 

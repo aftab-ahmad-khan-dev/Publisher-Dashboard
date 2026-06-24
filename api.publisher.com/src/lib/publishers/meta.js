@@ -1,3 +1,5 @@
+import { isPubliclyFetchableUrl, resolveMetaPublicImageUrl } from '../metaImageUrl.js'
+
 function formatMetaError(data) {
   const err = data?.error || {}
   const msg = err.message || 'Meta API request failed'
@@ -88,11 +90,21 @@ export async function publishToFacebook({ message, pageToken, postState }) {
     )
   }
 
-  // With an image we must post to /me/photos (a /me/feed text post drops the image).
-  if (dataUrl || imageUrl) {
+  // Prefer direct multipart upload when we have bytes — works locally without a public URL.
+  const hasImageBytes = dataUrl?.startsWith('data:image/')
+  const hasPublicUrl = isPubliclyFetchableUrl(imageUrl)
+
+  if (hasImageBytes || (imageUrl && hasPublicUrl)) {
     const url = `https://graph.facebook.com/v21.0/me/photos`
     let res
-    if (imageUrl) {
+    if (hasImageBytes) {
+      const form = new FormData()
+      form.append('source', dataUrlToBlob(dataUrl), 'image.jpg')
+      if (message) form.append('caption', message)
+      form.append('published', 'true')
+      form.append('access_token', pageToken)
+      res = await fetch(url, { method: 'POST', body: form })
+    } else {
       res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -103,13 +115,6 @@ export async function publishToFacebook({ message, pageToken, postState }) {
           access_token: pageToken,
         }),
       })
-    } else {
-      const form = new FormData()
-      form.append('source', dataUrlToBlob(dataUrl), 'image.jpg')
-      if (message) form.append('caption', message)
-      form.append('published', 'true')
-      form.append('access_token', pageToken)
-      res = await fetch(url, { method: 'POST', body: form })
     }
     const data = await res.json().catch(() => ({}))
     if (!res.ok || data.error) {
@@ -118,8 +123,13 @@ export async function publishToFacebook({ message, pageToken, postState }) {
     return { platform: 'facebook', postId: data.post_id || data.id }
   }
 
-  // Text-only feed post. `published: true` is the default, but we set it explicitly
-  // so the post can never land in a draft/scheduled state.
+  if (wantImage && (imageUrl || dataUrl)) {
+    throw new Error(
+      'Facebook could not use the attached image. Re-attach the image and try again.',
+    )
+  }
+
+  // Text-only feed post.
   const res = await fetch(`https://graph.facebook.com/v21.0/me/feed`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -165,9 +175,15 @@ async function waitForContainer(creationId, pageToken, attempts = 6) {
   }
 }
 
-export async function publishToInstagram({ message, pageToken, imageUrl }) {
+export async function publishToInstagram({ message, pageToken, imageUrl, postState }) {
+  const hostedUrl = await resolveMetaPublicImageUrl({
+    imageUrl,
+    imageDataUrl: postState?.imageDataUrl,
+    pageToken,
+  })
+
   // IG has no text-only posts; without a public image URL there's nothing to publish.
-  if (!imageUrl) {
+  if (!hostedUrl) {
     throw new Error(
       'Instagram requires an image, text-only posts cannot be published. Attach an image or disable Instagram for this post.',
     )
@@ -179,7 +195,7 @@ export async function publishToInstagram({ message, pageToken, imageUrl }) {
   const createRes = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image_url: imageUrl, caption: message, access_token: pageToken }),
+    body: JSON.stringify({ image_url: hostedUrl, caption: message, access_token: pageToken }),
   })
   const createData = await createRes.json().catch(() => ({}))
   if (!createRes.ok || createData.error) {

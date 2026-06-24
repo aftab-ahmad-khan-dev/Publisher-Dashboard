@@ -1,22 +1,80 @@
-/** Parse bulk paste: "Post 1 (Day 1)" blocks separated by blank lines */
+/** Parse bulk paste: "Post 1 (Day 1)" or "Day 1" blocks (incl. Unicode bold headers). */
 
 const HEADER_PATTERNS = [
   /^Post\s+(\d+)\s*\(\s*Day\s+(\d+)\s*\)\s*$/i,
   /^Post\s+(\d+)\s*[-–:]\s*Day\s+(\d+)\s*$/i,
   /^Post\s+(\d+)\s*$/i,
   /^Day\s+(\d+)\s*$/i,
+  /^Day\s+(\d+)\s*[-–:]\s*.+$/i,
   /^#+\s*Post\s+(\d+)\s*\(\s*Day\s+(\d+)\s*\)\s*$/i,
+  /^#+\s*Day\s+(\d+)\s*$/i,
 ]
 
+/**
+ * Fancy Unicode (𝗗𝗮𝘆 𝟭, 𝐃𝐚𝐲 𝟏, etc.) → plain ASCII so headers still match.
+ */
+export function normalizeBulkLine(line) {
+  if (!line || typeof line !== 'string') return line
+  let out = ''
+  for (const ch of line) {
+    const cp = ch.codePointAt(0)
+    // Mathematical Sans-Serif Bold A–Z / a–z
+    if (cp >= 0x1d5d4 && cp <= 0x1d5ed) {
+      out += String.fromCharCode(0x41 + (cp - 0x1d5d4))
+      continue
+    }
+    if (cp >= 0x1d5ee && cp <= 0x1d607) {
+      out += String.fromCharCode(0x61 + (cp - 0x1d5ee))
+      continue
+    }
+    // Mathematical Sans-Serif Bold digits 0–9
+    if (cp >= 0x1d7e2 && cp <= 0x1d7eb) {
+      out += String.fromCharCode(0x30 + (cp - 0x1d7e2))
+      continue
+    }
+    // Mathematical Sans-Serif digits 0–9 (non-bold — common in 𝗗𝗮𝘆 𝟭 paste)
+    if (cp >= 0x1d7ec && cp <= 0x1d7f5) {
+      out += String.fromCharCode(0x30 + (cp - 0x1d7ec))
+      continue
+    }
+    // Mathematical Monospace digits 0–9
+    if (cp >= 0x1d7f6 && cp <= 0x1d7ff) {
+      out += String.fromCharCode(0x30 + (cp - 0x1d7f6))
+      continue
+    }
+    // Mathematical Bold A–Z / a–z
+    if (cp >= 0x1d400 && cp <= 0x1d419) {
+      out += String.fromCharCode(0x41 + (cp - 0x1d400))
+      continue
+    }
+    if (cp >= 0x1d41a && cp <= 0x1d433) {
+      out += String.fromCharCode(0x61 + (cp - 0x1d41a))
+      continue
+    }
+    // Mathematical Bold digits
+    if (cp >= 0x1d7ce && cp <= 0x1d7d7) {
+      out += String.fromCharCode(0x30 + (cp - 0x1d7ce))
+      continue
+    }
+    // Fullwidth digits
+    if (cp >= 0xff10 && cp <= 0xff19) {
+      out += String.fromCharCode(0x30 + (cp - 0xff10))
+      continue
+    }
+    out += ch
+  }
+  return out
+}
+
 function matchHeader(line) {
-  const trimmed = line.trim()
+  const trimmed = normalizeBulkLine(line).trim()
   if (!trimmed) return null
   for (const re of HEADER_PATTERNS) {
     const m = trimmed.match(re)
     if (m) {
       const postNum = Number(m[1])
       const dayNum = m[2] != null ? Number(m[2]) : postNum
-      return { postNum, dayNum, title: trimmed }
+      return { postNum, dayNum, title: line.trim() }
     }
   }
   return null
@@ -82,13 +140,55 @@ export function imageIndexFromFilename(name) {
   return null
 }
 
-export function buildImageMap(files) {
+export function buildImageMap(files, { useUploadOrder = true } = {}) {
   const map = new Map()
+  const unnumbered = []
+
   for (const file of files) {
-    if (!file.type.startsWith('image/')) continue
+    if (!file?.type?.startsWith('image/')) continue
     const idx = imageIndexFromFilename(file.name)
-    if (idx != null && !map.has(idx)) map.set(idx, file)
+    if (idx != null && !map.has(idx)) {
+      map.set(idx, file)
+    } else if (idx == null) {
+      unnumbered.push(file)
+    }
   }
+
+  if (useUploadOrder) {
+    let slot = 1
+    for (const file of unnumbered) {
+      while (map.has(slot)) slot++
+      map.set(slot, file)
+      slot++
+    }
+  }
+
+  return map
+}
+
+export function buildImageMapFromMediaItems(mediaItems = []) {
+  const map = new Map()
+  const unnumbered = []
+  const sorted = [...mediaItems].sort((a, b) => (a.index ?? 9999) - (b.index ?? 9999))
+
+  for (const item of sorted) {
+    const file = item.file
+    if (!file?.type?.startsWith('image/')) continue
+    const idx = item.index ?? imageIndexFromFilename(file.name)
+    if (idx != null && !map.has(idx)) {
+      map.set(idx, file)
+    } else {
+      unnumbered.push(file)
+    }
+  }
+
+  let slot = 1
+  for (const file of unnumbered) {
+    while (map.has(slot)) slot++
+    map.set(slot, file)
+    slot++
+  }
+
   return map
 }
 
@@ -101,12 +201,7 @@ export function assignImagesToPosts(posts, imageMap) {
   })
 }
 
-export function computeScheduleDate(startDateStr, dayNum, hour = 12, minute = 0) {
-  const [y, m, d] = startDateStr.split('-').map(Number)
-  const date = new Date(y, m - 1, d, hour, minute, 0, 0)
-  date.setDate(date.getDate() + (dayNum - 1))
-  return date
-}
+export { computeScheduleDate } from './scheduleUtils'
 
 export function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -117,9 +212,7 @@ export function fileToDataUrl(file) {
   })
 }
 
-/** Resize/compress for API payload limits */
-export async function compressImageFile(file, maxWidth = 1200, quality = 0.82) {
-  if (!file.type.startsWith('image/')) return fileToDataUrl(file)
+async function renderCompressedJpeg(file, maxWidth, quality) {
   const bitmap = await createImageBitmap(file)
   const scale = Math.min(1, maxWidth / bitmap.width)
   const w = Math.round(bitmap.width * scale)
@@ -131,4 +224,51 @@ export async function compressImageFile(file, maxWidth = 1200, quality = 0.82) {
   ctx.drawImage(bitmap, 0, 0, w, h)
   bitmap.close()
   return canvas.toDataURL('image/jpeg', quality)
+}
+
+/** Resize/compress for single-post publish. */
+export async function compressImageFile(file, maxWidth = 1200, quality = 0.82) {
+  if (!file.type.startsWith('image/')) return fileToDataUrl(file)
+  return renderCompressedJpeg(file, maxWidth, quality)
+}
+
+/** Smaller payload for bulk metadata-only requests (legacy fallback). */
+export async function compressImageFileForBulk(file, maxBytes = 160_000) {
+  if (!file.type.startsWith('image/')) return fileToDataUrl(file)
+
+  let maxWidth = 900
+  let quality = 0.72
+
+  for (let attempt = 0; attempt < 7; attempt++) {
+    const dataUrl = await renderCompressedJpeg(file, maxWidth, quality)
+    const b64 = dataUrl.split(',')[1] || ''
+    const approxBytes = (b64.length * 3) / 4
+    if (approxBytes <= maxBytes) return dataUrl
+    quality = Math.max(0.48, quality - 0.06)
+    maxWidth = Math.round(maxWidth * 0.86)
+  }
+
+  return renderCompressedJpeg(file, 640, 0.5)
+}
+
+/**
+ * Per-image upload compression for Figma exports (large PNGs).
+ * Targets ~1.8 MB decoded so JSON stays under Vercel's request cap.
+ */
+export async function compressImageFileForUpload(file, maxBytes = 2_400_000) {
+  if (!file.type.startsWith('image/')) return fileToDataUrl(file)
+
+  let maxWidth = 2048
+  let quality = 0.82
+
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const dataUrl = await renderCompressedJpeg(file, maxWidth, quality)
+    const b64 = dataUrl.split(',')[1] || ''
+    const approxBytes = (b64.length * 3) / 4
+    if (approxBytes <= maxBytes) return dataUrl
+    quality = Math.max(0.45, quality - 0.05)
+    maxWidth = Math.round(maxWidth * 0.88)
+  }
+
+  return renderCompressedJpeg(file, 1280, 0.55)
 }

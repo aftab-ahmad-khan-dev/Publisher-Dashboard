@@ -49,6 +49,9 @@ export default function TopBar() {
             afterSelectOrganizationUrl="/compose"
             afterSelectPersonalUrl="/compose"
           />
+          <p className="mt-0.5 hidden text-[10px] text-slate-600 sm:block">
+            Posts &amp; config stay on your account
+          </p>
         </div>
         <UserButton
           appearance={clerkAppearance}

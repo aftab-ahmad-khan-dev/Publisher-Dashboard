@@ -1,15 +1,38 @@
 import { useState, useCallback, useMemo } from 'react'
 import { draftToComposerState } from '../lib/draftUtils'
-import { DEFAULT_PLATFORMS, DEFAULT_IMAGE_VISIBILITY } from '../lib/constants'
+import { DEFAULT_PLATFORMS, DEFAULT_IMAGE_VISIBILITY, MAX_UPLOAD_IMAGES } from '../lib/constants'
 import { DEFAULT_POLL } from '../lib/pollUtils'
+import { todayDateInputValue, getDefaultBulkStartDate } from '../lib/scheduleUtils'
+
+import { imageIndexFromFilename } from '../lib/bulkParse'
 
 const DEFAULT_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+export { MAX_UPLOAD_IMAGES as MAX_MEDIA_ITEMS }
+
+const ACCEPT_MEDIA = (file) =>
+  file.type.startsWith('image/') || file.type === 'video/mp4'
+
+function fileToMediaItem(file, index = null) {
+  const isVideo = file.type.startsWith('video/')
+  return {
+    id: crypto.randomUUID(),
+    file,
+    previewUrl: URL.createObjectURL(file),
+    type: isVideo ? 'video' : 'image',
+    index,
+  }
+}
+
+function revokeMediaItems(items = []) {
+  items.forEach((item) => {
+    if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
+  })
+}
 
 const INITIAL_STATE = {
   body: '',
-  image: null,
-  imagePreviewUrl: null,
-  imageType: null,
+  mediaItems: [],
+  activeMediaId: null,
   cropHint: 'square',
   imageVisibility: { ...DEFAULT_IMAGE_VISIBILITY },
   hashtags: [],
@@ -17,6 +40,9 @@ const INITIAL_STATE = {
   publishMode: 'now',
   scheduledAt: '',
   timezone: DEFAULT_TIMEZONE,
+  scheduleByDay: false,
+  scheduleStartDate: getDefaultBulkStartDate(),
+  scheduleDayNum: 1,
   poll: { ...DEFAULT_POLL },
 }
 
@@ -30,10 +56,17 @@ export const PLATFORM_LIMITS = {
 }
 
 export const CROP_HINTS = [
+  { id: 'original', label: 'Original', ratio: null },
   { id: 'square', label: 'Square (1:1)', ratio: '1 / 1' },
   { id: 'portrait', label: 'Portrait (4:5)', ratio: '4 / 5' },
   { id: 'landscape', label: 'Landscape (1.91:1)', ratio: '1.91 / 1' },
 ]
+
+/** Aspect ratio for preview framing; `null` = keep native dimensions. */
+export function getCropAspectRatio(cropHint, fallback = '1 / 1') {
+  if (cropHint === 'original') return null
+  return CROP_HINTS.find((c) => c.id === cropHint)?.ratio ?? fallback
+}
 
 function normalizeTag(raw) {
   const trimmed = raw.trim()
@@ -41,41 +74,106 @@ function normalizeTag(raw) {
   return trimmed.startsWith('#') ? trimmed : `#${trimmed}`
 }
 
+/** Derive legacy single-image fields from the active media item. */
+export function enrichPostState(state) {
+  const active =
+    state.mediaItems?.find((m) => m.id === state.activeMediaId) ?? state.mediaItems?.[0] ?? null
+  return {
+    ...state,
+    image: active?.file ?? null,
+    imagePreviewUrl: active?.previewUrl ?? null,
+    imageType: active?.type ?? null,
+  }
+}
+
 export function usePostState() {
-  const [state, setState] = useState(INITIAL_STATE)
+  const [rawState, setRawState] = useState(INITIAL_STATE)
   const [editingDraftId, setEditingDraftId] = useState(null)
 
+  const state = useMemo(() => enrichPostState(rawState), [rawState])
+
   const setBody = useCallback((body) => {
-    setState((s) => ({ ...s, body }))
+    setRawState((s) => ({ ...s, body }))
   }, [])
 
-  const setImage = useCallback((file) => {
-    setState((s) => {
-      if (s.imagePreviewUrl) URL.revokeObjectURL(s.imagePreviewUrl)
-      if (!file) {
-        return {
-          ...s,
-          image: null,
-          imagePreviewUrl: null,
-          imageType: null,
+  const addMediaFiles = useCallback((fileList) => {
+    const incoming = [...(fileList || [])].filter(ACCEPT_MEDIA)
+    if (!incoming.length) return
+
+    setRawState((s) => {
+      const usedIndices = new Set(
+        s.mediaItems.map((m) => m.index).filter((n) => n != null),
+      )
+      let nextAuto = 1
+      const claimIndex = (preferred) => {
+        if (preferred != null && !usedIndices.has(preferred)) {
+          usedIndices.add(preferred)
+          return preferred
         }
+        while (usedIndices.has(nextAuto)) nextAuto++
+        const n = nextAuto
+        usedIndices.add(n)
+        nextAuto++
+        return n
       }
-      const isVideo = file.type.startsWith('video/')
-      return {
-        ...s,
-        image: file,
-        imagePreviewUrl: URL.createObjectURL(file),
-        imageType: isVideo ? 'video' : 'image',
+
+      const toAdd = []
+      for (const file of incoming) {
+        if (s.mediaItems.length + toAdd.length >= MAX_UPLOAD_IMAGES) break
+        const fromName = imageIndexFromFilename(file.name)
+        const index = claimIndex(fromName)
+        toAdd.push(fileToMediaItem(file, index))
       }
+      if (!toAdd.length) return s
+
+      const mediaItems = [...s.mediaItems, ...toAdd]
+      const activeMediaId = s.activeMediaId || toAdd[0].id
+      return { ...s, mediaItems, activeMediaId }
     })
   }, [])
 
+  const removeMedia = useCallback((id) => {
+    setRawState((s) => {
+      const removed = s.mediaItems.find((m) => m.id === id)
+      if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl)
+      const mediaItems = s.mediaItems.filter((m) => m.id !== id)
+      let activeMediaId = s.activeMediaId
+      if (activeMediaId === id) activeMediaId = mediaItems[0]?.id ?? null
+      return { ...s, mediaItems, activeMediaId }
+    })
+  }, [])
+
+  const setActiveMedia = useCallback((id) => {
+    setRawState((s) => ({ ...s, activeMediaId: id }))
+  }, [])
+
+  const clearMedia = useCallback(() => {
+    setRawState((s) => {
+      revokeMediaItems(s.mediaItems)
+      return { ...s, mediaItems: [], activeMediaId: null }
+    })
+  }, [])
+
+  /** @deprecated Use addMediaFiles / clearMedia — kept for narrow call sites */
+  const setImage = useCallback((file) => {
+    if (!file) {
+      clearMedia()
+      return
+    }
+    setRawState((s) => {
+      revokeMediaItems(s.mediaItems)
+      const fromName = imageIndexFromFilename(file.name)
+      const item = fileToMediaItem(file, fromName ?? 1)
+      return { ...s, mediaItems: [item], activeMediaId: item.id }
+    })
+  }, [clearMedia])
+
   const setCropHint = useCallback((cropHint) => {
-    setState((s) => ({ ...s, cropHint }))
+    setRawState((s) => ({ ...s, cropHint }))
   }, [])
 
   const toggleImageVisibility = useCallback((platform) => {
-    setState((s) => ({
+    setRawState((s) => ({
       ...s,
       imageVisibility: {
         ...s.imageVisibility,
@@ -85,7 +183,7 @@ export function usePostState() {
   }, [])
 
   const togglePlatform = useCallback((platform) => {
-    setState((s) => ({
+    setRawState((s) => ({
       ...s,
       platforms: {
         ...s.platforms,
@@ -97,7 +195,7 @@ export function usePostState() {
   const addHashtag = useCallback((raw) => {
     const tag = normalizeTag(raw)
     if (!tag) return false
-    setState((s) => {
+    setRawState((s) => {
       if (s.hashtags.some((h) => h.tag.toLowerCase() === tag.toLowerCase())) {
         return s
       }
@@ -117,14 +215,14 @@ export function usePostState() {
   }, [])
 
   const removeHashtag = useCallback((id) => {
-    setState((s) => ({
+    setRawState((s) => ({
       ...s,
       hashtags: s.hashtags.filter((h) => h.id !== id),
     }))
   }, [])
 
   const toggleHashtagPlatform = useCallback((id, platform) => {
-    setState((s) => ({
+    setRawState((s) => ({
       ...s,
       hashtags: s.hashtags.map((h) =>
         h.id === id
@@ -141,19 +239,34 @@ export function usePostState() {
   }, [])
 
   const setPublishMode = useCallback((publishMode) => {
-    setState((s) => ({ ...s, publishMode }))
+    setRawState((s) => ({ ...s, publishMode }))
   }, [])
 
   const setScheduledAt = useCallback((scheduledAt) => {
-    setState((s) => ({ ...s, scheduledAt }))
+    setRawState((s) => ({ ...s, scheduledAt }))
   }, [])
 
   const setTimezone = useCallback((timezone) => {
-    setState((s) => ({ ...s, timezone }))
+    setRawState((s) => ({ ...s, timezone }))
+  }, [])
+
+  const setScheduleByDay = useCallback((scheduleByDay) => {
+    setRawState((s) => ({ ...s, scheduleByDay }))
+  }, [])
+
+  const setScheduleStartDate = useCallback((scheduleStartDate) => {
+    setRawState((s) => ({ ...s, scheduleStartDate }))
+  }, [])
+
+  const setScheduleDayNum = useCallback((scheduleDayNum) => {
+    setRawState((s) => ({
+      ...s,
+      scheduleDayNum: Math.max(1, Number(scheduleDayNum) || 1),
+    }))
   }, [])
 
   const setPoll = useCallback((poll) => {
-    setState((s) => ({ ...s, poll: { ...s.poll, ...poll } }))
+    setRawState((s) => ({ ...s, poll: { ...s.poll, ...poll } }))
   }, [])
 
   const hashtagCounts = useMemo(() => {
@@ -184,14 +297,18 @@ export function usePostState() {
   )
 
   const loadDraft = useCallback((draft) => {
-    setState(draftToComposerState(draft))
+    setRawState(draftToComposerState(draft))
     setEditingDraftId(draft.id)
   }, [])
 
   const resetComposer = useCallback(() => {
-    setState((s) => {
-      if (s.imagePreviewUrl) URL.revokeObjectURL(s.imagePreviewUrl)
-      return { ...INITIAL_STATE, timezone: s.timezone }
+    setRawState((s) => {
+      revokeMediaItems(s.mediaItems)
+      return {
+        ...INITIAL_STATE,
+        timezone: s.timezone,
+        scheduleStartDate: getDefaultBulkStartDate(),
+      }
     })
     setEditingDraftId(null)
   }, [])
@@ -207,6 +324,10 @@ export function usePostState() {
     clearEditingDraft,
     setBody,
     setImage,
+    addMediaFiles,
+    removeMedia,
+    setActiveMedia,
+    clearMedia,
     setCropHint,
     toggleImageVisibility,
     togglePlatform,
@@ -216,6 +337,9 @@ export function usePostState() {
     setPublishMode,
     setScheduledAt,
     setTimezone,
+    setScheduleByDay,
+    setScheduleStartDate,
+    setScheduleDayNum,
     setPoll,
     hashtagCounts,
     getBodyForPlatform,

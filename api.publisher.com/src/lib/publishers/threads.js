@@ -74,7 +74,9 @@ export async function publishToThreads({ text, imageUrl, threads }) {
   })
   const createData = await createRes.json().catch(() => ({}))
   if (!createRes.ok || createData.error) {
-    throw new Error(createData.error?.message || `Threads container failed (${createRes.status})`)
+    const msg = createData.error?.message || `Threads container failed (${createRes.status})`
+    const detail = createData.error?.error_user_msg
+    throw new Error(detail ? `${msg}: ${detail}` : msg)
   }
 
   // An image container must finish processing before publish, or the image is dropped.

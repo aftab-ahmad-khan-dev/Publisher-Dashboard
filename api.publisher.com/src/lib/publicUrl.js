@@ -8,6 +8,13 @@
  */
 export function apiPublicBase() {
   const raw = process.env.API_PUBLIC_URL?.trim()
-  if (!raw) return ''
-  return raw.replace(/\/+$/, '').replace(/\/api$/i, '')
+  if (raw) return raw.replace(/\/+$/, '').replace(/\/api$/i, '')
+
+  // Local dev: derive from PORT when API_PUBLIC_URL isn't set
+  if (process.env.NODE_ENV !== 'production') {
+    const port = Number(process.env.PORT) || 3001
+    return `http://localhost:${port}`
+  }
+
+  return ''
 }

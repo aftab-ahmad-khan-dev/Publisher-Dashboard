@@ -6,6 +6,8 @@ import { publishToQuora } from './quora.js'
 import { publishToPinterest } from './pinterest.js'
 import { publishToThreads } from './threads.js'
 import { resolvePublicImageUrl } from '../mediaHost.js'
+import { hydratePostStateMedia } from '../mediaResolve.js'
+import { resolveMetaPublicImageUrl } from '../metaImageUrl.js'
 import { logger } from '../logger.js'
 import { isPollEnabled, platformSupportsPoll } from '../pollPolicy.js'
 
@@ -19,7 +21,7 @@ function normalizePostMedia(postState) {
 export async function publishToAllPlatforms({ platforms, postState, config, workspaceId }) {
   const results = []
   const errors = []
-  const normalizedPostState = normalizePostMedia(postState)
+  const normalizedPostState = await hydratePostStateMedia(normalizePostMedia(postState))
   const pollMode = isPollEnabled(normalizedPostState)
 
   for (const platform of platforms) {
@@ -53,6 +55,7 @@ export async function publishToAllPlatforms({ platforms, postState, config, work
             message: text,
             pageToken: config.meta.pageToken,
             imageUrl,
+            postState: normalizedPostState,
           }),
         )
       } else if (platform === 'linkedin') {
@@ -90,17 +93,23 @@ export async function publishToAllPlatforms({ platforms, postState, config, work
           }),
         )
       } else if (platform === 'threads') {
-        // Threads, like Instagram, needs a public image URL — base64/uploads
-        // aren't accepted. Resolve the scheduled post's image the same way.
         const imageUrl = await resolvePublicImageUrl({
           postState: normalizedPostState,
           workspaceId,
           platform: 'threads',
         })
+        let threadsImageUrl = imageUrl
+        if (imageUrl) {
+          threadsImageUrl = await resolveMetaPublicImageUrl({
+            imageUrl,
+            imageDataUrl: normalizedPostState.imageDataUrl,
+            pageToken: config.meta.pageToken,
+          })
+        }
         results.push(
           await publishToThreads({
             text,
-            imageUrl,
+            imageUrl: threadsImageUrl,
             threads: config.threads,
           }),
         )

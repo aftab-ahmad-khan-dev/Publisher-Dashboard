@@ -3,8 +3,15 @@ import { ScheduledPost } from '../models/ScheduledPost.js'
 import { DEFAULT_SCHEDULE_HOUR, DEFAULT_SCHEDULE_MINUTE } from '../lib/scheduleConstants.js'
 import { validateCommunityPublish } from '../lib/contentPolicy.js'
 import { sanitizePublishedText } from '../lib/contentSanitize.js'
+import { validatePoll } from '../lib/pollPolicy.js'
+import { mediaPublicUrl } from '../lib/mediaResolve.js'
 import { isRedditConfigured, isQuoraConfigured } from '../lib/platforms.js'
 import { getWorkspaceConfig } from '../lib/configStore.js'
+import {
+  ensureFutureBulkStartDate,
+  computeBulkScheduleDate,
+  parseScheduleTime,
+} from '../lib/bulkSchedule.js'
 
 const router = Router()
 
@@ -27,11 +34,13 @@ router.post('/bulk/schedule', async (req, res, next) => {
       return res.status(400).json({ ok: false, error: 'Quora profile URL is required in API Config.' })
     }
 
-    const [sy, sm, sd] = (startDate || new Date().toISOString().slice(0, 10)).split('-').map(Number)
-    // Default time of day comes from the workspace's scheduling defaults ("HH:MM").
-    const [defHour, defMinute] = (config.defaults?.scheduleTime || `${DEFAULT_SCHEDULE_HOUR}:${DEFAULT_SCHEDULE_MINUTE}`)
-      .split(':')
-      .map(Number)
+    const defaultScheduleTime =
+      config.defaults?.scheduleTime || `${DEFAULT_SCHEDULE_HOUR}:${DEFAULT_SCHEDULE_MINUTE}`
+    const [defHour, defMinute] = parseScheduleTime(defaultScheduleTime)
+    const resolvedStart = ensureFutureBulkStartDate(
+      startDate || new Date().toISOString().slice(0, 10),
+      defaultScheduleTime,
+    )
     const created = []
 
     for (const post of posts) {
@@ -45,13 +54,12 @@ router.post('/bulk/schedule', async (req, res, next) => {
       }
 
       const dayNum = Number(post.dayNum) || 1
-      const scheduled = new Date(sy, sm - 1, sd, defHour, defMinute, 0, 0)
-      scheduled.setDate(scheduled.getDate() + (dayNum - 1))
+      const scheduled = computeBulkScheduleDate(resolvedStart, dayNum, defHour, defMinute)
 
       if (scheduled <= new Date()) {
         return res.status(400).json({
           ok: false,
-          error: `Post ${post.postNum || dayNum}: schedule time must be in the future.`,
+          error: `Post ${post.postNum || dayNum}: schedule time must be in the future. Pick a later start date or default schedule time.`,
         })
       }
 
@@ -62,11 +70,25 @@ router.post('/bulk/schedule', async (req, res, next) => {
         bulkTitle: post.title,
         bulkPostNum: post.postNum,
         bulkDayNum: dayNum,
-        // Canonical field used by publishers; keep imagePreview for existing UI cards.
+        imageMediaId: post.imageMediaId || null,
+        imageUrl: post.imageUrl || mediaPublicUrl(post.imageMediaId) || null,
         imageDataUrl: post.imageDataUrl || null,
-        imagePreview: post.imageDataUrl || null,
+        imagePreview: post.imagePreview || post.imageUrl || null,
         imageMeta: post.imageMeta || null,
+        imageVisibility: post.imageVisibility || undefined,
+        cropHint: post.cropHint || undefined,
         timezone: timezone || 'UTC',
+      }
+
+      if (post.poll?.enabled) {
+        postState.poll = post.poll
+        const pollCheck = validatePoll(postState, platforms)
+        if (!pollCheck.ok) {
+          return res.status(400).json({
+            ok: false,
+            error: `Post ${post.postNum || dayNum}: ${pollCheck.error}`,
+          })
+        }
       }
 
       const doc = await ScheduledPost.create({
@@ -90,7 +112,7 @@ router.post('/bulk/schedule', async (req, res, next) => {
       })
     }
 
-    res.json({ ok: true, count: created.length, scheduled: created })
+    res.json({ ok: true, count: created.length, scheduled: created, startDate: resolvedStart })
   } catch (err) {
     next(err)
   }

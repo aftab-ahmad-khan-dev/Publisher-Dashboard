@@ -1,6 +1,8 @@
 import { isLivePublishing } from "./api";
+import { getApiBaseUrl } from "./apiBaseUrl.js";
+import { isPlatformAdmin } from "./admin.js";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, "") || "";
+const API_BASE = getApiBaseUrl();
 
 /**
  * The tenant is derived server-side from the verified Clerk session, so the
@@ -18,23 +20,40 @@ async function getClerkToken() {
   return null;
 }
 
+/** Local API without CLERK_SECRET_KEY uses this header for admin routes only. */
+function getAdminEmailHeader() {
+  try {
+    const email = window.Clerk?.user?.primaryEmailAddress?.emailAddress;
+    if (isPlatformAdmin(email)) {
+      return { "X-Admin-Email": email };
+    }
+  } catch {
+    /* Clerk not ready */
+  }
+  return {};
+}
+
 export function hasBackend() {
   return isLivePublishing();
 }
 
 export async function apiFetch(path, { method = "GET", body } = {}) {
-  if (!API_BASE) throw new Error("VITE_API_BASE_URL is not set");
+  if (!API_BASE) throw new Error("VITE_API_BASE_URL is not set (dev defaults to http://localhost:3001/api)");
   const token = await getClerkToken();
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...getAdminEmailHeader(),
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 413) {
+      throw new Error("Request payload too large (413). Images are sent in smaller batches automatically — retry the schedule.");
+    }
     throw new Error(data.error || data.message || `API error ${res.status}`);
   }
   return data;
@@ -174,10 +193,23 @@ export async function deleteScheduledRemote(id) {
   return apiFetch(`/scheduled/${id}`, { method: "DELETE" });
 }
 
+export async function deleteAllScheduledRemote() {
+  return apiFetch("/scheduled", { method: "DELETE" });
+}
+
+export async function fetchAdminUsers() {
+  return apiFetch("/admin/users");
+}
+
 export async function updateScheduledRemote(id, payload) {
   return apiFetch(`/scheduled/${id}`, { method: "PUT", body: payload });
 }
 
 export async function scheduleBulkRemote(payload) {
   return apiFetch("/bulk/schedule", { method: "POST", body: payload });
+}
+
+/** Upload one image at a time — avoids 413 on large multi-post schedules. */
+export async function uploadMediaRemote(imageDataUrl) {
+  return apiFetch("/media/upload", { method: "POST", body: { imageDataUrl } });
 }

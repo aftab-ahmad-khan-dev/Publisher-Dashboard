@@ -17,7 +17,7 @@ const port = Number(process.env.PORT) || 3001;
 const isVercel = Boolean(process.env.VERCEL);
 
 app.use(cors({ origin: true }));
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "15mb" }));
 app.use(requestLogger());
 
 app.use(healthRoutes);
@@ -76,7 +76,7 @@ app.get("/api/media/:id", async (req, res) => {
     if (!media?.data?.length) return res.status(404).end();
     res.set("Content-Type", media.contentType || "image/jpeg");
     res.set("Cache-Control", "public, max-age=86400");
-    return res.send(Buffer.from(media.data));
+    return res.send(media.data);
   } catch {
     return res.status(404).end();
   }

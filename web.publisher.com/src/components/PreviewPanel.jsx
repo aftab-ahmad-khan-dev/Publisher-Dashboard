@@ -17,6 +17,8 @@ export default function PreviewPanel({ state, compact = false }) {
     state.body,
     state.hashtags.map((h) => `${h.tag}-${Object.entries(h.platforms).map(([k, v]) => `${k}:${v}`).join('-')}`).join(','),
     state.imagePreviewUrl,
+    state.activeMediaId,
+    state.mediaItems?.length,
     state.cropHint,
     JSON.stringify(state.imageVisibility),
     JSON.stringify(state.platforms),

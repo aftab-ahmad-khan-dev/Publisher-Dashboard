@@ -1,5 +1,6 @@
 import { DEFAULT_PLATFORMS, DEFAULT_IMAGE_VISIBILITY } from './constants'
 import { DEFAULT_POLL } from './pollUtils'
+import { todayDateInputValue } from './scheduleUtils'
 
 export function draftTitleFromBody(body) {
   const trimmed = body.trim()
@@ -24,9 +25,19 @@ export function serializePostState(state, existingId = null) {
     publishMode: state.publishMode,
     scheduledAt: state.scheduledAt || '',
     timezone: state.timezone,
-    imageMeta: state.image
-      ? { name: state.image.name, type: state.image.type, size: state.image.size }
-      : null,
+    scheduleByDay: Boolean(state.scheduleByDay),
+    scheduleStartDate: state.scheduleStartDate || todayDateInputValue(),
+    scheduleDayNum: state.scheduleDayNum || 1,
+    imageMeta: state.mediaItems?.length
+      ? state.mediaItems.map((m) => ({
+          name: m.file.name,
+          type: m.file.type,
+          size: m.file.size,
+        }))
+      : state.image
+        ? { name: state.image.name, type: state.image.type, size: state.image.size }
+        : null,
+    activeMediaId: state.activeMediaId || null,
     poll: state.poll
       ? {
           enabled: Boolean(state.poll.enabled),
@@ -58,9 +69,8 @@ export function mergeDraftSave(drafts, payload, existingId) {
 export function draftToComposerState(draft) {
   return {
     body: draft.body || '',
-    image: null,
-    imagePreviewUrl: null,
-    imageType: null,
+    mediaItems: [],
+    activeMediaId: null,
     cropHint: draft.cropHint || 'square',
     imageVisibility: draft.imageVisibility || { ...DEFAULT_IMAGE_VISIBILITY },
     hashtags: draft.hashtags || [],
@@ -68,6 +78,9 @@ export function draftToComposerState(draft) {
     publishMode: draft.publishMode || 'now',
     scheduledAt: draft.scheduledAt || '',
     timezone: draft.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    scheduleByDay: Boolean(draft.scheduleByDay),
+    scheduleStartDate: draft.scheduleStartDate || todayDateInputValue(),
+    scheduleDayNum: draft.scheduleDayNum || 1,
     poll: draft.poll
       ? {
           ...DEFAULT_POLL,

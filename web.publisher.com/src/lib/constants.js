@@ -15,8 +15,18 @@ export const DEFAULT_PLATFORMS = {
   linkedin: true,
   reddit: false,
   pinterest: false,
-  threads: false,
+  threads: true,
 }
+
+/** Platforms that can include the attached image when publishing. */
+export const IMAGE_VISIBILITY_PLATFORMS = [
+  'instagram',
+  'facebook',
+  'linkedin',
+  'reddit',
+  'pinterest',
+  'threads',
+]
 
 export const DEFAULT_IMAGE_VISIBILITY = {
   instagram: true,
@@ -26,6 +36,9 @@ export const DEFAULT_IMAGE_VISIBILITY = {
   pinterest: true,
   threads: true,
 }
+
+/** Max images per composer or bulk upload batch. */
+export const MAX_UPLOAD_IMAGES = 30
 
 export const PLATFORM_META = {
   instagram: {

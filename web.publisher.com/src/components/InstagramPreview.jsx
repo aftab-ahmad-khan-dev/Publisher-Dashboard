@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CROP_HINTS } from '../hooks/usePostState'
+import { CROP_HINTS, getCropAspectRatio } from '../hooks/usePostState'
 
 const IG_CAPTION_LIMIT = 125
 
@@ -20,7 +20,8 @@ export default function InstagramPreview({
   defaultCollapsed = true,
 }) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
-  const ratio = CROP_HINTS.find((c) => c.id === cropHint)?.ratio ?? '1 / 1'
+  const ratio = getCropAspectRatio(cropHint, '1 / 1')
+  const isOriginal = cropHint === 'original'
   const fullText = [body, hashtags].filter(Boolean).join('\n\n')
   const { visible, more } = truncateCaption(fullText)
 
@@ -60,11 +61,22 @@ export default function InstagramPreview({
             <span className="text-xs font-semibold text-white">yourbrand</span>
           </div>
           {showImage && imagePreviewUrl && (
-            <div className="bg-black" style={{ aspectRatio: ratio }}>
+            <div
+              className={`bg-black ${isOriginal ? 'flex max-h-72 items-center justify-center' : ''}`}
+              style={ratio ? { aspectRatio: ratio } : undefined}
+            >
               {imageType === 'video' ? (
-                <video src={imagePreviewUrl} className="h-full w-full object-cover" muted />
+                <video
+                  src={imagePreviewUrl}
+                  className={`w-full ${isOriginal ? 'max-h-72 object-contain' : 'h-full object-cover'}`}
+                  muted
+                />
               ) : (
-                <img src={imagePreviewUrl} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={imagePreviewUrl}
+                  alt=""
+                  className={`w-full ${isOriginal ? 'max-h-72 object-contain' : 'h-full object-cover'}`}
+                />
               )}
             </div>
           )}

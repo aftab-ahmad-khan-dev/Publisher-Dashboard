@@ -5,6 +5,7 @@ import { refreshLinkedInTokenIfNeeded } from './linkedinOAuth.js'
 import { publishToAllPlatforms } from './publishers/index.js'
 import { broadcastEvent } from './events.js'
 import { sanitizePostState } from './contentSanitize.js'
+import { hydratePostStateMedia } from './mediaResolve.js'
 import { logger } from './logger.js'
 import { isMongoNetworkError, markDisconnected } from '../db.js'
 import { resetDbConnection } from './dbInit.js'
@@ -13,6 +14,7 @@ let timer = null
 
 function coerceScheduledImageData(postState = {}) {
   if (postState?.imageDataUrl) return postState
+  if (postState?.imageMediaId) return postState
 
   const fromPreview = typeof postState.imagePreview === 'string' ? postState.imagePreview.trim() : ''
   const fromPreviewUrl =
@@ -78,7 +80,8 @@ async function processScheduled(doc) {
     const config = await getWorkspaceConfig(doc.workspaceId)
     const rawState = doc.postState || { body: doc.body, platforms: {} }
     for (const p of doc.platforms) rawState.platforms[p] = true
-    const postState = sanitizePostState(rawState)
+    const hydrated = await hydratePostStateMedia(rawState)
+    const postState = sanitizePostState(hydrated)
 
     const outcome = await publishToAllPlatforms({
       platforms: doc.platforms,

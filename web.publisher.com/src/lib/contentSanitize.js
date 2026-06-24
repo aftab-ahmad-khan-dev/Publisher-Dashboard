@@ -9,6 +9,39 @@ export function containsForbiddenDash(text) {
   return DASH_CHARS.test(text)
 }
 
+/** Split text into segments for inline highlighting of forbidden dashes. */
+export function splitTextForDashHighlight(text) {
+  if (!text) return [{ text: '', dash: false }]
+  const parts = []
+  let last = 0
+  const re = /[\u2013\u2014]/g
+  let match
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > last) {
+      parts.push({ text: text.slice(last, match.index), dash: false })
+    }
+    parts.push({ text: match[0], dash: true })
+    last = match.index + match[0].length
+  }
+  if (last < text.length) {
+    parts.push({ text: text.slice(last), dash: false })
+  }
+  return parts.length ? parts : [{ text: '', dash: false }]
+}
+
+export function postHasForbiddenDash(postState) {
+  if (!postState) return false
+  if (containsForbiddenDash(postState.body)) return true
+  const poll = postState.poll
+  if (!poll?.enabled) return false
+  if (containsForbiddenDash(poll.question)) return true
+  return (poll.options || []).some((o) => containsForbiddenDash(o))
+}
+
+export function forbiddenDashMessage() {
+  return 'Em dashes (—) are not allowed. Replace highlighted dashes with a comma or period before publishing.'
+}
+
 export function sanitizePublishedText(text) {
   if (text == null || typeof text !== 'string') return text
   let out = text.replace(DASH_WITH_SPACES, ', ')

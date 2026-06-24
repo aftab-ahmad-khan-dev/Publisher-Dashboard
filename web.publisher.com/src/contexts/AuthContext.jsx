@@ -1,9 +1,9 @@
 import { useAuth as useClerkAuth, useUser, useClerk } from '@clerk/clerk-react'
 
 /**
- * Auth is now backed by Clerk. This module keeps the original `useAuth()` shape
- * ({ user, ready, isAuthenticated, logout, workspaceId }) so the rest of the app
- * doesn't need to know about the provider swap.
+ * Auth is backed by Clerk. Publishing data is always scoped to the signed-in
+ * user's personal workspace (`user_<id>`), regardless of which organization is
+ * selected in the org switcher (used for branding/roles only).
  */
 export function AuthProvider({ children }) {
   return children
@@ -14,7 +14,7 @@ export function useAuth() {
   const { user } = useUser()
   const { signOut } = useClerk()
 
-  const workspaceId = orgId || (user ? `user_${user.id}` : null)
+  const workspaceId = user ? `user_${user.id}` : null
 
   return {
     ready: isLoaded,
@@ -32,6 +32,7 @@ export function useAuth() {
         }
       : null,
     workspaceId,
+    orgId: orgId || null,
     logout: () => signOut(),
   }
 }

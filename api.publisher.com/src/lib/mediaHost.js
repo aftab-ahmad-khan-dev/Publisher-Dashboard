@@ -1,5 +1,6 @@
 import { Media } from '../models/Media.js'
 import { apiPublicBase } from './publicUrl.js'
+import { mediaPublicUrl } from './mediaResolve.js'
 
 /**
  * Instagram and Threads require a PUBLIC image URL (they can't take an upload or
@@ -8,11 +9,12 @@ import { apiPublicBase } from './publicUrl.js'
  * that's an error). `platform` selects which per-platform image toggle to honour.
  */
 export async function resolvePublicImageUrl({ postState, workspaceId, platform = 'instagram' }) {
-  // Respect the per-platform image toggle.
   if (postState?.imageVisibility?.[platform] === false) return null
 
-  // Already a public URL (e.g. bulk uploads) — use it directly.
   if (postState?.imageUrl) return postState.imageUrl
+
+  const fromStored = mediaPublicUrl(postState?.imageMediaId)
+  if (fromStored) return fromStored
 
   const dataUrl = postState?.imageDataUrl
   if (!dataUrl?.startsWith('data:image/')) return null

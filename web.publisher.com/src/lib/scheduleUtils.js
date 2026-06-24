@@ -134,6 +134,60 @@ export function formatScheduledISO(iso, timezone) {
   }).format(new Date(iso))
 }
 
+/** Day N scheduling: startDate + (dayNum − 1) calendar days at hour:minute. */
+export function computeScheduleDate(startDateStr, dayNum, hour = DEFAULT_SCHEDULE_HOUR, minute = DEFAULT_SCHEDULE_MINUTE) {
+  const [y, m, d] = startDateStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d, hour, minute, 0, 0)
+  date.setDate(date.getDate() + (Math.max(1, dayNum) - 1))
+  return date
+}
+
+export function computeScheduleFromDayN(startDateStr, dayNum, defaultScheduleTime = DEFAULT_SCHEDULE_TIME) {
+  const [hour, minute] = parseScheduleTime(defaultScheduleTime)
+  return toDatetimeLocalValue(computeScheduleDate(startDateStr, dayNum, hour, minute))
+}
+
+export function todayDateInputValue() {
+  return dateOnlyKey(new Date())
+}
+
+/**
+ * First calendar day where Day 1 at the default schedule time is still in the future.
+ * If today's slot already passed, returns tomorrow (or later).
+ */
+export function getDefaultBulkStartDate(defaultScheduleTime = DEFAULT_SCHEDULE_TIME) {
+  return ensureFutureBulkStartDate(todayDateInputValue(), defaultScheduleTime)
+}
+
+/** Bump start date forward until Day 1 at default time is strictly in the future. */
+export function ensureFutureBulkStartDate(startDateStr, defaultScheduleTime = DEFAULT_SCHEDULE_TIME) {
+  if (!startDateStr) return getDefaultBulkStartDate(defaultScheduleTime)
+  const [hour, minute] = parseScheduleTime(defaultScheduleTime)
+  let candidate = startDateStr
+  let guard = 0
+  while (computeScheduleDate(candidate, 1, hour, minute) <= new Date() && guard < 366) {
+    const [y, m, d] = candidate.split('-').map(Number)
+    const next = new Date(y, m - 1, d)
+    next.setDate(next.getDate() + 1)
+    candidate = dateOnlyKey(next)
+    guard++
+  }
+  return candidate
+}
+
+/** True when Day 1 for this start date would publish in the past. */
+export function isBulkStartDateInPast(startDateStr, defaultScheduleTime = DEFAULT_SCHEDULE_TIME) {
+  if (!startDateStr) return true
+  const [hour, minute] = parseScheduleTime(defaultScheduleTime)
+  return computeScheduleDate(startDateStr, 1, hour, minute) <= new Date()
+}
+
+export function addDaysToDate(date, days) {
+  const d = new Date(date)
+  d.setDate(d.getDate() + days)
+  return d
+}
+
 export function createQueueItemAtNoon(daysFromNow, body, platforms, timezone) {
   const d = new Date()
   d.setDate(d.getDate() + daysFromNow)

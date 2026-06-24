@@ -25,7 +25,10 @@ import ApiConfigPage from './pages/ApiConfigPage'
 import GuidePage from './pages/GuidePage'
 import BulkUploadPage from './pages/BulkUploadPage'
 import EmailPage from './pages/EmailPage'
+import AdminUsersPage from './pages/AdminUsersPage'
 import AppToaster from './components/AppToaster'
+import AppErrorBoundary from './components/AppErrorBoundary'
+import UploadProgressOverlay from './components/UploadProgressOverlay'
 import BrandLogo from './components/BrandLogo'
 import { clerkAppearance } from './lib/clerkAppearance'
 
@@ -75,6 +78,7 @@ function AppRoutes() {
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="api-config" element={<ApiConfigPage />} />
               <Route path="guide" element={<GuidePage />} />
+              <Route path="admin/users" element={<AdminUsersPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/compose" replace />} />
@@ -139,15 +143,18 @@ export default function App() {
     <BrowserRouter>
       <ClerkWithRouter>
         <AuthProvider>
-          <AppDataProvider>
-            <AppToaster />
-            <SplashScreen visible={splash} />
-            <div
-              className={splash ? 'opacity-0' : 'opacity-100 transition-opacity duration-500'}
-            >
-              <AppRoutes />
-            </div>
-          </AppDataProvider>
+          <AppErrorBoundary>
+            <AppDataProvider>
+              <UploadProgressOverlay />
+              <AppToaster />
+              <SplashScreen visible={splash} />
+              <div
+                className={splash ? 'opacity-0' : 'opacity-100 transition-opacity duration-500'}
+              >
+                <AppRoutes />
+              </div>
+            </AppDataProvider>
+          </AppErrorBoundary>
         </AuthProvider>
       </ClerkWithRouter>
     </BrowserRouter>

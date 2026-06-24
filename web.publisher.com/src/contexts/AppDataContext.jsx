@@ -37,11 +37,13 @@ import {
   saveDraftRemote,
   deleteDraftRemote,
   deleteScheduledRemote,
+  deleteAllScheduledRemote,
   updateScheduledRemote,
   scheduleBulkRemote,
+  uploadMediaRemote,
   subscribeRealtime,
 } from '../lib/backendApi'
-import { compressImageFile, computeScheduleDate } from '../lib/bulkParse'
+import { compressImageFile, compressImageFileForUpload, computeScheduleDate } from '../lib/bulkParse'
 import {
   configFromServer,
   linkedinPayloadForSave,
@@ -59,8 +61,16 @@ import {
   linkedInMigrationPayload,
 } from '../lib/configUtils'
 import { validateCommunityPublish } from '../lib/contentPolicy'
-import { sanitizePostState, sanitizePublishedText } from '../lib/contentSanitize'
+import {
+  sanitizePostState,
+  sanitizePublishedText,
+  postHasForbiddenDash,
+  forbiddenDashMessage,
+} from '../lib/contentSanitize'
+import { formatPublishOutcome } from '../lib/publishOutcome'
 import { validatePollClient, isPollEnabled } from '../lib/pollUtils'
+import { getComposerPosts } from '../lib/composerPosts'
+import { todayDateInputValue, ensureFutureBulkStartDate, computeScheduleFromDayN, formatScheduleDisplay } from '../lib/scheduleUtils'
 import { showToast } from '../lib/toast'
 import { useAuth } from './AuthContext'
 
@@ -113,18 +123,77 @@ function loadApiConfigLocal() {
 }
 
 const AppDataContext = createContext(null)
+const BULK_SCHEDULE_CHUNK = 30
+
+/**
+ * Compress + optionally upload one image with progress reporting (schedule & publish).
+ */
+async function prepareImageForBackend(file, { live, reportProgress, step = 1, total = 1 }) {
+  if (!file?.type?.startsWith('image/')) return {}
+
+  const safeTotal = Math.max(total, 1)
+
+  reportProgress?.({
+    phase: 'compress',
+    current: step,
+    total: safeTotal,
+    percent: Math.round(((step - 1) / safeTotal) * 100),
+    label: safeTotal > 1 ? `Preparing file ${step} of ${safeTotal}` : 'Preparing image…',
+    fileName: file.name,
+  })
+
+  const compressed = await compressImageFileForUpload(file)
+
+  if (!live) {
+    reportProgress?.({
+      phase: 'compress',
+      current: step,
+      total: safeTotal,
+      percent: Math.round((step / safeTotal) * 100),
+      label: safeTotal > 1 ? `Processed file ${step} of ${safeTotal}` : 'Image ready',
+      fileName: file.name,
+    })
+    return { image: file, imageDataUrl: compressed }
+  }
+
+  reportProgress?.({
+    phase: 'upload',
+    current: step,
+    total: safeTotal,
+    percent: Math.round(((step - 0.35) / safeTotal) * 100),
+    label: safeTotal > 1 ? `Uploading file ${step} of ${safeTotal}` : 'Uploading image…',
+    fileName: file.name,
+  })
+
+  const up = await uploadMediaRemote(compressed)
+
+  reportProgress?.({
+    phase: 'upload',
+    current: step,
+    total: safeTotal,
+    percent: Math.round((step / safeTotal) * 100),
+    label: safeTotal > 1 ? `Uploaded file ${step} of ${safeTotal}` : 'Image uploaded',
+    fileName: file.name,
+  })
+
+  return { image: file, imageMediaId: up.id, imageUrl: up.url }
+}
 
 /**
  * The composer holds the image as a File, which JSON.stringify drops to `{}` on the
  * way to the API. Convert it to a compressed data URL the backend can actually post.
  */
-async function withImageData(postState) {
-  const file = postState?.image
+async function withImageData(postState, imageFile = null, { useMediaUpload = false } = {}) {
+  const file = imageFile ?? postState?.image
   if (!file || !file.type?.startsWith('image/')) return postState
   try {
-    return { ...postState, imageDataUrl: await compressImageFile(file) }
-  } catch {
-    return postState
+    if (useMediaUpload) {
+      const prepared = await prepareImageForBackend(file, { live: true })
+      return { ...postState, ...prepared }
+    }
+    return { ...postState, image: file, imageDataUrl: await compressImageFile(file) }
+  } catch (err) {
+    throw new Error(err?.message || 'Image upload failed')
   }
 }
 
@@ -137,7 +206,14 @@ export function AppDataProvider({ children }) {
   const [published, setPublished] = useState([])
   const [apiConfig, setApiConfig] = useState(loadApiConfigLocal)
   const [publishStatus, setPublishStatus] = useState('idle')
+  const [uploadProgress, setUploadProgress] = useState(null)
   const [syncing, setSyncing] = useState(false)
+
+  const clearUploadProgress = useCallback(() => setUploadProgress(null), [])
+
+  const reportUploadProgress = useCallback((patch) => {
+    setUploadProgress((prev) => ({ ...prev, ...patch }))
+  }, [])
 
   const applyConfigResponse = useCallback((serverConfig) => {
     const fromServer = configFromServer(serverConfig) || serverConfig
@@ -480,6 +556,11 @@ export function AppDataProvider({ children }) {
 
   const publishNow = useCallback(
     async (rawState) => {
+      if (postHasForbiddenDash(rawState)) {
+        showToast(forbiddenDashMessage(), 'error')
+        return { ok: false }
+      }
+
       const postState = sanitizePostState(rawState)
       const enabled = Object.entries(postState.platforms)
         .filter(([, on]) => on)
@@ -487,64 +568,180 @@ export function AppDataProvider({ children }) {
 
       if (enabled.length === 0) {
         showToast('Enable at least one platform to publish.', 'error')
-        return
+        return { ok: false }
       }
       if (!postState.body.trim() && !isPollEnabled(postState)) {
         showToast('Write something before publishing.', 'error')
-        return
+        return { ok: false }
       }
 
       const pollCheck = validatePollClient(postState)
       if (!pollCheck.ok) {
         showToast(pollCheck.error, 'error')
-        return
+        return { ok: false }
       }
 
       const communityCheck = validateCommunityPublish(postState.body, enabled, postState)
       if (!communityCheck.ok) {
         showToast(communityCheck.error, 'error')
-        return
+        return { ok: false }
+      }
+
+      const posts = getComposerPosts(postState)
+      if (posts.length > 1) {
+        for (const post of posts) {
+          if (!post.body.trim() && !isPollEnabled(postState)) {
+            showToast(`Post ${post.postNum}: add body text.`, 'error')
+            return { ok: false }
+          }
+          const check = validateCommunityPublish(post.body, enabled, postState)
+          if (!check.ok) {
+            showToast(`Post ${post.postNum}: ${check.error}`, 'error')
+            return { ok: false }
+          }
+        }
       }
 
       setPublishStatus('loading')
-      const result = await publishToPlatforms(await withImageData(postState), apiConfig)
+
+      const finishPublish = () => {
+        setTimeout(() => {
+          setPublishStatus('idle')
+          clearUploadProgress()
+        }, 2500)
+      }
+
+      try {
+      if (posts.length > 1) {
+        const imagePosts = posts.filter((p) => p.imageFile)
+        const imageTotal = imagePosts.length
+        let imageStep = 0
+        let published = 0
+
+        for (const post of posts) {
+          let singleState = {
+            ...postState,
+            body: post.body,
+            image: post.imageFile || null,
+            mediaItems: [],
+          }
+
+          if (post.imageFile) {
+            imageStep++
+            try {
+              const img = await prepareImageForBackend(post.imageFile, {
+                live,
+                reportProgress: reportUploadProgress,
+                step: imageStep,
+                total: imageTotal,
+              })
+              singleState = { ...singleState, ...img }
+            } catch (err) {
+              setPublishStatus('idle')
+              clearUploadProgress()
+              showToast(`Post ${post.postNum}: ${err.message}`, 'error')
+              return { ok: false }
+            }
+          }
+
+          reportUploadProgress({
+            phase: 'publish',
+            current: published + 1,
+            total: posts.length,
+            percent: Math.round(((published + 0.5) / posts.length) * 100),
+            label: `Publishing post ${post.postNum} of ${posts.length}…`,
+          })
+
+          const result = await publishToPlatforms(singleState, apiConfig)
+          if (!result.ok) {
+            setPublishStatus('idle')
+            clearUploadProgress()
+            showToast(`Post ${post.postNum}: ${result.error}`, 'error')
+            return { ok: false }
+          }
+          if (result.simulated) {
+            setPublishStatus('idle')
+            clearUploadProgress()
+            showToast('Demo only — set VITE_API_BASE_URL for live publishing.', 'error')
+            return { ok: false }
+          }
+          published++
+        }
+
+        reportUploadProgress({ phase: 'publish', percent: 100, label: 'Done!' })
+        showToast(`Published ${published} posts`)
+        await refreshFromServer()
+        setPublishStatus('success')
+        finishPublish()
+        return { ok: true }
+      }
+
+      let stateToPublish = postState
+      if (postState.image?.type?.startsWith('image/')) {
+        try {
+          const img = await prepareImageForBackend(postState.image, {
+            live,
+            reportProgress: reportUploadProgress,
+          })
+          stateToPublish = { ...postState, ...img }
+        } catch (err) {
+          setPublishStatus('idle')
+          clearUploadProgress()
+          showToast(err.message, 'error')
+          return { ok: false }
+        }
+      } else {
+        if (!live) {
+          stateToPublish = await withImageData(postState, null, { useMediaUpload: false })
+        }
+        reportUploadProgress({
+          phase: 'publish',
+          percent: 40,
+          label: 'Publishing to platforms…',
+        })
+      }
+
+      reportUploadProgress({
+        phase: 'publish',
+        percent: 85,
+        label: 'Publishing to platforms…',
+      })
+
+      const result = await publishToPlatforms(stateToPublish, apiConfig)
 
       if (!result.ok) {
         setPublishStatus('idle')
+        clearUploadProgress()
         showToast(result.error, 'error')
-        return
+        return { ok: false }
       }
-
-      const platformNames = enabled.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')
 
       if (result.simulated) {
         setPublishStatus('idle')
+        clearUploadProgress()
+        const platformNames = enabled.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')
         showToast(
           `Demo only — nothing was posted to ${platformNames}. Set VITE_API_BASE_URL.`,
           'error',
         )
-        return
+        return { ok: false }
       }
 
-      if (result.warnings?.length) {
-        showToast(
-          result.warnings.map((w) => `${w.platform}: ${w.error}`).join(' | '),
-          'error',
-        )
-      }
+      reportUploadProgress({ phase: 'publish', percent: 100, label: 'Done!' })
+
+      const outcome = formatPublishOutcome(result, enabled)
+      showToast(outcome.message, outcome.type)
 
       simulateSocketPublish({
         type: 'POST_PUBLISHED',
-        title: 'Post Published Successfully',
-        body: `Live on ${platformNames}.`,
+        title: outcome.type === 'success' ? 'Post Published Successfully' : 'Post Partially Published',
+        body: outcome.message,
         tag: result.id,
-        platforms: enabled,
+        platforms: (result.platformResults || []).map((r) => r.platform),
       })
 
       const quoraResult = result.platformResults?.find?.((r) => r.platform === 'quora' && r.copyText)
       if (quoraResult?.copyText) {
-        // Quora has no public write API, so we get as close to one-click as we can:
-        // copy the formatted answer and open Quora in a new tab to paste & post.
         try {
           await navigator.clipboard.writeText(quoraResult.copyText)
           window.open(quoraResult.openUrl || 'https://www.quora.com/', '_blank', 'noopener')
@@ -553,15 +750,20 @@ export function AppDataProvider({ children }) {
           window.open(quoraResult.openUrl || 'https://www.quora.com/', '_blank', 'noopener')
           showToast('Quora opened — copy your answer from platform results and paste', 'success')
         }
-      } else {
-        showToast(`Published to ${platformNames}`)
       }
 
       await refreshFromServer()
       setPublishStatus('success')
-      setTimeout(() => setPublishStatus('idle'), 2500)
+      finishPublish()
+      return { ok: true, partial: outcome.type !== 'success' }
+      } catch (err) {
+        setPublishStatus('idle')
+        clearUploadProgress()
+        showToast(err.message || 'Publish failed', 'error')
+        return { ok: false }
+      }
     },
-    [apiConfig, showToast, refreshFromServer],
+    [apiConfig, showToast, refreshFromServer, live, reportUploadProgress, clearUploadProgress],
   )
 
   const schedulePost = useCallback(
@@ -579,6 +781,42 @@ export function AppDataProvider({ children }) {
         showToast('Write something before scheduling.', 'error')
         return { ok: false }
       }
+
+      const posts = getComposerPosts(postState)
+      if (posts.length > 1) {
+        for (const post of posts) {
+          if (!post.body.trim() && !isPollEnabled(postState)) {
+            showToast(`Post ${post.postNum}: add body text.`, 'error')
+            return { ok: false }
+          }
+          const check = validateCommunityPublish(post.body, enabled, postState)
+          if (!check.ok) {
+            showToast(`Post ${post.postNum}: ${check.error}`, 'error')
+            return { ok: false }
+          }
+        }
+
+        const pollCheck = validatePollClient(postState)
+        if (!pollCheck.ok) {
+          showToast(pollCheck.error, 'error')
+          return { ok: false }
+        }
+
+        return scheduleBulkPosts({
+          posts,
+          platforms: enabled,
+          startDate: postState.scheduleStartDate || todayDateInputValue(),
+          timezone: postState.timezone,
+          composerMeta: {
+            poll: postState.poll,
+            hashtags: postState.hashtags,
+            imageVisibility: postState.imageVisibility,
+            cropHint: postState.cropHint,
+            platforms: postState.platforms,
+          },
+        })
+      }
+
       if (!postState.scheduledAt) {
         showToast('Pick a date and time to schedule.', 'error')
         return { ok: false }
@@ -603,7 +841,10 @@ export function AppDataProvider({ children }) {
       }
 
       setPublishStatus('loading')
-      const result = await scheduleToPlatforms(await withImageData(postState), apiConfig)
+      const result = await scheduleToPlatforms(
+        await withImageData(postState, null, { useMediaUpload: live }),
+        apiConfig,
+      )
 
       if (!result.ok) {
         setPublishStatus('idle')
@@ -641,7 +882,7 @@ export function AppDataProvider({ children }) {
   )
 
   const scheduleBulkPosts = useCallback(
-    async ({ posts, platforms, startDate, timezone }) => {
+    async ({ posts, platforms, startDate, timezone, composerMeta }) => {
       if (!posts?.length) {
         showToast('No posts to schedule.', 'error')
         return { ok: false }
@@ -652,6 +893,32 @@ export function AppDataProvider({ children }) {
       }
 
       setPublishStatus('loading')
+
+      const defaultScheduleTime = apiConfig.defaults?.scheduleTime || '12:00'
+      const rawStart = startDate || todayDateInputValue()
+      const resolvedStart = ensureFutureBulkStartDate(rawStart, defaultScheduleTime)
+      if (resolvedStart !== rawStart) {
+        showToast(
+          `Day 1 at ${defaultScheduleTime} already passed — series starts ${formatScheduleDisplay(
+            computeScheduleFromDayN(resolvedStart, 1, defaultScheduleTime),
+            { timezone, showRelative: true },
+          )}`,
+          'warning',
+        )
+      }
+
+      const imagePosts = posts.filter((p) => p.imageFile)
+      const imageTotal = imagePosts.length
+
+      if (imageTotal > 0) {
+        reportUploadProgress({
+          phase: 'compress',
+          current: 0,
+          total: imageTotal,
+          percent: 0,
+          label: `Starting upload of ${imageTotal} file${imageTotal === 1 ? '' : 's'}…`,
+        })
+      }
 
       if (platforms.some((p) => p === 'reddit' || p === 'quora')) {
         for (const post of posts) {
@@ -664,54 +931,155 @@ export function AppDataProvider({ children }) {
         }
       }
 
+      if (composerMeta?.poll?.enabled) {
+        const pollCheck = validatePollClient({
+          poll: composerMeta.poll,
+          platforms: composerMeta.platforms || {},
+          mediaItems: [],
+          image: null,
+          body: posts[0]?.body || '',
+        })
+        if (!pollCheck.ok) {
+          showToast(pollCheck.error, 'error')
+          setPublishStatus('idle')
+          return { ok: false }
+        }
+      }
+
       const payloadPosts = []
+      let imageStep = 0
+
       for (const post of posts) {
+        let imageMediaId = null
+        let imageUrl = null
         let imageDataUrl = null
+
         if (post.imageFile) {
+          imageStep++
           try {
-            imageDataUrl = await compressImageFile(post.imageFile)
-          } catch {
-            showToast(`Could not process image for ${post.title}`, 'error')
+            reportUploadProgress({
+              phase: 'compress',
+              current: imageStep,
+              total: imageTotal,
+              percent: Math.round(((imageStep - 1) / Math.max(imageTotal, 1)) * 100),
+              label: `Preparing file ${imageStep} of ${imageTotal}`,
+              fileName: post.imageFile.name,
+            })
+
+            const compressed = await compressImageFileForUpload(post.imageFile)
+
+            if (live) {
+              reportUploadProgress({
+                phase: 'upload',
+                current: imageStep,
+                total: imageTotal,
+                percent: Math.round(((imageStep - 0.35) / Math.max(imageTotal, 1)) * 100),
+                label: `Uploading file ${imageStep} of ${imageTotal}`,
+                fileName: post.imageFile.name,
+              })
+              const up = await uploadMediaRemote(compressed)
+              imageMediaId = up.id
+              imageUrl = up.url
+            } else {
+              imageDataUrl = compressed
+            }
+
+            reportUploadProgress({
+              phase: live ? 'upload' : 'compress',
+              current: imageStep,
+              total: imageTotal,
+              percent: Math.round((imageStep / Math.max(imageTotal, 1)) * 100),
+              label: live
+                ? `Uploaded file ${imageStep} of ${imageTotal}`
+                : `Processed file ${imageStep} of ${imageTotal}`,
+              fileName: post.imageFile.name,
+            })
+          } catch (err) {
+            setPublishStatus('idle')
+            clearUploadProgress()
+            showToast(
+              `Image ${post.postNum || post.dayNum} (${post.imageFile.name}): ${err.message}`,
+              'error',
+            )
+            return { ok: false }
           }
         }
+
         payloadPosts.push({
           postNum: post.postNum,
           dayNum: post.dayNum,
           title: post.title,
           body: sanitizePublishedText(post.body),
-          imageDataUrl,
+          imageMediaId,
+          imageUrl,
+          imageDataUrl: live ? null : imageDataUrl,
           imageMeta: post.imageFile
             ? { name: post.imageFile.name, type: post.imageFile.type }
             : null,
+          poll: composerMeta?.poll?.enabled ? composerMeta.poll : null,
+          hashtags: composerMeta?.hashtags || [],
+          imageVisibility: composerMeta?.imageVisibility || null,
+          cropHint: composerMeta?.cropHint || null,
         })
       }
 
       if (live) {
         try {
-          const result = await scheduleBulkRemote({
-            posts: payloadPosts,
-            platforms,
-            startDate,
-            timezone,
+          reportUploadProgress({
+            phase: 'schedule',
+            current: payloadPosts.length,
+            total: payloadPosts.length,
+            percent: 92,
+            label: `Scheduling ${payloadPosts.length} post${payloadPosts.length === 1 ? '' : 's'}…`,
           })
+
+          let totalCount = 0
+          for (let i = 0; i < payloadPosts.length; i += BULK_SCHEDULE_CHUNK) {
+            const chunk = payloadPosts.slice(i, i + BULK_SCHEDULE_CHUNK)
+            const result = await scheduleBulkRemote({
+              posts: chunk,
+              platforms,
+              startDate: resolvedStart,
+              timezone,
+            })
+            totalCount += result.count ?? chunk.length
+            reportUploadProgress({
+              phase: 'schedule',
+              percent: 92 + Math.round(((i + chunk.length) / payloadPosts.length) * 8),
+              label: `Scheduled ${totalCount} of ${payloadPosts.length} posts…`,
+            })
+          }
+          reportUploadProgress({ phase: 'schedule', percent: 100, label: 'Done!' })
           await refreshFromServer()
           setPublishStatus('success')
-          showToast(`Scheduled ${result.count} posts — noon each day`)
-          setTimeout(() => setPublishStatus('idle'), 2500)
-          return { ok: true, count: result.count }
+          showToast(`Scheduled ${totalCount} posts`)
+          setTimeout(() => {
+            setPublishStatus('idle')
+            clearUploadProgress()
+          }, 2500)
+          return { ok: true, count: totalCount }
         } catch (err) {
           setPublishStatus('idle')
-          const msg = err.message?.includes('503') || err.message?.includes('Database')
-            ? 'Database unavailable — check API terminal and MongoDB connection.'
-            : err.message
+          clearUploadProgress()
+          const msg =
+            err.message?.includes('413') || /too large/i.test(err.message)
+              ? 'Images were too large for one upload. Try fewer posts at a time or use smaller images.'
+              : err.message?.includes('503') || err.message?.includes('Database')
+                ? 'Database unavailable — check API terminal and MongoDB connection.'
+                : err.message
           showToast(msg, 'error')
           return { ok: false }
         }
       }
 
       const [defHour, defMinute] = (apiConfig.defaults?.scheduleTime || '12:00').split(':').map(Number)
+      reportUploadProgress({
+        phase: 'schedule',
+        percent: 95,
+        label: `Saving ${payloadPosts.length} posts locally…`,
+      })
       const items = payloadPosts.map((post) => {
-        const scheduled = computeScheduleDate(startDate, post.dayNum, defHour, defMinute)
+        const scheduled = computeScheduleDate(resolvedStart, post.dayNum, defHour, defMinute)
         return {
           id: crypto.randomUUID(),
           body: post.body,
@@ -728,10 +1096,13 @@ export function AppDataProvider({ children }) {
       localStorage.setItem(STORAGE_KEYS.scheduledQueue, JSON.stringify(nextQueue))
       setPublishStatus('success')
       showToast(`Saved ${items.length} posts locally (demo mode)`, 'error')
-      setTimeout(() => setPublishStatus('idle'), 2500)
+      setTimeout(() => {
+        setPublishStatus('idle')
+        clearUploadProgress()
+      }, 2500)
       return { ok: true, count: items.length }
     },
-    [live, queue, showToast, refreshFromServer],
+    [live, queue, showToast, refreshFromServer, reportUploadProgress, clearUploadProgress],
   )
 
   const cancelScheduled = useCallback(
@@ -751,6 +1122,29 @@ export function AppDataProvider({ children }) {
       setQueue(next)
       localStorage.setItem(STORAGE_KEYS.scheduledQueue, JSON.stringify(next))
       showToast('Scheduled post removed')
+    },
+    [live, queue, showToast, refreshFromServer],
+  )
+
+  const cancelAllScheduled = useCallback(
+    async () => {
+      if (live) {
+        try {
+          const result = await deleteAllScheduledRemote()
+          await refreshFromServer()
+          const count = result.removed ?? queue.length
+          showToast(count ? `Removed ${count} scheduled posts` : 'No scheduled posts to remove')
+          return { ok: true, removed: count }
+        } catch (err) {
+          showToast(err.message, 'error')
+          return { ok: false, error: err.message }
+        }
+      }
+      const count = queue.length
+      setQueue([])
+      localStorage.setItem(STORAGE_KEYS.scheduledQueue, JSON.stringify([]))
+      showToast(count ? `Removed ${count} scheduled posts` : 'No scheduled posts to remove')
+      return { ok: true, removed: count }
     },
     [live, queue, showToast, refreshFromServer],
   )
@@ -855,6 +1249,7 @@ export function AppDataProvider({ children }) {
         published,
         apiConfig,
         publishStatus,
+        uploadProgress,
         syncing,
         showToast,
         saveApiConfig,
@@ -871,6 +1266,7 @@ export function AppDataProvider({ children }) {
         schedulePost,
         scheduleBulkPosts,
         cancelScheduled,
+        cancelAllScheduled,
         editScheduled,
         saveDraft,
         deleteDraft,

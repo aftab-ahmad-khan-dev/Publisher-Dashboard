@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CROP_HINTS } from '../hooks/usePostState'
+import { getCropAspectRatio } from '../hooks/usePostState'
 
 export default function FacebookPreview({
   enabled,
@@ -12,7 +12,8 @@ export default function FacebookPreview({
   defaultCollapsed = true,
 }) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
-  const ratio = CROP_HINTS.find((c) => c.id === cropHint)?.ratio ?? '1.91 / 1'
+  const ratio = getCropAspectRatio(cropHint, '1.91 / 1')
+  const isOriginal = cropHint === 'original'
   const fullText = [body, hashtags].filter(Boolean).join('\n\n')
 
   if (!enabled) {
@@ -50,11 +51,22 @@ export default function FacebookPreview({
           <p className="whitespace-pre-wrap px-4 pb-3 text-[15px] leading-snug">{fullText}</p>
         )}
         {showImage && imagePreviewUrl && (
-          <div className="bg-black/30" style={{ aspectRatio: ratio }}>
+          <div
+            className={`bg-black/30 ${isOriginal ? 'flex max-h-72 items-center justify-center' : ''}`}
+            style={ratio ? { aspectRatio: ratio } : undefined}
+          >
             {imageType === 'video' ? (
-              <video src={imagePreviewUrl} className="h-full w-full object-cover" muted />
+              <video
+                src={imagePreviewUrl}
+                className={`w-full ${isOriginal ? 'max-h-72 object-contain' : 'h-full object-cover'}`}
+                muted
+              />
             ) : (
-              <img src={imagePreviewUrl} alt="" className="h-full w-full object-cover" />
+              <img
+                src={imagePreviewUrl}
+                alt=""
+                className={`w-full ${isOriginal ? 'max-h-72 object-contain' : 'h-full object-cover'}`}
+              />
             )}
           </div>
         )}

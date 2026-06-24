@@ -29,6 +29,11 @@ export default function ComposePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state?.draftId])
 
+  const handlePublishNow = async (state) => {
+    const result = await app.publishNow(state)
+    if (result?.ok && !result?.partial) post.resetComposer()
+  }
+
   const handleScheduleSuccess = (updatedQueue) => {
     post.setScheduledAt(getNextScheduleSlot(updatedQueue, app.apiConfig?.defaults?.scheduleTime))
   }
@@ -82,13 +87,16 @@ export default function ComposePage() {
         </div>
       )}
 
-      <PageBody className="flex min-h-0 flex-1 flex-col gap-2 lg:flex-row lg:gap-3">
-        <PageScroll className="lg:w-[58%]">
-          <div className="surface-panel h-full rounded-xl p-3 sm:p-4">
+      <PageBody className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 lg:flex-row lg:gap-3">
+        <PageScroll className="min-w-0 lg:w-[58%]">
+          <div className="compose-panel">
             <ComposerPanel
               state={post.state}
               setBody={post.setBody}
-              setImage={post.setImage}
+              addMediaFiles={post.addMediaFiles}
+              removeMedia={post.removeMedia}
+              setActiveMedia={post.setActiveMedia}
+              clearMedia={post.clearMedia}
               setCropHint={post.setCropHint}
               toggleImageVisibility={post.toggleImageVisibility}
               togglePlatform={post.togglePlatform}
@@ -98,11 +106,14 @@ export default function ComposePage() {
               setPublishMode={post.setPublishMode}
               setScheduledAt={post.setScheduledAt}
               setTimezone={post.setTimezone}
+              setScheduleByDay={post.setScheduleByDay}
+              setScheduleStartDate={post.setScheduleStartDate}
+              setScheduleDayNum={post.setScheduleDayNum}
               setPoll={post.setPoll}
               hashtagCounts={post.hashtagCounts}
               getFullLength={post.getFullLength}
               publishStatus={app.publishStatus}
-              publishNow={app.publishNow}
+              publishNow={handlePublishNow}
               schedulePost={app.schedulePost}
               onScheduleSuccess={handleScheduleSuccess}
               onSaveDraft={handleSaveDraft}
@@ -114,8 +125,10 @@ export default function ComposePage() {
           </div>
         </PageScroll>
 
-        <PageScroll className={`${showPreview ? 'block' : 'hidden'} lg:block lg:w-[42%]`}>
-          <PreviewPanel state={post.state} compact />
+        <PageScroll className={`min-w-0 ${showPreview ? 'block' : 'hidden'} lg:block lg:w-[42%]`}>
+          <div className="compose-preview-panel">
+            <PreviewPanel state={post.state} compact />
+          </div>
         </PageScroll>
       </PageBody>
     </PageShell>

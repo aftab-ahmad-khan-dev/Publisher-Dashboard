@@ -20,11 +20,12 @@ function loadView() {
 }
 
 export default function ScheduledPage() {
-  const { queue, cancelScheduled, editScheduled } = useAppData()
+  const { queue, cancelScheduled, cancelAllScheduled, editScheduled } = useAppData()
   const [view, setView] = useState(loadView)
   const [previewing, setPreviewing] = useState(null)
   const [editing, setEditing] = useState(null)
   const [deleting, setDeleting] = useState(null)
+  const [deletingAll, setDeletingAll] = useState(false)
 
   const setViewAndPersist = (v) => {
     setView(v)
@@ -39,6 +40,15 @@ export default function ScheduledPage() {
         action={
           <div className="flex items-center gap-2">
             {queue.length > 0 && <ViewToggle view={view} onChange={setViewAndPersist} />}
+            {queue.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setDeletingAll(true)}
+                className="inline-flex items-center rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300 transition hover:bg-rose-500/20"
+              >
+                Delete all
+              </button>
+            )}
             <Link to="/compose" className="btn-primary px-3 py-1.5 text-xs">
               + New Post
             </Link>
@@ -104,6 +114,16 @@ export default function ScheduledPage() {
         title="Delete scheduled post?"
         message="This post will be removed from your queue and won't be published. This can't be undone."
         confirmLabel="Delete post"
+        destructive
+      />
+
+      <ConfirmDialog
+        open={deletingAll}
+        onClose={() => setDeletingAll(false)}
+        onConfirm={() => cancelAllScheduled()}
+        title="Delete all scheduled posts?"
+        message={`This will remove all ${queue.length} posts from your queue. They won't be published. This can't be undone.`}
+        confirmLabel="Delete all"
         destructive
       />
     </PageShell>

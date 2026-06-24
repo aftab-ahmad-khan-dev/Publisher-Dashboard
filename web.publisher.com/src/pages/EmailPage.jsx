@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppData } from '../contexts/AppDataContext'
 import { isLivePublishing } from '../lib/api'
+import { isLocalApi } from '../lib/apiBaseUrl'
 import { isGmailConfigured } from '../lib/connections'
 import {
   createEmailCampaign,
@@ -49,8 +50,7 @@ export default function EmailPage() {
   const live = isLivePublishing()
   const gmailReady = isGmailConfigured(apiConfig?.gmail)
   // Open tracking needs a publicly reachable API; localhost can't be hit by mail clients.
-  const trackingUnreachable =
-    live && /localhost|127\.0\.0\.1/.test(import.meta.env.VITE_API_BASE_URL || '')
+  const trackingUnreachable = live && isLocalApi()
 
   const [subject, setSubject] = useState(SAMPLE_SUBJECT)
   const [body, setBody] = useState(SAMPLE_BODY)

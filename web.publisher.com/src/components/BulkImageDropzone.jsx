@@ -1,8 +1,9 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { imageIndexFromFilename } from '../lib/bulkParse'
+import { MAX_UPLOAD_IMAGES } from '../lib/constants'
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif'
-export const BULK_IMAGE_MAX = 30
+export const BULK_IMAGE_MAX = MAX_UPLOAD_IMAGES
 
 function mergeFiles(prev, incoming, max = BULK_IMAGE_MAX) {
   const images = [...incoming].filter((f) => f.type.startsWith('image/'))
