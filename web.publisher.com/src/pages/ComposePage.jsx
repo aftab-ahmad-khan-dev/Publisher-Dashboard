@@ -101,7 +101,7 @@ export default function ComposePage() {
 
       <PageBody className="flex min-h-0 flex-1 flex-col gap-2 lg:flex-row lg:gap-3">
         <PageScroll className="min-w-0 lg:w-[58%]">
-          <div className="surface-panel min-w-0 rounded-xl p-3 sm:p-4">
+          <div className="surface-panel h-full min-w-0 overflow-hidden rounded-xl p-3 sm:p-4">
             <ComposerPanel
               state={post.state}
               setBody={post.setBody}
