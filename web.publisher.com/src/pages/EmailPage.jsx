@@ -20,7 +20,7 @@ import PainPointEmailGuide from '../components/PainPointEmailGuide'
 import RecipientCsvUpload from '../components/RecipientCsvUpload'
 import { downloadTextFile } from '../lib/recipientFile'
 import PageHeader from '../components/PageHeader'
-import PageShell, { PageBody, PageScroll } from '../components/PageShell'
+import PageShell, { PageBody, PageScroll, PageSection, PageStatsRow, PageStat, InfoBanner } from '../components/PageShell'
 import Modal from '../components/Modal'
 
 const SAMPLE_RECIPIENTS = `email,name,company,niche
@@ -254,7 +254,7 @@ export default function EmailPage() {
     <PageShell>
       <PageHeader
         title="Bulk Email"
-        subtitle="One pain-first template · personalized per name, company & niche"
+        subtitle="Personalized campaigns with open tracking via Gmail"
         action={
           <Link to="/api-config" className="btn-secondary px-3 py-1.5 text-xs">
             Gmail setup
@@ -262,24 +262,30 @@ export default function EmailPage() {
         }
       />
 
-      <PageBody className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
+      <PageStatsRow>
+        <PageStat label="Recipients" value={recipients.length} tone="violet" />
+        <PageStat label="Campaigns" value={campaigns.length} />
+        <PageStat label="Gmail" value={gmailReady ? 'Connected' : 'Setup'} tone={gmailReady ? 'emerald' : 'amber'} />
+        <PageStat label="Templates" value={EMAIL_TEMPLATES.length} hint="Pain-first library" />
+      </PageStatsRow>
+
+      <PageBody className="saas-page-grid min-h-0 flex-1">
         <PageScroll className="space-y-3">
           {!gmailReady && (
-            <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-4">
-              <p className="text-sm font-medium text-amber-200">Connect Gmail</p>
-              <p className="mt-1 text-[11px] text-slate-400">
-                Bulk mail sends through your Gmail account (same as Mailsuite). Messages land in Sent so your
-                Mailsuite extension can show opens/clicks in Gmail.
+            <InfoBanner tone="amber">
+              <p className="text-sm font-medium text-amber-100">Connect Gmail</p>
+              <p className="mt-1 text-[11px] opacity-90">
+                Bulk mail sends through your Gmail account. Messages land in Sent for open/click tracking.
               </p>
               <button type="button" onClick={connectGmail} className="btn-primary mt-3 text-xs">
                 Connect Gmail
               </button>
-            </div>
+            </InfoBanner>
           )}
 
           <PainPointEmailGuide subject={subject} body={body} />
 
-          <section className="surface-panel rounded-xl p-4">
+          <section className="saas-content-card rounded-xl p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-sm font-semibold text-white">
                 Compose
@@ -355,7 +361,7 @@ export default function EmailPage() {
             )}
           </section>
 
-          <section className="surface-panel rounded-xl p-4">
+          <section className="saas-content-card rounded-xl p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-sm font-semibold text-white">Recipients</h2>
               <button type="button" onClick={downloadTemplate} className="text-[11px] text-violet-400">
@@ -429,7 +435,7 @@ export default function EmailPage() {
           </section>
 
           {preview && (
-            <section className="surface-panel rounded-xl p-4">
+            <section className="saas-content-card rounded-xl p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Preview for recipient
@@ -470,7 +476,7 @@ export default function EmailPage() {
         </PageScroll>
 
         <PageScroll className="space-y-3">
-          <section className="surface-panel min-h-[200px] rounded-xl p-4">
+          <section className="saas-content-card min-h-[200px] rounded-xl p-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-white">Campaigns & delivery</h2>
               <button type="button" onClick={loadCampaigns} className="text-[11px] text-violet-400">
@@ -532,7 +538,7 @@ export default function EmailPage() {
           </section>
 
           {detail?.campaign && (
-            <section className="surface-panel rounded-xl p-4">
+            <section className="saas-content-card rounded-xl p-4">
               <h2 className="text-sm font-semibold text-white">Original email</h2>
               <p className="mt-3 text-[10px] font-medium uppercase tracking-wider text-slate-600">Subject</p>
               <p className="mt-0.5 text-sm font-medium text-white">{detail.campaign.subject}</p>
@@ -551,7 +557,7 @@ export default function EmailPage() {
           )}
 
           {detail?.recipients && (
-            <section className="surface-panel rounded-xl p-4">
+            <section className="saas-content-card rounded-xl p-4">
               <h2 className="text-sm font-semibold text-white">Recipient delivery</h2>
               <div className="mt-2 max-h-[320px] overflow-x-auto overflow-y-auto">
                 <table className="w-full min-w-[480px] text-left text-[11px]">

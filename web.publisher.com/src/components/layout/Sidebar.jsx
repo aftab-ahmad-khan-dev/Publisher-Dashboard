@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { getNavItems } from '../../lib/admin'
+import { getNavGroups } from '../../lib/admin'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppData } from '../../contexts/AppDataContext'
 import { getConnectionSummary } from '../../lib/connections'
@@ -42,33 +42,48 @@ const BADGE_COUNTS = {
   scheduled: (data) => data.queue.length,
 }
 
+function ConnectionRow({ ready, label, children }) {
+  return (
+    <div className="flex items-center justify-between gap-2 py-1">
+      <div className="flex items-center gap-2">{children}</div>
+      <span
+        className={`rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
+          ready ? 'bg-emerald-500/15 text-emerald-400' : 'bg-white/[0.04] text-slate-600'
+        }`}
+      >
+        {label}
+      </span>
+    </div>
+  )
+}
+
 export default function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }) {
   const { user } = useAuth()
   const app = useAppData()
-  const navItems = getNavItems(user?.email)
-  const { metaReady, linkedInReady, linkedInPublish, redditReady, pinterestReady, threadsReady } =
+  const navGroups = getNavGroups(user?.email)
+  const { metaReady, linkedInReady, linkedInPublish, redditReady, pinterestReady, threadsReady, connectedCount } =
     getConnectionSummary(app.apiConfig)
-  const linkedInLabel = linkedInPublish ? 'Ready' : linkedInReady ? 'Connect' : 'Setup'
-  const linkedInClass = linkedInPublish
-    ? 'text-emerald-400'
-    : linkedInReady
-      ? 'text-amber-400'
-      : 'text-slate-600'
+  const linkedInLabel = linkedInPublish ? 'Live' : linkedInReady ? 'Setup' : 'Off'
+  const healthPct = Math.round((connectedCount / 6) * 100)
 
   return (
     <aside
-      className={`flex h-full max-h-dvh w-full flex-col overflow-hidden border-r border-white/[0.07] bg-[#08090f]/95 backdrop-blur-2xl transition-[width] duration-300 ${
-        collapsed ? 'lg:w-[78px]' : 'lg:w-[272px]'
+      className={`saas-sidebar flex h-full max-h-dvh w-full flex-col overflow-hidden transition-[width] duration-300 ${
+        collapsed ? 'lg:w-[76px]' : 'lg:w-[280px]'
       }`}
     >
-      {/* Brand + collapse toggle */}
-      <div className={`flex items-center border-b border-white/[0.06] px-4 py-5 ${collapsed ? 'lg:justify-center' : 'justify-between'}`}>
-        <div className="flex items-center gap-3">
-          <BrandLogo className="h-10 w-10 shrink-0 shadow-lg shadow-fuchsia-500/20" />
+      <div className={`saas-sidebar__brand ${collapsed ? 'lg:justify-center lg:px-3' : ''}`}>
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="relative shrink-0">
+            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-violet-500/30 to-fuchsia-500/20 blur-md" />
+            <BrandLogo className="relative h-10 w-10 rounded-xl shadow-lg shadow-violet-500/25" />
+          </div>
           {!collapsed && (
-            <div className="lg:block">
-              <p className="font-display text-sm font-bold text-white">Publisher Suite</p>
-              <p className="text-[11px] text-slate-500">Publish everywhere</p>
+            <div className="min-w-0 lg:block">
+              <p className="truncate font-display text-[15px] font-bold tracking-tight text-white">
+                Publisher Suite
+              </p>
+              <p className="truncate text-[11px] text-slate-500">Cross-platform publishing</p>
             </div>
           )}
         </div>
@@ -77,7 +92,7 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
             type="button"
             onClick={onToggleCollapse}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className={`hidden h-7 w-7 items-center justify-center rounded-lg text-slate-500 ring-1 ring-white/10 transition hover:bg-white/5 hover:text-white lg:flex ${collapsed ? 'lg:hidden' : ''}`}
+            className={`saas-icon-btn hidden lg:flex ${collapsed ? 'lg:hidden' : ''}`}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -86,13 +101,12 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
         )}
       </div>
 
-      {/* Expand button shown when collapsed */}
       {collapsed && onToggleCollapse && (
         <button
           type="button"
           onClick={onToggleCollapse}
           aria-label="Expand sidebar"
-          className="mx-auto mt-3 hidden h-7 w-7 items-center justify-center rounded-lg text-slate-500 ring-1 ring-white/10 transition hover:bg-white/5 hover:text-white lg:flex"
+          className="saas-icon-btn mx-auto mt-3 hidden lg:flex"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -100,82 +114,93 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
         </button>
       )}
 
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        {navItems.map(({ path, label, icon }) => {
-          const countFn = BADGE_COUNTS[icon]
-          const count = countFn ? countFn(app) : 0
+      <nav className="saas-sidebar__nav scrollbar-none flex-1 overflow-y-auto px-3 py-4">
+        {navGroups.map((group) => (
+          <div key={group.id} className="mb-5 last:mb-2">
+            {!collapsed && (
+              <p className="saas-nav-section-label mb-2 px-2">{group.label}</p>
+            )}
+            <ul className="space-y-0.5">
+              {group.items.map(({ path, label, icon, description }) => {
+                const countFn = BADGE_COUNTS[icon]
+                const count = countFn ? countFn(app) : 0
 
-          return (
-            <NavLink
-              key={path}
-              to={path}
-              onClick={onNavigate}
-              title={collapsed ? label : undefined}
-              className={({ isActive }) =>
-                `group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  collapsed ? 'lg:justify-center lg:px-0 px-3 py-2.5' : 'px-3 py-2.5'
-                } ${
-                  isActive
-                    ? 'bg-gradient-to-r from-violet-500/20 via-fuchsia-500/15 to-transparent text-white shadow-inner shadow-violet-500/10 ring-1 ring-violet-500/25'
-                    : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <span
-                    className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
-                      isActive ? 'bg-violet-500/20 text-violet-300' : 'bg-white/[0.03] text-slate-500 group-hover:text-slate-300'
-                    }`}
-                  >
-                    <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      {ICONS[icon]}
-                    </svg>
-                    {count > 0 && (icon === 'drafts' || icon === 'scheduled') && (
-                      <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-fuchsia-600 px-1 text-[9px] font-bold text-white ring-2 ring-[#08090f]">
-                        {count > 9 ? '9+' : count}
-                      </span>
-                    )}
-                  </span>
-                  <span className={collapsed ? 'lg:hidden' : ''}>{label}</span>
-                </>
-              )}
-            </NavLink>
-          )
-        })}
+                return (
+                  <li key={path}>
+                    <NavLink
+                      to={path}
+                      onClick={onNavigate}
+                      title={collapsed ? label : undefined}
+                      className={({ isActive }) =>
+                        `saas-nav-link group ${collapsed ? 'lg:justify-center lg:px-0' : ''} ${
+                          isActive ? 'saas-nav-link--active' : ''
+                        }`
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <span className={`saas-nav-icon ${isActive ? 'saas-nav-icon--active' : ''}`}>
+                            <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              {ICONS[icon]}
+                            </svg>
+                            {count > 0 && (icon === 'drafts' || icon === 'scheduled') && (
+                              <span className="saas-nav-badge">{count > 9 ? '9+' : count}</span>
+                            )}
+                          </span>
+                          {!collapsed && (
+                            <span className="min-w-0 flex-1 lg:block">
+                              <span className="block truncate text-[13px] font-medium">{label}</span>
+                              {description && (
+                                <span className="block truncate text-[10px] text-slate-600 group-hover:text-slate-500">
+                                  {description}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       {!collapsed && (
-        <div className="border-t border-white/[0.06] p-4">
-          <div className="rounded-xl bg-gradient-to-br from-white/[0.04] to-transparent p-3 ring-1 ring-white/[0.06]">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Connections</p>
-            <div className="mt-3 flex items-center justify-between gap-2">
-              <MetaSuiteIcons size="sm" />
-              <span className={`text-[10px] font-semibold ${metaReady ? 'text-emerald-400' : 'text-slate-600'}`}>
-                {metaReady ? 'Ready' : 'Setup'}
+        <div className="border-t border-white/[0.06] p-3">
+          <div className="saas-connection-card">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                Integrations
+              </p>
+              <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
+                {healthPct}%
               </span>
             </div>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <PlatformIcon platform="linkedin" size="sm" />
-              <span className={`text-[10px] font-semibold ${linkedInClass}`}>{linkedInLabel}</span>
+            <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
+                style={{ width: `${healthPct}%` }}
+              />
             </div>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <PlatformIcon platform="reddit" size="sm" />
-              <span className={`text-[10px] font-semibold ${redditReady ? 'text-emerald-400' : 'text-slate-600'}`}>
-                {redditReady ? 'Ready' : 'Community'}
-              </span>
-            </div>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <PlatformIcon platform="pinterest" size="sm" />
-              <span className={`text-[10px] font-semibold ${pinterestReady ? 'text-emerald-400' : 'text-slate-600'}`}>
-                {pinterestReady ? 'Ready' : 'Setup'}
-              </span>
-            </div>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <PlatformIcon platform="threads" size="sm" />
-              <span className={`text-[10px] font-semibold ${threadsReady ? 'text-emerald-400' : 'text-slate-600'}`}>
-                {threadsReady ? 'Ready' : 'Setup'}
-              </span>
+            <div className="mt-3 space-y-0.5">
+              <ConnectionRow ready={metaReady} label={metaReady ? 'Live' : 'Setup'}>
+                <MetaSuiteIcons size="sm" />
+              </ConnectionRow>
+              <ConnectionRow ready={linkedInPublish || linkedInReady} label={linkedInLabel}>
+                <PlatformIcon platform="linkedin" size="sm" />
+              </ConnectionRow>
+              <ConnectionRow ready={redditReady} label={redditReady ? 'Live' : 'Off'}>
+                <PlatformIcon platform="reddit" size="sm" />
+              </ConnectionRow>
+              <ConnectionRow ready={pinterestReady} label={pinterestReady ? 'Live' : 'Off'}>
+                <PlatformIcon platform="pinterest" size="sm" />
+              </ConnectionRow>
+              <ConnectionRow ready={threadsReady} label={threadsReady ? 'Live' : 'Off'}>
+                <PlatformIcon platform="threads" size="sm" />
+              </ConnectionRow>
             </div>
           </div>
         </div>

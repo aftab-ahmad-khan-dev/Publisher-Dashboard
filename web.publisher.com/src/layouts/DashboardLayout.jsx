@@ -26,23 +26,23 @@ export default function DashboardLayout() {
   }, [collapsed])
 
   return (
-    <div className="dashboard-shell flex h-dvh max-h-dvh overflow-hidden bg-[#06080f]">
-      <div className="mesh-bg pointer-events-none fixed inset-0" aria-hidden />
+    <div className="dashboard-shell saas-app-shell flex h-dvh max-h-dvh overflow-hidden">
+      <div className="saas-ambient pointer-events-none fixed inset-0" aria-hidden />
+      <div className="saas-grid-overlay pointer-events-none fixed inset-0" aria-hidden />
 
-      {/* Sidebar — desktop only; mobile uses the bottom nav */}
       <div className="hidden h-full lg:block">
         <Sidebar collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
       </div>
 
-      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
         <TopBar />
-        <main className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden px-3 pb-[5.25rem] pt-2 sm:px-4 lg:pb-3 lg:pt-3">
+        <main className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden px-3 pb-[5.25rem] pt-3 sm:px-4 lg:pb-4 lg:pt-4">
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 16, filter: 'blur(4px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="flex min-h-0 flex-1 flex-col"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="saas-content-frame flex min-h-0 flex-1 flex-col"
           >
             <Outlet />
           </motion.div>

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAppData } from '../contexts/AppDataContext'
 import { PlatformIconGroup } from '../components/PlatformIcon'
 import PageHeader from '../components/PageHeader'
-import PageShell, { PageScroll } from '../components/PageShell'
+import PageShell, { PageScroll, PageStatsRow, PageStat, EmptyState } from '../components/PageShell'
 import ViewToggle from '../components/ViewToggle'
 import { formatDraftDate } from '../lib/draftUtils'
 
@@ -31,11 +31,15 @@ export default function DraftsPage() {
     navigate('/compose', { state: { draftId: id } })
   }
 
+  const withPlatforms = drafts.filter((d) =>
+    Object.values(d.platforms || {}).some(Boolean),
+  ).length
+
   return (
     <PageShell>
       <PageHeader
         title="Drafts"
-        subtitle={`${drafts.length} saved`}
+        subtitle="Saved compositions ready to finish and publish"
         action={
           <div className="flex items-center gap-2">
             {drafts.length > 0 && <ViewToggle view={view} onChange={setViewAndPersist} />}
@@ -46,14 +50,33 @@ export default function DraftsPage() {
         }
       />
 
+      <PageStatsRow>
+        <PageStat label="Total drafts" value={drafts.length} tone="amber" />
+        <PageStat label="With platforms" value={withPlatforms} hint="Ready to publish" />
+        <PageStat
+          label="Latest"
+          value={drafts[0] ? formatDraftDate(drafts[0].updatedAt).split(',')[0] : '—'}
+          tone="violet"
+        />
+        <PageStat label="View" value={view === 'grid' ? 'Grid' : 'List'} hint="Toggle in toolbar" />
+      </PageStatsRow>
+
       <PageScroll>
         {drafts.length === 0 ? (
-          <div className="surface-panel flex h-full min-h-[200px] flex-col items-center justify-center rounded-xl py-12 text-center">
-            <p className="font-medium text-slate-200">No drafts yet</p>
-            <Link to="/compose" className="btn-secondary mt-4 text-xs">
-              Start composing
-            </Link>
-          </div>
+          <EmptyState
+            icon={
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            }
+            title="No drafts yet"
+            description="Save work from Compose to pick up later without losing your caption, platforms, or images."
+            action={
+              <Link to="/compose" className="btn-primary px-4 py-2 text-xs">
+                Start composing
+              </Link>
+            }
+          />
         ) : view === 'grid' ? (
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {drafts.map((draft, i) => (
@@ -106,11 +129,7 @@ function DraftGridCard({ draft, onEdit, onDelete, delay }) {
         <button type="button" onClick={onEdit} className="btn-secondary min-h-0 flex-1 py-1 text-[10px]">
           Edit
         </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="min-h-0 flex-1 rounded-lg py-1 text-[10px] font-semibold text-rose-400 ring-1 ring-rose-500/25 hover:bg-rose-500/10"
-        >
+        <button type="button" onClick={onDelete} className="btn-danger min-h-0 flex-1 py-1 text-[10px]">
           Delete
         </button>
       </div>
@@ -137,11 +156,7 @@ function DraftListCard({ draft, onEdit, onDelete, delay }) {
           <button type="button" onClick={onEdit} className="btn-secondary px-2 py-1 text-[10px]">
             Edit
           </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="rounded-lg px-2 py-1 text-[10px] font-semibold text-rose-400 ring-1 ring-rose-500/25 hover:bg-rose-500/10"
-          >
+          <button type="button" onClick={onDelete} className="btn-danger px-2 py-1 text-[10px]">
             Delete
           </button>
         </div>

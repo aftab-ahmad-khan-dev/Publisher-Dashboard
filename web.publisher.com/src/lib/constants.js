@@ -115,6 +115,36 @@ export const NAV_ITEMS = [
   { path: '/drafts', label: 'Drafts', icon: 'drafts' },
   { path: '/scheduled', label: 'Scheduled', icon: 'scheduled' },
   { path: '/calendar', label: 'Calendar', icon: 'calendar' },
-  { path: '/api-config', label: 'API Config', icon: 'api' },
+  { path: '/api-config', label: 'Integrations', icon: 'api' },
   { path: '/guide', label: 'Setup Guide', icon: 'guide' },
+]
+
+/** Grouped sidebar navigation for premium SaaS layout. */
+export const NAV_GROUPS = [
+  {
+    id: 'create',
+    label: 'Create',
+    items: [
+      { path: '/compose', label: 'Compose', icon: 'compose', description: 'Write & publish' },
+      { path: '/bulk', label: 'Bulk Upload', icon: 'bulk', description: 'Multi-post days' },
+      { path: '/email', label: 'Bulk Email', icon: 'email', description: 'Campaigns' },
+    ],
+  },
+  {
+    id: 'library',
+    label: 'Content',
+    items: [
+      { path: '/drafts', label: 'Drafts', icon: 'drafts', description: 'Saved work' },
+      { path: '/scheduled', label: 'Scheduled', icon: 'scheduled', description: 'Queue' },
+      { path: '/calendar', label: 'Calendar', icon: 'calendar', description: 'Timeline' },
+    ],
+  },
+  {
+    id: 'workspace',
+    label: 'Workspace',
+    items: [
+      { path: '/api-config', label: 'Integrations', icon: 'api', description: 'API keys' },
+      { path: '/guide', label: 'Setup Guide', icon: 'guide', description: 'Onboarding' },
+    ],
+  },
 ]

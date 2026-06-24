@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { isPlatformAdmin } from '../lib/admin'
 import { fetchAdminUsers } from '../lib/backendApi'
 import PageHeader from '../components/PageHeader'
-import PageShell, { PageScroll } from '../components/PageShell'
+import PageShell, { PageScroll, PageStatsRow, PageStat, EmptyState } from '../components/PageShell'
 import PlatformIcon from '../components/PlatformIcon'
 
 const PLATFORM_LABELS = {
@@ -50,10 +50,7 @@ function UserCard({ user, index }) {
     .toUpperCase()
 
   return (
-    <li
-      className="surface-panel group flex flex-col overflow-hidden rounded-2xl ring-1 ring-white/[0.06] transition hover:ring-violet-500/25"
-      style={{ animationDelay: `${index * 40}ms` }}
-    >
+    <li className="saas-user-card" style={{ animationDelay: `${index * 40}ms` }}>
       <div className="border-b border-white/[0.06] bg-gradient-to-br from-violet-500/10 via-transparent to-fuchsia-500/5 px-4 py-4">
         <div className="flex items-start gap-3">
           {user.imageUrl ? (
@@ -178,38 +175,36 @@ export default function AdminUsersPage() {
     <PageShell>
       <PageHeader
         title="Platform Users"
-        subtitle={
-          loading
-            ? 'Loading registered users…'
-            : `${users.length} registered · ${activeCount} with config · ${connectedCount} with connections`
-        }
+        subtitle="Registered accounts, activity, and integration health"
       />
+
+      <PageStatsRow>
+        <PageStat label="Registered" value={loading ? '…' : users.length} tone="violet" />
+        <PageStat label="Active" value={loading ? '…' : activeCount} tone="emerald" hint="With API config" />
+        <PageStat label="Connected" value={loading ? '…' : connectedCount} hint="Platforms linked" />
+        <PageStat label="Source" value={sourceNote ? 'DB' : 'Clerk'} />
+      </PageStatsRow>
 
       <PageScroll>
         {sourceNote && !error && !loading && (
-          <div className="mb-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200/90">
-            {sourceNote}
-          </div>
+          <div className="saas-info-banner saas-info-banner--amber mb-3 text-xs">{sourceNote}</div>
         )}
         {error ? (
-          <div className="surface-panel rounded-xl border border-rose-500/20 bg-rose-500/5 p-6 text-center">
+          <div className="saas-content-card border border-rose-500/20 bg-rose-500/5 p-6 text-center">
             <p className="font-medium text-rose-200">Could not load users</p>
             <p className="mt-1 text-xs text-rose-300/80">{error}</p>
           </div>
         ) : loading ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="surface-panel h-64 animate-pulse rounded-2xl ring-1 ring-white/[0.06]"
-              />
+              <div key={i} className="saas-content-card h-64 animate-pulse" />
             ))}
           </div>
         ) : users.length === 0 ? (
-          <div className="surface-panel flex min-h-[200px] flex-col items-center justify-center rounded-xl py-12 text-center">
-            <p className="font-medium text-slate-200">No users found</p>
-            <p className="mt-1 text-xs text-slate-500">Registered Clerk users will appear here.</p>
-          </div>
+          <EmptyState
+            title="No users found"
+            description="Registered Clerk users will appear here with stats and connection status."
+          />
         ) : (
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {users.map((u, i) => (

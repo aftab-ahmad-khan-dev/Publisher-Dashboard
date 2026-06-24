@@ -1,62 +1,84 @@
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { OrganizationSwitcher, UserButton } from '@clerk/clerk-react'
 import { useAppData } from '../../contexts/AppDataContext'
-import { NAV_ITEMS } from '../../lib/constants'
-import { getConnectionSummary } from '../../lib/connections'
 import { isLivePublishing } from '../../lib/api'
+import { NAV_ITEMS } from '../../lib/constants'
+import { ADMIN_NAV_ITEM } from '../../lib/admin'
 import { clerkAppearance } from '../../lib/clerkAppearance'
 import BrandLogo from '../BrandLogo'
 
-export default function TopBar() {
-  const { apiConfig } = useAppData()
+function Breadcrumb() {
   const { pathname } = useLocation()
-  const title = NAV_ITEMS.find((n) => pathname.startsWith(n.path))?.label ?? 'Dashboard'
-  const { connectedCount, anyConnected } = getConnectionSummary(apiConfig)
-  const live = isLivePublishing()
+  const allItems = [...NAV_ITEMS, ADMIN_NAV_ITEM]
+  const match = allItems.find((n) => pathname.startsWith(n.path))
+  const page = match?.label ?? 'Dashboard'
 
   return (
-    <header className="z-30 flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] bg-[#08090f]/80 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-2xl sm:gap-4 sm:px-6">
-      <div className="flex min-w-0 flex-1 items-center gap-2.5">
-        {/* Brand mark on mobile (sidebar logo is hidden there) */}
-        <BrandLogo className="h-8 w-8 shrink-0 lg:hidden" />
-        <div className="min-w-0">
-          <h1 className="font-display truncate whitespace-nowrap text-lg font-bold text-white sm:text-xl">{title}</h1>
-          <p className="hidden text-xs text-slate-500 sm:block">Manage your cross-platform content</p>
-        </div>
+    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-sm">
+      <BrandLogo className="h-7 w-7 shrink-0 lg:hidden" />
+      <div className="hidden min-w-0 items-center gap-2 sm:flex">
+        <Link to="/compose" className="truncate font-medium text-slate-500 transition hover:text-slate-300">
+          Suite
+        </Link>
+        <span className="text-slate-700">/</span>
+        <span className="truncate font-display font-semibold text-white">{page}</span>
       </div>
+      <span className="truncate font-display text-base font-bold text-white sm:hidden">{page}</span>
+    </nav>
+  )
+}
 
-      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-        {live ? (
-          <span className="hidden items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 sm:inline-flex">
-            Live publish API
-          </span>
-        ) : (
-          <span className="hidden rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-400/90 sm:inline-block">
-            Demo publish (no live posts)
-          </span>
-        )}
-        {anyConnected && !live ? (
-          <span className="hidden text-[10px] text-slate-500 sm:inline">
-            {connectedCount} credential{connectedCount !== 1 ? 's' : ''} in localStorage
-          </span>
-        ) : null}
+export default function TopBar() {
+  const { queue, drafts, syncing } = useAppData()
+  const live = isLivePublishing()
+  const scheduled = queue?.length ?? 0
+  const draftCount = drafts?.length ?? 0
 
-        <div className="max-w-[42vw] sm:max-w-none [&_.cl-organizationSwitcherTrigger]:max-w-full">
-          <OrganizationSwitcher
-            appearance={clerkAppearance}
-            hidePersonal={false}
-            afterCreateOrganizationUrl="/compose"
-            afterSelectOrganizationUrl="/compose"
-            afterSelectPersonalUrl="/compose"
-          />
-          <p className="mt-0.5 hidden text-[10px] text-slate-600 sm:block">
-            Posts &amp; config stay on your account
-          </p>
+  return (
+    <header className="saas-topbar z-30 shrink-0">
+      <div className="flex min-h-[3.5rem] items-center justify-between gap-3 px-3 sm:px-5 lg:px-6">
+        <div className="min-w-0 flex-1">
+          <Breadcrumb />
         </div>
-        <UserButton
-          appearance={clerkAppearance}
-          afterSignOutUrl="/sign-in"
-        />
+
+        <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+          {syncing && (
+            <span className="hidden items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-slate-400 lg:inline-flex">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-400" />
+              Syncing
+            </span>
+          )}
+
+          <div className="hidden items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.02] p-1 lg:flex">
+            <span className="rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-400">
+              <span className="text-violet-300">{scheduled}</span> queued
+            </span>
+            <span className="h-3 w-px bg-white/10" />
+            <span className="rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-400">
+              <span className="text-amber-300">{draftCount}</span> drafts
+            </span>
+          </div>
+
+          {live ? (
+            <span className="saas-status-pill saas-status-pill--live hidden sm:inline-flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+              Live API
+            </span>
+          ) : (
+            <span className="saas-status-pill saas-status-pill--demo hidden sm:inline-flex">Demo mode</span>
+          )}
+
+          <div className="saas-topbar__account">
+            <OrganizationSwitcher
+              appearance={clerkAppearance}
+              hidePersonal={false}
+              afterCreateOrganizationUrl="/compose"
+              afterSelectOrganizationUrl="/compose"
+              afterSelectPersonalUrl="/compose"
+            />
+            <UserButton appearance={clerkAppearance} afterSignOutUrl="/sign-in" />
+          </div>
+        </div>
       </div>
     </header>
   )

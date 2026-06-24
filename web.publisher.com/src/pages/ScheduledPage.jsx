@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppData } from '../contexts/AppDataContext'
 import PageHeader from '../components/PageHeader'
-import PageShell, { PageScroll } from '../components/PageShell'
+import PageShell, { PageScroll, EmptyState, PageStatsRow, PageStat } from '../components/PageShell'
 import ViewToggle from '../components/ViewToggle'
 import { ScheduledPostListCard, ScheduledPostGridCard } from '../components/ScheduledPostCard'
 import EditScheduledModal from '../components/EditScheduledModal'
@@ -36,7 +36,7 @@ export default function ScheduledPage() {
     <PageShell>
       <PageHeader
         title="Scheduled Posts"
-        subtitle={`${queue.length} queued · 12:00 PM default`}
+        subtitle="Automatic publishing at your chosen times"
         action={
           <div className="flex items-center gap-2">
             {queue.length > 0 && <ViewToggle view={view} onChange={setViewAndPersist} />}
@@ -44,7 +44,7 @@ export default function ScheduledPage() {
               <button
                 type="button"
                 onClick={() => setDeletingAll(true)}
-                className="inline-flex items-center rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300 transition hover:bg-rose-500/20"
+                className="btn-danger px-3 py-1.5 text-xs"
               >
                 Delete all
               </button>
@@ -56,15 +56,29 @@ export default function ScheduledPage() {
         }
       />
 
+      <PageStatsRow>
+        <PageStat label="Queued" value={queue.length} tone="violet" hint="12:00 PM default" />
+        <PageStat label="View" value={view === 'grid' ? 'Grid' : 'List'} />
+        <PageStat label="Status" value="Auto-publish" tone="emerald" hint="Scheduler runs every 30s" />
+        <PageStat label="Timezone" value={Intl.DateTimeFormat().resolvedOptions().timeZone.split('/').pop()} />
+      </PageStatsRow>
+
       <PageScroll>
         {queue.length === 0 ? (
-          <div className="surface-panel flex h-full min-h-[200px] flex-col items-center justify-center rounded-xl py-12 text-center">
-            <p className="font-medium text-slate-200">No scheduled posts yet</p>
-            <p className="mt-1 text-xs text-slate-500">Schedule from Compose</p>
-            <Link to="/compose" className="btn-secondary mt-4 text-xs">
-              Go to Compose
-            </Link>
-          </div>
+          <EmptyState
+            icon={
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            }
+            title="No scheduled posts yet"
+            description="Schedule from Compose or bulk upload. Posts publish automatically at your chosen time."
+            action={
+              <Link to="/compose" className="btn-primary px-4 py-2 text-xs">
+                Go to Compose
+              </Link>
+            }
+          />
         ) : view === 'grid' ? (
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {queue.map((item, i) => (

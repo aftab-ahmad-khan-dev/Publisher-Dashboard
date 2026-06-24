@@ -6,7 +6,7 @@ import { getNextScheduleSlot } from '../lib/scheduleUtils'
 import ComposerPanel from '../components/ComposerPanel'
 import PreviewPanel from '../components/PreviewPanel'
 import PageHeader from '../components/PageHeader'
-import PageShell, { PageBody, PageScroll } from '../components/PageShell'
+import PageShell, { PageBody, PageScroll, PageStat, PageStatsRow } from '../components/PageShell'
 
 export default function ComposePage() {
   const post = usePostState()
@@ -55,8 +55,8 @@ export default function ComposePage() {
   return (
     <PageShell>
       <PageHeader
-        title={post.editingDraftId ? 'Edit Draft' : 'New Post'}
-        subtitle="Compose · preview · publish"
+        title={post.editingDraftId ? 'Edit Draft' : 'Compose'}
+        subtitle="Write once · preview every platform · publish or schedule"
         action={
           <div className="flex items-center gap-1.5">
             <button
@@ -71,18 +71,27 @@ export default function ComposePage() {
                 New
               </button>
             )}
-            <StatPill label="Drafts" value={String(app.drafts.length)} accent={app.drafts.length > 0} />
-            <StatPill label="Queue" value={String(app.queue.length)} accent />
           </div>
         }
       />
 
+      <PageStatsRow>
+        <PageStat label="Drafts" value={app.drafts.length} tone="amber" />
+        <PageStat label="Queue" value={app.queue.length} tone="violet" />
+        <PageStat label="Mode" value={post.state.publishMode === 'schedule' ? 'Schedule' : 'Publish'} />
+        <PageStat
+          label="Platforms"
+          value={Object.values(post.state.platforms || {}).filter(Boolean).length}
+          tone="emerald"
+        />
+      </PageStatsRow>
+
       {post.editingDraftId && (
-        <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-1.5 text-xs">
-          <span className="draft-badge">Editing</span>
-          <span className="truncate text-slate-400">{editingTitle}</span>
-          <Link to="/drafts" className="shrink-0 text-amber-400/90 hover:text-amber-300">
-            Drafts →
+        <div className="saas-info-banner saas-info-banner--amber mb-3 flex shrink-0 items-center justify-between gap-2 py-2">
+          <span className="draft-badge">Editing draft</span>
+          <span className="truncate text-xs text-slate-300">{editingTitle}</span>
+          <Link to="/drafts" className="shrink-0 text-xs font-medium text-amber-300 hover:text-amber-200">
+            All drafts →
           </Link>
         </div>
       )}
@@ -132,16 +141,5 @@ export default function ComposePage() {
         </PageScroll>
       </PageBody>
     </PageShell>
-  )
-}
-
-function StatPill({ label, value, accent }) {
-  return (
-    <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-center">
-      <p className={`font-display text-sm font-bold leading-none ${accent ? 'text-gradient' : 'text-white'}`}>
-        {value}
-      </p>
-      <p className="text-[9px] uppercase tracking-wider text-slate-500">{label}</p>
-    </div>
   )
 }

@@ -10,7 +10,7 @@ import {
   computeScheduleDate,
 } from '../lib/bulkParse'
 import PageHeader from '../components/PageHeader'
-import PageShell, { PageBody, PageScroll } from '../components/PageShell'
+import PageShell, { PageBody, PageScroll, PageSection, PageStatsRow, PageStat } from '../components/PageShell'
 import PlatformIcon from '../components/PlatformIcon'
 import BulkImageDropzone from '../components/BulkImageDropzone'
 import { imageIndexFromFilename } from '../lib/bulkParse'
@@ -108,68 +108,63 @@ export default function BulkUploadPage() {
         }
       />
 
-      <PageBody className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
-        <PageScroll className="space-y-3 lg:col-span-1">
-          <section className="surface-panel rounded-xl p-4">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-white">Content</h2>
+      <PageStatsRow>
+        <PageStat label="Parsed posts" value={parsed.length} tone="violet" />
+        <PageStat label="Images" value={imageFiles.length} hint={`${imageMapSummary.length} matched`} />
+        <PageStat label="Platforms" value={enabledPlatforms.length} tone="emerald" />
+        <PageStat label="Day 1" value={startDate} tone="amber" />
+      </PageStatsRow>
+
+      <PageBody className="saas-page-grid min-h-0 flex-1">
+        <PageScroll className="space-y-3">
+          <PageSection
+            title="Content"
+            description={
+              <>
+                One block per post. Headers: <code className="text-slate-400">Post 1 (Day 1)</code>,{' '}
+                <code className="text-slate-400">Post 2 (Day 2)</code>
+              </>
+            }
+            action={
               <button
                 type="button"
-                className="text-[11px] text-violet-400 hover:text-violet-300"
+                className="text-[11px] font-medium text-violet-400 hover:text-violet-300"
                 onClick={() => setRaw(SAMPLE)}
               >
                 Load sample
               </button>
-            </div>
-            <p className="mt-1 text-[11px] text-slate-500">
-              One block per post. Headers: <code className="text-slate-400">Post 1 (Day 1)</code>,{' '}
-              <code className="text-slate-400">Post 2 (Day 2)</code>, etc.
-            </p>
+            }
+          >
             <textarea
               value={raw}
               onChange={(e) => setRaw(e.target.value)}
               placeholder={SAMPLE}
               rows={14}
-              className="mt-3 w-full resize-y rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs text-slate-200 placeholder:text-slate-600 focus:border-violet-500/50 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
+              className="input-premium mt-1 w-full resize-y font-mono text-xs"
             />
-          </section>
+          </PageSection>
 
-          <section className="surface-panel rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-white">Images</h2>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Matched to post/day number from filename.
-            </p>
-            <div className="mt-3">
-              <BulkImageDropzone files={imageFiles} onChange={setImageFiles} />
-            </div>
+          <PageSection title="Images" description="Matched to post/day number from filename (1.jpg, 2.png, …)">
+            <BulkImageDropzone files={imageFiles} onChange={setImageFiles} />
             {imageMapSummary.length > 0 && (
               <p className="mt-2 text-[11px] text-emerald-400/90">
-                Linked to posts: {imageMapSummary.map(([n, f]) => `Day ${n} ← ${f.name}`).join(' · ')}
+                Linked: {imageMapSummary.map(([n, f]) => `Day ${n} ← ${f.name}`).join(' · ')}
               </p>
             )}
             {imageFiles.length > 0 && imageMapSummary.length < imageFiles.length && (
               <p className="mt-1 text-[11px] text-amber-500/80">
-                {imageFiles.filter((f) => imageIndexFromFilename(f.name) == null).length} file(s) have no numeric name — rename to 1.jpg, 2.png, etc.
+                {imageFiles.filter((f) => imageIndexFromFilename(f.name) == null).length} file(s) need numeric names.
               </p>
             )}
-          </section>
+          </PageSection>
 
-          <section className="surface-panel rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-white">Schedule</h2>
-            <label className="mt-3 block text-[11px] text-slate-500">Day 1 starts on</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm text-white"
-            />
-            <p className="mt-2 text-[11px] text-slate-500">
-              Each post publishes at 12:00 PM local ({TZ}). Day N = start date + (N − 1) days.
-            </p>
+          <PageSection title="Schedule & platforms" description={`Each post publishes at 12:00 PM (${TZ})`}>
+            <label className="field-label mt-1">Day 1 starts on</label>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="input-premium" />
 
             <CommunityContentGuide body={raw} platforms={platforms} />
 
-            <p className="mt-4 text-[11px] font-medium uppercase tracking-wider text-slate-500">Platforms</p>
+            <p className="mt-4 field-label">Platforms</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {Object.entries(PLATFORM_META).map(([key, meta]) => (
                 <button
@@ -202,25 +197,23 @@ export default function BulkUploadPage() {
                 Set VITE_API_BASE_URL for MongoDB-backed scheduling.
               </p>
             )}
-          </section>
+          </PageSection>
         </PageScroll>
 
-        <PageScroll className="lg:col-span-1">
-          <section className="surface-panel min-h-[200px] rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-white">
-              Preview <span className="text-slate-500">({parsed.length})</span>
-            </h2>
+        <PageScroll>
+          <PageSection
+            title="Preview"
+            description={`${parsed.length} post${parsed.length === 1 ? '' : 's'} ready to schedule`}
+            className="min-h-[200px]"
+          >
             {parsed.length === 0 ? (
-              <p className="mt-8 text-center text-xs text-slate-500">Parsed posts appear here</p>
+              <p className="py-12 text-center text-xs text-slate-500">Parsed posts appear here</p>
             ) : (
-              <ul className="mt-3 space-y-3">
+              <ul className="space-y-3">
                 {parsed.map((post) => {
                   const when = computeScheduleDate(startDate, post.dayNum)
                   return (
-                    <li
-                      key={post.id}
-                      className="rounded-lg border border-white/[0.06] bg-black/20 p-3"
-                    >
+                    <li key={post.id} className="saas-list-item">
                       <div className="flex gap-3">
                         <PostThumb file={post.imageFile} />
                         <div className="min-w-0 flex-1">
@@ -247,7 +240,7 @@ export default function BulkUploadPage() {
                 })}
               </ul>
             )}
-          </section>
+          </PageSection>
         </PageScroll>
       </PageBody>
     </PageShell>

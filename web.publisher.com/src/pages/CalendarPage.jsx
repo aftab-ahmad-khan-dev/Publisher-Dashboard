@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useAppData } from '../contexts/AppDataContext'
 import { PlatformIconGroup } from '../components/PlatformIcon'
 import PageHeader from '../components/PageHeader'
-import PageShell, { PageBody } from '../components/PageShell'
+import PageShell, { PageBody, PageStatsRow, PageStat, ContentCard } from '../components/PageShell'
 import PostPreviewModal from '../components/PostPreviewModal'
 import { formatScheduledISO } from '../lib/scheduleUtils'
 
@@ -49,25 +49,33 @@ export default function CalendarPage() {
 
   const selectedKey = dateKey(cursor)
   const selectedPosts = postsByDay[selectedKey] || []
+  const daysWithPosts = Object.keys(postsByDay).filter((k) => k.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)).length
 
   const prevMonth = () => setCursor(new Date(year, month - 1, 1))
   const nextMonth = () => setCursor(new Date(year, month + 1, 1))
 
   return (
     <PageShell>
-      <PageHeader title="Calendar" subtitle={`${queue.length} scheduled · 12:00 PM`} />
+      <PageHeader title="Calendar" subtitle="Visual timeline of your publishing schedule" />
 
-      <PageBody className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-y-auto lg:grid-cols-3 lg:gap-3 lg:overflow-hidden">
-        <div className="surface-panel flex flex-col rounded-xl p-3 lg:col-span-2 lg:min-h-0 lg:overflow-hidden lg:p-4">
-          <div className="mb-2 flex shrink-0 items-center justify-between">
-            <h3 className="font-display text-base font-bold text-white">
+      <PageStatsRow>
+        <PageStat label="Scheduled" value={queue.length} tone="violet" />
+        <PageStat label="This month" value={daysWithPosts} hint="Days with posts" tone="amber" />
+        <PageStat label="Selected day" value={selectedPosts.length} hint="Posts on this date" />
+        <PageStat label="Default time" value="12:00 PM" tone="emerald" />
+      </PageStatsRow>
+
+      <PageBody className="saas-calendar-shell min-h-0 flex-1 overflow-y-auto lg:overflow-hidden">
+        <ContentCard className="flex min-h-[320px] flex-col lg:min-h-0 lg:overflow-hidden">
+          <div className="mb-3 flex shrink-0 items-center justify-between">
+            <h3 className="font-display text-lg font-bold text-white">
               {MONTHS[month]} <span className="text-slate-500">{year}</span>
             </h3>
             <div className="flex gap-1">
               <button type="button" onClick={prevMonth} className="btn-icon" aria-label="Previous month">
                 ‹
               </button>
-              <button type="button" onClick={() => setCursor(new Date())} className="btn-secondary px-2 py-1 text-[10px]">
+              <button type="button" onClick={() => setCursor(new Date())} className="btn-secondary px-2.5 py-1 text-[10px]">
                 Today
               </button>
               <button type="button" onClick={nextMonth} className="btn-icon" aria-label="Next month">
@@ -76,13 +84,13 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          <div className="mb-1 grid shrink-0 grid-cols-7 gap-1 text-center text-[9px] font-bold uppercase text-slate-500">
+          <div className="mb-2 grid shrink-0 grid-cols-7 gap-1 text-center text-[9px] font-bold uppercase tracking-wider text-slate-500">
             {WEEKDAYS.map((d) => (
               <div key={d}>{d}</div>
             ))}
           </div>
 
-          <div className="grid min-h-0 flex-1 grid-cols-7 gap-1">
+          <div className="saas-calendar-grid">
             {days.map((day, idx) => {
               if (!day) return <div key={`empty-${idx}`} />
 
@@ -97,13 +105,9 @@ export default function CalendarPage() {
                   key={key}
                   type="button"
                   onClick={() => setCursor(day)}
-                  className={`calendar-day flex min-h-[2.75rem] flex-col rounded-lg p-1 text-left transition-all lg:min-h-0 ${
-                    isSelected
-                      ? 'bg-violet-600/25 ring-1 ring-fuchsia-500/50'
-                      : posts.length
-                        ? 'calendar-day-has-post'
-                        : 'hover:bg-white/[0.04]'
-                  } ${isToday ? 'ring-1 ring-fuchsia-400/40' : ''}`}
+                  className={`saas-calendar-day ${
+                    isSelected ? 'saas-calendar-day--selected' : posts.length ? 'calendar-day-has-post' : ''
+                  } ${isToday ? 'saas-calendar-day--today' : ''}`}
                 >
                   <span className={`text-xs font-bold ${isToday ? 'text-fuchsia-400' : 'text-slate-400'}`}>
                     {day.getDate()}
@@ -117,30 +121,26 @@ export default function CalendarPage() {
               )
             })}
           </div>
-        </div>
+        </ContentCard>
 
-        <div className="surface-panel flex flex-col rounded-xl p-3 lg:min-h-0 lg:overflow-hidden lg:p-4">
-          <h3 className="shrink-0 font-display text-sm font-bold text-white">
-            {cursor.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+        <ContentCard className="flex flex-col lg:min-h-0 lg:overflow-hidden">
+          <h3 className="shrink-0 font-display text-base font-bold text-white">
+            {cursor.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
           </h3>
-          <p className="shrink-0 text-[10px] text-slate-500">{selectedPosts.length} post(s)</p>
+          <p className="shrink-0 text-[11px] text-slate-500">{selectedPosts.length} post(s) scheduled</p>
 
-          <ul className="scrollbar-none mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto">
+          <ul className="scrollbar-none mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
             {selectedPosts.length === 0 ? (
-              <li className="rounded-lg border border-dashed border-white/10 py-8 text-center text-xs text-slate-500">
-                No posts this day
+              <li className="rounded-xl border border-dashed border-white/10 py-10 text-center text-xs text-slate-500">
+                No posts on this day
               </li>
             ) : (
               selectedPosts.map((item) => (
                 <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewing(item)}
-                    className="w-full rounded-lg border border-white/[0.07] bg-black/20 p-2.5 text-left transition-colors hover:border-violet-500/30 hover:bg-white/[0.04]"
-                  >
+                  <button type="button" onClick={() => setPreviewing(item)} className="saas-list-item">
                     <PlatformIconGroup platforms={item.platforms} size="xs" />
                     <p className="mt-1.5 line-clamp-2 text-xs text-slate-300">{item.body}</p>
-                    <p className="mt-1 text-[10px] text-violet-300">
+                    <p className="mt-1 text-[10px] font-medium text-violet-300">
                       {formatScheduledISO(item.scheduledAt, item.timezone)}
                     </p>
                   </button>
@@ -148,14 +148,10 @@ export default function CalendarPage() {
               ))
             )}
           </ul>
-        </div>
+        </ContentCard>
       </PageBody>
 
-      <PostPreviewModal
-        open={!!previewing}
-        item={previewing}
-        onClose={() => setPreviewing(null)}
-      />
+      <PostPreviewModal open={!!previewing} item={previewing} onClose={() => setPreviewing(null)} />
     </PageShell>
   )
 }

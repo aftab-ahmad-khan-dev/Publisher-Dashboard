@@ -16,17 +16,16 @@ const ICONS = {
   users: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />,
 }
 
-// Most-used items live in the bar; the rest go in the "More" sheet.
 const PRIMARY = ['/compose', '/calendar', '/scheduled', '/drafts']
 
-function NavIcon({ icon, count }) {
+function NavIcon({ icon, count, active }) {
   return (
-    <span className="relative">
-      <svg className="h-[22px] w-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <span className={`relative flex h-9 w-9 items-center justify-center rounded-xl transition ${active ? 'bg-violet-500/20 text-violet-300' : ''}`}>
+      <svg className="h-[20px] w-[20px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         {ICONS[icon]}
       </svg>
       {count > 0 && (icon === 'drafts' || icon === 'scheduled') && (
-        <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-fuchsia-600 px-1 text-[9px] font-bold text-white">
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-r from-fuchsia-600 to-violet-600 px-1 text-[9px] font-bold text-white ring-2 ring-[#07080f]">
           {count > 9 ? '9+' : count}
         </span>
       )}
@@ -48,19 +47,18 @@ export default function BottomNav() {
 
   return (
     <div className="lg:hidden">
-      {/* Tap-away overlay */}
       {moreOpen && (
         <button
           type="button"
           aria-label="Close menu"
           onClick={() => setMoreOpen(false)}
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
         />
       )}
 
-      {/* Upward dropdown of overflow items */}
       {moreOpen && (
-        <div className="fixed inset-x-3 bottom-[4.75rem] z-50 rounded-2xl border border-white/10 bg-[#0b0d16]/95 p-2 shadow-2xl backdrop-blur-2xl">
+        <div className="saas-mobile-sheet fixed inset-x-3 bottom-[4.85rem] z-50 p-2">
+          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">More</p>
           <div className="grid grid-cols-2 gap-1.5">
             {overflow.map((item) => (
               <NavLink
@@ -69,7 +67,9 @@ export default function BottomNav() {
                 onClick={() => setMoreOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
-                    isActive ? 'bg-violet-500/20 text-white ring-1 ring-violet-500/30' : 'text-slate-300 hover:bg-white/5'
+                    isActive
+                      ? 'bg-violet-500/15 text-white ring-1 ring-violet-500/25'
+                      : 'text-slate-300 hover:bg-white/[0.04]'
                   }`
                 }
               >
@@ -83,33 +83,46 @@ export default function BottomNav() {
         </div>
       )}
 
-      {/* Bottom bar */}
-      <nav className="fixed inset-x-0 bottom-0 z-50 flex h-[4.25rem] items-stretch justify-around border-t border-white/[0.08] bg-[#08090f]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl">
+      <nav className="saas-bottom-nav fixed inset-x-0 bottom-0 z-50 flex h-[4.35rem] items-stretch justify-around pb-[env(safe-area-inset-bottom)]">
         {primary.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             onClick={() => setMoreOpen(false)}
             className={({ isActive }) =>
-              `flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition ${
+              `flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition ${
                 isActive ? 'text-violet-300' : 'text-slate-500'
               }`
             }
           >
-            <NavIcon icon={item.icon} count={counts[item.icon]} />
-            {item.label}
+            {({ isActive }) => (
+              <>
+                <NavIcon icon={item.icon} count={counts[item.icon]} active={isActive} />
+                {item.label}
+              </>
+            )}
           </NavLink>
         ))}
         <button
           type="button"
           onClick={() => setMoreOpen((o) => !o)}
-          className={`flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition ${
+          className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition ${
             moreOpen || moreActive ? 'text-violet-300' : 'text-slate-500'
           }`}
         >
-          <svg className="h-[22px] w-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-            <path strokeLinecap="round" strokeLinejoin="round" d={moreOpen ? 'M6 18 18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} />
-          </svg>
+          <span
+            className={`flex h-9 w-9 items-center justify-center rounded-xl ${
+              moreOpen || moreActive ? 'bg-violet-500/20' : ''
+            }`}
+          >
+            <svg className="h-[20px] w-[20px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d={moreOpen ? 'M6 18 18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'}
+              />
+            </svg>
+          </span>
           More
         </button>
       </nav>

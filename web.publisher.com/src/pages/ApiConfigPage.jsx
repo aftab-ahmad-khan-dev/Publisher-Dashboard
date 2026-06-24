@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAppData } from "../contexts/AppDataContext";
 import PageHeader from "../components/PageHeader";
-import PageShell, { PageScroll } from "../components/PageShell";
+import PageShell, { PageScroll, PageStatsRow, PageStat } from "../components/PageShell";
 import PlatformIcon, { MetaSuiteIcons } from "../components/PlatformIcon";
 import { getConnectionSummary } from "../lib/connections";
 import { isLivePublishing } from "../lib/api";
@@ -396,8 +396,8 @@ export default function ApiConfigPage() {
   return (
     <PageShell>
       <PageHeader
-        title='API Configuration'
-        subtitle='Meta · LinkedIn · Reddit · Gmail'
+        title="Integrations"
+        subtitle="Connect platforms · manage credentials · test publishing"
         action={
           <div className='flex items-center gap-2'>
             <button
@@ -407,20 +407,27 @@ export default function ApiConfigPage() {
             >
               Save configuration
             </button>
-            <span className='rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-slate-400'>
+            <span className='saas-status-pill saas-status-pill--live hidden sm:inline-flex'>
               {summary.connectedCount}/5 ready
-              {syncing ? " · syncing…" : ""}
+              {syncing ? ' · syncing…' : ''}
             </span>
           </div>
         }
       />
+
+      <PageStatsRow>
+        <PageStat label="Connected" value={`${summary.connectedCount}/5`} tone="emerald" />
+        <PageStat label="Meta" value={summary.metaReady ? 'Live' : 'Setup'} tone={summary.metaReady ? 'emerald' : 'default'} />
+        <PageStat label="LinkedIn" value={summary.linkedInPublish ? 'Live' : 'Setup'} tone={summary.linkedInPublish ? 'violet' : 'default'} />
+        <PageStat label="Gmail" value={summary.gmailReady ? 'Live' : 'Off'} tone={summary.gmailReady ? 'amber' : 'default'} />
+      </PageStatsRow>
 
       <PageScroll>
         <div className='mx-auto space-y-3 pb-2'>
           <form id={FORM_ID} onSubmit={handleSave} className='space-y-3'>
             <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
               <div className='flex min-h-full flex-col gap-3'>
-                <section className='surface-panel flex min-h-[320px] flex-1 flex-col rounded-xl p-4'>
+                <section className='saas-content-card flex min-h-[320px] flex-1 flex-col rounded-xl p-4'>
                   <div className='flex items-center justify-between gap-3'>
                     <div className='flex items-center gap-3'>
                       <MetaSuiteIcons size='lg' />
@@ -484,7 +491,7 @@ export default function ApiConfigPage() {
               </div>
 
               <div className='flex min-h-full flex-col gap-3'>
-                <section className='surface-panel flex min-h-[320px] flex-1 flex-col rounded-xl p-4'>
+                <section className='saas-content-card flex min-h-[320px] flex-1 flex-col rounded-xl p-4'>
                   <div className='flex items-center justify-between gap-3'>
                     <div className='flex items-center gap-3'>
                       <PlatformIcon platform='linkedin' size='lg' />
@@ -606,7 +613,7 @@ export default function ApiConfigPage() {
 
             <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
               <div className='flex min-h-full flex-col gap-3'>
-                <section className='surface-panel flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
+                <section className='saas-content-card flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
                   <div className='flex items-center justify-between gap-3'>
                     <div className='flex items-center gap-3'>
                       <PlatformIcon platform='reddit' size='lg' />
@@ -715,7 +722,7 @@ export default function ApiConfigPage() {
               </div>
 
               <div className='flex min-h-full flex-col gap-3'>
-                <section className='surface-panel flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
+                <section className='saas-content-card flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
                   <div className='flex flex-wrap items-start justify-between gap-3'>
                     <div className='flex items-center gap-3'>
                       <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EA4335] text-lg font-bold text-white'>
@@ -796,7 +803,7 @@ export default function ApiConfigPage() {
             <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
               {/* Pinterest */}
               <div className='flex min-h-full flex-col gap-3'>
-                <section className='surface-panel flex min-h-[240px] flex-1 flex-col rounded-xl p-4'>
+                <section className='saas-content-card flex min-h-[240px] flex-1 flex-col rounded-xl p-4'>
                   <div className='flex items-center justify-between gap-3'>
                     <div className='flex items-center gap-3'>
                       <PlatformIcon platform='pinterest' size='lg' />
@@ -863,7 +870,7 @@ export default function ApiConfigPage() {
 
               {/* Threads */}
               <div className='flex min-h-full flex-col gap-3'>
-                <section className='surface-panel flex min-h-[240px] flex-1 flex-col rounded-xl p-4'>
+                <section className='saas-content-card flex min-h-[240px] flex-1 flex-col rounded-xl p-4'>
                   <div className='flex items-center justify-between gap-3'>
                     <div className='flex items-center gap-3'>
                       <PlatformIcon platform='threads' size='lg' />
@@ -929,7 +936,7 @@ export default function ApiConfigPage() {
               </div>
             </div>
 
-            <section className='surface-panel rounded-xl p-4'>
+            <section className='saas-content-card rounded-xl p-4'>
               <h3 className='text-sm font-semibold text-white'>Webhooks</h3>
               <div className='mt-3 space-y-2'>
                 <Field
@@ -963,7 +970,7 @@ export default function ApiConfigPage() {
               </div>
             </section>
 
-            <section className='surface-panel rounded-xl p-4'>
+            <section className='saas-content-card rounded-xl p-4'>
               <h3 className='text-sm font-semibold text-white'>Scheduling defaults</h3>
               <p className='mt-1 text-[11px] text-slate-500'>
                 Default time of day used for the next open slot and bulk uploads.
