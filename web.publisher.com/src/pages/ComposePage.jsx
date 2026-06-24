@@ -30,24 +30,7 @@ export default function ComposePage() {
   }, [location.state?.draftId])
 
   const handleScheduleSuccess = (updatedQueue) => {
-    post.resetComposer()
-    post.setScheduledAt(getNextScheduleSlot(updatedQueue ?? app.queue, app.apiConfig?.defaults?.scheduleTime))
-  }
-
-  const handlePublishNow = async (state) => {
-    const result = await app.publishNow(state)
-    if (result?.ok) {
-      post.resetComposer()
-      post.setScheduledAt(getNextScheduleSlot(app.queue, app.apiConfig?.defaults?.scheduleTime))
-    }
-  }
-
-  const handleSchedulePost = async (state) => {
-    const result = await app.schedulePost(state)
-    if (result?.ok) {
-      handleScheduleSuccess(result.queue)
-    }
-    return result
+    post.setScheduledAt(getNextScheduleSlot(updatedQueue, app.apiConfig?.defaults?.scheduleTime))
   }
 
   const handleSaveDraft = async () => {
@@ -100,8 +83,8 @@ export default function ComposePage() {
       )}
 
       <PageBody className="flex min-h-0 flex-1 flex-col gap-2 lg:flex-row lg:gap-3">
-        <PageScroll className="min-w-0 lg:w-[58%]">
-          <div className="surface-panel h-full min-w-0 overflow-hidden rounded-xl p-3 sm:p-4">
+        <PageScroll className="lg:w-[58%]">
+          <div className="surface-panel h-full rounded-xl p-3 sm:p-4">
             <ComposerPanel
               state={post.state}
               setBody={post.setBody}
@@ -119,9 +102,9 @@ export default function ComposePage() {
               hashtagCounts={post.hashtagCounts}
               getFullLength={post.getFullLength}
               publishStatus={app.publishStatus}
-              publishNow={handlePublishNow}
-              schedulePost={handleSchedulePost}
-              onScheduleSuccess={undefined}
+              publishNow={app.publishNow}
+              schedulePost={app.schedulePost}
+              onScheduleSuccess={handleScheduleSuccess}
               onSaveDraft={handleSaveDraft}
               editingDraftId={post.editingDraftId}
               draftSaving={draftSaving}

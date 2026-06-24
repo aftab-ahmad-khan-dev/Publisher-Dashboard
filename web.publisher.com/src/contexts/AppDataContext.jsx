@@ -487,23 +487,23 @@ export function AppDataProvider({ children }) {
 
       if (enabled.length === 0) {
         showToast('Enable at least one platform to publish.', 'error')
-        return { ok: false }
+        return
       }
       if (!postState.body.trim() && !isPollEnabled(postState)) {
         showToast('Write something before publishing.', 'error')
-        return { ok: false }
+        return
       }
 
       const pollCheck = validatePollClient(postState)
       if (!pollCheck.ok) {
         showToast(pollCheck.error, 'error')
-        return { ok: false }
+        return
       }
 
       const communityCheck = validateCommunityPublish(postState.body, enabled, postState)
       if (!communityCheck.ok) {
         showToast(communityCheck.error, 'error')
-        return { ok: false }
+        return
       }
 
       setPublishStatus('loading')
@@ -512,7 +512,7 @@ export function AppDataProvider({ children }) {
       if (!result.ok) {
         setPublishStatus('idle')
         showToast(result.error, 'error')
-        return { ok: false, error: result.error }
+        return
       }
 
       const platformNames = enabled.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')
@@ -523,7 +523,7 @@ export function AppDataProvider({ children }) {
           `Demo only — nothing was posted to ${platformNames}. Set VITE_API_BASE_URL.`,
           'error',
         )
-        return { ok: false, simulated: true }
+        return
       }
 
       if (result.warnings?.length) {
@@ -560,7 +560,6 @@ export function AppDataProvider({ children }) {
       await refreshFromServer()
       setPublishStatus('success')
       setTimeout(() => setPublishStatus('idle'), 2500)
-      return { ok: true, platforms: enabled, id: result.id }
     },
     [apiConfig, showToast, refreshFromServer],
   )
