@@ -125,9 +125,15 @@ dist
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
+#Emv
+.env.development
+.env.example
+.env.local
+.env.production.example
+.env.dev
+.env
 # pnpm
 .pnpm-store
-
 # yarn v3
 .pnp.*
 .yarn/*
