@@ -203,6 +203,9 @@ export function assignImagesToPosts(posts, imageMap) {
 
 export { computeScheduleDate } from './scheduleUtils'
 
+/** Max decoded image size for publish/upload (under Express 15 MB JSON cap). */
+export const PUBLISH_IMAGE_MAX_BYTES = 14_000_000
+
 export function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -212,66 +215,90 @@ export function fileToDataUrl(file) {
   })
 }
 
-async function renderCompressedJpeg(file, maxWidth, quality) {
-  const bitmap = await createImageBitmap(file)
-  const scale = Math.min(1, maxWidth / bitmap.width)
-  const w = Math.round(bitmap.width * scale)
-  const h = Math.round(bitmap.height * scale)
+function estimateDataUrlBytes(dataUrl) {
+  const b64 = String(dataUrl).split(',')[1] || ''
+  return Math.ceil((b64.length * 3) / 4)
+}
+
+function encodeCanvas(bitmap, width, height, mimeType, quality = 0.98) {
   const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
+  canvas.width = width
+  canvas.height = height
   const ctx = canvas.getContext('2d')
-  ctx.drawImage(bitmap, 0, 0, w, h)
-  bitmap.close()
+  ctx.drawImage(bitmap, 0, 0, width, height)
+  if (mimeType === 'image/png') return canvas.toDataURL('image/png')
+  if (mimeType === 'image/webp') return canvas.toDataURL('image/webp', quality)
   return canvas.toDataURL('image/jpeg', quality)
 }
 
-/** Resize/compress for single-post publish. */
-export async function compressImageFile(file, maxWidth = 4096, quality = 0.92) {
-  if (!file.type.startsWith('image/')) return fileToDataUrl(file)
-  if (file.size <= 10_000_000) return fileToDataUrl(file)
-  return renderCompressedJpeg(file, maxWidth, quality)
-}
-
-/** Smaller payload for bulk metadata-only requests (legacy fallback). */
-export async function compressImageFileForBulk(file, maxBytes = 160_000) {
-  if (!file.type.startsWith('image/')) return fileToDataUrl(file)
-
-  let maxWidth = 900
-  let quality = 0.72
-
-  for (let attempt = 0; attempt < 7; attempt++) {
-    const dataUrl = await renderCompressedJpeg(file, maxWidth, quality)
-    const b64 = dataUrl.split(',')[1] || ''
-    const approxBytes = (b64.length * 3) / 4
-    if (approxBytes <= maxBytes) return dataUrl
-    quality = Math.max(0.48, quality - 0.06)
-    maxWidth = Math.round(maxWidth * 0.86)
-  }
-
-  return renderCompressedJpeg(file, 640, 0.5)
-}
-
 /**
- * Upload / schedule compression. Keeps original dimensions when the file is
- * under the byte cap (full-quality publish). Only downscales when necessary.
+ * Prepare an image for publishing: original bytes when under the cap; otherwise
+ * re-encode at full resolution first (high quality), shrinking only as a last resort.
  */
-export async function compressImageFileForUpload(file, maxBytes = 10_000_000) {
-  if (!file.type.startsWith('image/')) return fileToDataUrl(file)
+export async function prepareImageForPublish(
+  file,
+  maxBytes = PUBLISH_IMAGE_MAX_BYTES,
+) {
+  if (!file?.type?.startsWith('image/')) return fileToDataUrl(file)
 
+  // Keep exact file bytes (dimensions + format) when within the upload limit.
   if (file.size <= maxBytes) return fileToDataUrl(file)
 
-  let maxWidth = 4096
-  let quality = 0.92
+  const bitmap = await createImageBitmap(file)
+  const srcW = bitmap.width
+  const srcH = bitmap.height
+  const preferPng = file.type === 'image/png'
+  const preferWebp = file.type === 'image/webp'
 
-  for (let attempt = 0; attempt < 12; attempt++) {
-    const dataUrl = await renderCompressedJpeg(file, maxWidth, quality)
-    const b64 = dataUrl.split(',')[1] || ''
-    const approxBytes = (b64.length * 3) / 4
-    if (approxBytes <= maxBytes) return dataUrl
-    quality = Math.max(0.5, quality - 0.04)
-    maxWidth = Math.round(maxWidth * 0.9)
+  let quality = 0.98
+  let width = srcW
+
+  try {
+    for (let attempt = 0; attempt < 24; attempt++) {
+      const height = Math.max(1, Math.round(srcH * (width / srcW)))
+
+      if (width === srcW && preferPng) {
+        const png = encodeCanvas(bitmap, width, height, 'image/png')
+        if (estimateDataUrlBytes(png) <= maxBytes) return png
+      }
+      if (width === srcW && preferWebp) {
+        const webp = encodeCanvas(bitmap, width, height, 'image/webp', quality)
+        if (estimateDataUrlBytes(webp) <= maxBytes) return webp
+      }
+
+      const jpeg = encodeCanvas(bitmap, width, height, 'image/jpeg', quality)
+      if (estimateDataUrlBytes(jpeg) <= maxBytes) return jpeg
+
+      if (quality > 0.84) {
+        quality -= 0.02
+      } else {
+        width = Math.max(1440, Math.round(width * 0.94))
+        quality = 0.96
+      }
+    }
+
+    const height = Math.max(1, Math.round(srcH * (width / srcW)))
+    return encodeCanvas(bitmap, width, height, 'image/jpeg', 0.88)
+  } finally {
+    bitmap.close()
   }
+}
 
-  return renderCompressedJpeg(file, 2560, 0.72)
+/** @deprecated Use prepareImageForPublish */
+export async function compressImageFile(file) {
+  return prepareImageForPublish(file)
+}
+
+/** Smaller payload for legacy metadata-only requests. */
+export async function compressImageFileForBulk(file, maxBytes = 160_000) {
+  if (!file.type.startsWith('image/')) return fileToDataUrl(file)
+  return prepareImageForPublish(file, maxBytes)
+}
+
+/** Upload / schedule — preserves original size when the file fits under the cap. */
+export async function compressImageFileForUpload(
+  file,
+  maxBytes = PUBLISH_IMAGE_MAX_BYTES,
+) {
+  return prepareImageForPublish(file, maxBytes)
 }

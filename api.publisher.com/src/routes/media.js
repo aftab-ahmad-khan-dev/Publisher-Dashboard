@@ -26,7 +26,7 @@ router.post('/media/upload', async (req, res, next) => {
       return res.status(400).json({ ok: false, error: 'Empty image data.' })
     }
 
-    const MAX_BYTES = 10 * 1024 * 1024
+    const MAX_BYTES = 14 * 1024 * 1024
     if (buffer.length > MAX_BYTES) {
       return res.status(413).json({
         ok: false,
