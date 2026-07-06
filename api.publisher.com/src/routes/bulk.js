@@ -73,7 +73,7 @@ router.post('/bulk/schedule', async (req, res, next) => {
         imageMediaId: post.imageMediaId || null,
         imageUrl: post.imageUrl || mediaPublicUrl(post.imageMediaId) || null,
         imageDataUrl: post.imageDataUrl || null,
-        imagePreview: post.imagePreview || post.imageUrl || null,
+        imagePreview: post.imageDataUrl || post.imagePreview || post.imageUrl || null,
         imageMeta: post.imageMeta || null,
         imageVisibility: post.imageVisibility || undefined,
         cropHint: post.cropHint || undefined,
@@ -91,15 +91,37 @@ router.post('/bulk/schedule', async (req, res, next) => {
         }
       }
 
-      const doc = await ScheduledPost.create({
-        workspaceId: req.workspaceId,
-        body: body || '',
-        platforms,
-        scheduledAt: scheduled,
-        timezone: timezone || 'UTC',
-        status: 'scheduled',
-        postState,
-      })
+      const existing = post.postNum
+        ? await ScheduledPost.findOne({
+            workspaceId: req.workspaceId,
+            status: { $in: ['scheduled', 'failed'] },
+            'postState.bulkPostNum': post.postNum,
+          })
+        : null
+
+      let doc
+      if (existing) {
+        existing.body = body || ''
+        existing.platforms = platforms
+        existing.scheduledAt = scheduled
+        existing.timezone = timezone || 'UTC'
+        existing.status = 'scheduled'
+        existing.error = undefined
+        existing.postState = postState
+        existing.markModified('postState')
+        await existing.save()
+        doc = existing
+      } else {
+        doc = await ScheduledPost.create({
+          workspaceId: req.workspaceId,
+          body: body || '',
+          platforms,
+          scheduledAt: scheduled,
+          timezone: timezone || 'UTC',
+          status: 'scheduled',
+          postState,
+        })
+      }
 
       created.push({
         id: doc._id.toString(),

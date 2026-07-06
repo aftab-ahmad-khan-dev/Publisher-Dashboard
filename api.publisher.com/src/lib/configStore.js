@@ -142,7 +142,11 @@ export function envDefaults() {
       clientId: process.env.LINKEDIN_CLIENT_ID?.trim() || '',
       clientSecret: process.env.LINKEDIN_CLIENT_SECRET?.trim() || '',
       orgUrn: process.env.LINKEDIN_ORG_URN?.trim() || '',
-      accessToken: process.env.LINKEDIN_ACCESS_TOKEN?.trim() || '',
+      accessToken:
+        process.env.LINKEDIN_ACCESS_TOKEN?.trim() ||
+        process.env.LINKEDIN_TOKEN?.trim() ||
+        process.env.LinkedIn_Token?.trim() ||
+        '',
       refreshToken: '',
       tokenExpiresAt: null,
     },

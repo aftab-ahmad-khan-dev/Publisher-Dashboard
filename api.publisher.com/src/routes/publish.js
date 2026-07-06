@@ -10,6 +10,7 @@ import {
   saveQuoraConfig,
   savePinterestConfig,
   saveThreadsConfig,
+  stripPlaceholderSecrets,
 } from "../lib/configStore.js";
 import { refreshLinkedInTokenIfNeeded } from "../lib/linkedinOAuth.js";
 import {
@@ -122,7 +123,7 @@ router.post("/connections/threads/test", async (req, res, next) => {
 router.post("/connections/linkedin/test", async (req, res, next) => {
   try {
     if (req.body?.linkedin) {
-      await saveLinkedInConfig(req.workspaceId, req.body.linkedin);
+      await saveLinkedInConfig(req.workspaceId, stripPlaceholderSecrets(req.body.linkedin));
     }
     let config = await getWorkspaceConfig(req.workspaceId);
     config = await refreshLinkedInTokenIfNeeded(req.workspaceId);
@@ -130,7 +131,7 @@ router.post("/connections/linkedin/test", async (req, res, next) => {
       return res.status(400).json({
         ok: false,
         error:
-          "Client ID and Client Secret are required (Org URN is optional for profile posts).",
+          "LinkedIn Client ID is required. Add Client Secret for OAuth, or paste an Access Token.",
       });
     }
     const result = await testLinkedInConnection(config.linkedin);

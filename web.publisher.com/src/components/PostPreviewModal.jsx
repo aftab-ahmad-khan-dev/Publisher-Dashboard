@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Modal from './Modal'
 import PlatformIcon from './PlatformIcon'
 import { PLATFORM_META } from '../lib/constants'
+import { useScheduledImageUrl, ScheduledImagePlaceholder } from '../lib/scheduledImage.jsx'
 import InstagramPreview from './InstagramPreview'
 import FacebookPreview from './FacebookPreview'
 import LinkedInPreview from './LinkedInPreview'
@@ -19,17 +20,21 @@ function hashtagString(hashtags, platform) {
     .join(' ')
 }
 
-function renderPreview(platform, item) {
+function renderPreview(platform, item, imagePreviewUrl, imageMissing) {
   const body = item.body || ''
-  const image = item.imagePreview || item.imagePreviewUrl || null
   const imageType = item.imageType || 'image'
   const cropHint = item.cropHint || 'square'
   const common = { enabled: true, body, defaultCollapsed: false }
+
+  if (imageMissing && !imagePreviewUrl) {
+    return <ScheduledImagePlaceholder />
+  }
+
   const withImage = {
     ...common,
-    imagePreviewUrl: image,
+    imagePreviewUrl,
     imageType,
-    showImage: !!image,
+    showImage: !!imagePreviewUrl,
     cropHint,
   }
 
@@ -43,7 +48,7 @@ function renderPreview(platform, item) {
     case 'reddit':
       return <RedditPreview {...common} />
     case 'pinterest':
-      return <PinterestPreview {...common} imagePreviewUrl={image} />
+      return <PinterestPreview {...common} imagePreviewUrl={imagePreviewUrl} />
     case 'threads':
       return <ThreadsPreview {...common} />
     case 'quora':
@@ -61,6 +66,7 @@ export default function PostPreviewModal({ open, item, onClose }) {
   const platforms = Array.isArray(item?.platforms) ? item.platforms : []
   const [selected, setSelected] = useState(platforms[0] || 'instagram')
   const [menuOpen, setMenuOpen] = useState(false)
+  const { url: imagePreviewUrl, missing: imageMissing } = useScheduledImageUrl(open ? item : null)
   // Re-seed the selected platform whenever a different post is opened.
   const [seededId, setSeededId] = useState(null)
 
@@ -133,7 +139,9 @@ export default function PostPreviewModal({ open, item, onClose }) {
           </div>
 
           {/* Selected platform preview */}
-          <div key={selected}>{item && renderPreview(selected, item)}</div>
+          <div key={selected}>
+            {item && renderPreview(selected, item, imagePreviewUrl, imageMissing)}
+          </div>
         </div>
       )}
     </Modal>

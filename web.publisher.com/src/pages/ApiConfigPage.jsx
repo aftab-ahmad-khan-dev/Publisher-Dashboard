@@ -19,13 +19,13 @@ import {
   metaPayloadForSave,
   redditPayloadForSave,
   quoraPayloadForSave,
-  pinterestPayloadForSave,
   threadsPayloadForSave,
   gmailPayloadForSave,
 } from "../lib/configUtils";
 import { STORAGE_KEYS, readJsonStorage, writeJsonStorage } from "../lib/storage";
 
 const FORM_ID = "api-config-form";
+const INTEGRATION_TEST_PLATFORMS = ["meta", "linkedin", "reddit", "threads", "gmail"];
 
 export default function ApiConfigPage() {
   const {
@@ -35,7 +35,6 @@ export default function ApiConfigPage() {
     saveMetaConfig,
     saveRedditConfig,
     saveQuoraConfig,
-    savePinterestConfig,
     saveThreadsConfig,
     saveDefaultsConfig,
     saveGmailConfig,
@@ -48,6 +47,7 @@ export default function ApiConfigPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [form, setForm] = useState(apiConfig);
   const [testing, setTesting] = useState(null);
+  const [testingAll, setTestingAll] = useState(false);
   const [linkedInSave, setLinkedInSave] = useState("idle");
   const [metaSave, setMetaSave] = useState("idle");
   const [lastTest, setLastTest] = useState({
@@ -226,15 +226,11 @@ export default function ApiConfigPage() {
   const redditTimer = useRef(null);
   const quoraTimer = useRef(null);
 
-  const testConnection = async (platform) => {
-    setTesting(platform);
-    const result = await testPlatformConnection(platform, form);
-    setTesting(null);
+  const applyTestResult = (platform, result) => {
     const status =
       result.ok === false ? "error" : result.needsToken ? "needsToken" : "ok";
     setLastTest((t) => {
       const next = { ...t, [platform]: status };
-      // Persist every platform's status so it auto-restores next visit (no re-test).
       writeJsonStorage(STORAGE_KEYS.platformTestStatus, next);
       if (platform === "gmail")
         writeJsonStorage(STORAGE_KEYS.gmailTestStatus, status);
@@ -242,6 +238,44 @@ export default function ApiConfigPage() {
         writeJsonStorage(STORAGE_KEYS.redditTestStatus, status);
       return next;
     });
+    return status;
+  };
+
+  const testConnection = async (platform) => {
+    setTesting(platform);
+    const result = await testPlatformConnection(platform, form);
+    applyTestResult(platform, result);
+    setTesting(null);
+    return result;
+  };
+
+  const testAllConfigurations = async () => {
+    setTestingAll(true);
+    let passed = 0;
+    let needsToken = 0;
+    let failed = 0;
+
+    for (const platform of INTEGRATION_TEST_PLATFORMS) {
+      setTesting(platform);
+      const result = await testPlatformConnection(platform, form, { quiet: true });
+      const status = applyTestResult(platform, result);
+      if (status === "ok") passed += 1;
+      else if (status === "needsToken") needsToken += 1;
+      else failed += 1;
+    }
+
+    setTesting(null);
+    setTestingAll(false);
+    await refreshFromServer();
+
+    const parts = [`${passed} verified`];
+    if (needsToken) parts.push(`${needsToken} need OAuth`);
+    if (failed) parts.push(`${failed} failed`);
+
+    showToast(
+      `Test complete — ${parts.join(", ")}`,
+      failed || needsToken ? "error" : "success",
+    );
   };
 
   const persistReddit = useCallback(
@@ -298,7 +332,6 @@ export default function ApiConfigPage() {
     lastTest.linkedin,
   );
   const redditStatus = getPlatformStatus("reddit", form, summary, lastTest.reddit);
-  const pinterestStatus = getPlatformStatus("pinterest", form, summary, lastTest.pinterest);
   const threadsStatus = getPlatformStatus("threads", form, summary, lastTest.threads);
   const gmailStatus = getPlatformStatus("gmail", form, summary, lastTest.gmail);
 
@@ -401,6 +434,18 @@ export default function ApiConfigPage() {
         action={
           <div className='flex items-center gap-2'>
             <button
+              type='button'
+              onClick={testAllConfigurations}
+              disabled={testingAll || Boolean(testing)}
+              className='btn-secondary py-2 text-sm'
+            >
+              {testingAll
+                ? testing
+                  ? `Testing ${testing}…`
+                  : "Testing…"
+                : "Test configuration"}
+            </button>
+            <button
               type='submit'
               form={FORM_ID}
               className='btn-primary py-2 text-sm'
@@ -409,7 +454,7 @@ export default function ApiConfigPage() {
             </button>
             <span className='saas-status-pill saas-status-pill--live hidden sm:inline-flex'>
               {summary.connectedCount}/5 ready
-              {syncing ? ' · syncing…' : ''}
+              {syncing || testingAll ? " · syncing…" : ""}
             </span>
           </div>
         }
@@ -801,73 +846,6 @@ export default function ApiConfigPage() {
             </div>
 
             <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
-              {/* Pinterest */}
-              <div className='flex min-h-full flex-col gap-3'>
-                <section className='saas-content-card flex min-h-[240px] flex-1 flex-col rounded-xl p-4'>
-                  <div className='flex items-center justify-between gap-3'>
-                    <div className='flex items-center gap-3'>
-                      <PlatformIcon platform='pinterest' size='lg' />
-                      <div>
-                        <h3 className='text-sm font-semibold text-white'>Pinterest</h3>
-                        <p className='text-[10px] text-slate-500'>
-                          Image Pins · access token + board
-                        </p>
-                      </div>
-                    </div>
-                    <StatusDot
-                      connected={summary.pinterestReady}
-                      label={summary.pinterestReady ? "Ready" : "Setup"}
-                    />
-                  </div>
-                  <div className='mt-3 grid gap-2 sm:grid-cols-2'>
-                    <SecretField
-                      label='Access Token'
-                      value={form.pinterest?.accessToken || ""}
-                      hasStored={form.pinterest?.hasAccessToken}
-                      onChange={(v) => update("pinterest", "accessToken", v)}
-                      className='sm:col-span-2'
-                      help='https://developers.pinterest.com/apps/'
-                    />
-                    <Field
-                      label='Board ID'
-                      value={form.pinterest?.boardId || ""}
-                      onChange={(v) => update("pinterest", "boardId", v)}
-                      help='https://www.pinterest.com/'
-                      placeholder='Board to pin to'
-                      className='sm:col-span-2'
-                    />
-                  </div>
-                  <p className='mt-2 text-[11px] leading-relaxed text-slate-500'>
-                    Generate a token at{" "}
-                    <a href='https://developers.pinterest.com/apps/' target='_blank' rel='noreferrer' className='text-violet-300 underline'>
-                      developers.pinterest.com
-                    </a>
-                    . Pins require an attached image.
-                  </p>
-                  <div className='flex-1' aria-hidden />
-                  <div className='mt-auto flex flex-wrap gap-2 pt-3'>
-                    <button
-                      type='button'
-                      onClick={() => testConnection("pinterest")}
-                      disabled={testing === "pinterest"}
-                      className='btn-secondary px-3 py-1.5 text-xs'
-                    >
-                      {testing === "pinterest" ? "Testing…" : "Test & save Pinterest"}
-                    </button>
-                    {live && (
-                      <button
-                        type='button'
-                        onClick={() => savePinterestConfig(pinterestPayloadForSave(form.pinterest))}
-                        className='btn-secondary px-3 py-1.5 text-xs'
-                      >
-                        Save Pinterest now
-                      </button>
-                    )}
-                  </div>
-                </section>
-                <PlatformStatusCard status={pinterestStatus} platform='pinterest' />
-              </div>
-
               {/* Threads */}
               <div className='flex min-h-full flex-col gap-3'>
                 <section className='saas-content-card flex min-h-[240px] flex-1 flex-col rounded-xl p-4'>
@@ -1176,31 +1154,6 @@ function getPlatformStatus(platform, form, summary, lastTest) {
         lastTest === "ok"
           ? "Quora profile saved. Publish copies expertise-style answers for you to paste — avoid promotional language."
           : "Profile saved. Run “Test & save Quora” to confirm.",
-    });
-  }
-
-  if (platform === "pinterest") {
-    if (lastTest === "error") {
-      return withAlive({
-        tier: "error",
-        title: "Pinterest connection failed",
-        message: "Check your access token and Board ID, then test again.",
-      });
-    }
-    if (!summary.pinterestReady) {
-      return withAlive({
-        tier: "idle",
-        title: "Not connected",
-        message: "Add a Pinterest access token and Board ID, then Test & save.",
-      });
-    }
-    return withAlive({
-      tier: lastTest === "ok" ? "functional" : "connected",
-      title: lastTest === "ok" ? "Connected & functional" : "Connected",
-      message:
-        lastTest === "ok"
-          ? "Pinterest API verified. Pins publish to your board (image required)."
-          : "Credentials saved. Run “Test & save Pinterest” to verify.",
     });
   }
 

@@ -176,7 +176,7 @@ async function prepareImageForBackend(file, { live, reportProgress, step = 1, to
     fileName: file.name,
   })
 
-  return { image: file, imageMediaId: up.id, imageUrl: up.url }
+  return { image: file, imageMediaId: up.id, imageUrl: up.url, imageDataUrl: compressed }
 }
 
 /**
@@ -479,7 +479,7 @@ export function AppDataProvider({ children }) {
   )
 
   const testPlatformConnection = useCallback(
-    async (platform, config) => {
+    async (platform, config, { quiet = false } = {}) => {
       const result =
         platform === 'meta'
           ? await testMetaConnection(config.meta)
@@ -497,7 +497,7 @@ export function AppDataProvider({ children }) {
 
       if (result.ok) {
         if (platform === 'linkedin') {
-          await saveLinkedInConfig(config.linkedin)
+          await saveLinkedInConfig(linkedinPayloadForSave(config.linkedin))
         } else if (platform === 'reddit') {
           await saveRedditConfig(config.reddit)
         } else if (platform === 'quora') {
@@ -512,11 +512,13 @@ export function AppDataProvider({ children }) {
           await saveMetaConfig(config.meta)
         }
         if (result.saved) await refreshFromServer()
-        showToast(
-          result.message || `${platform} saved & verified`,
-          result.needsToken ? 'error' : 'success',
-        )
-      } else {
+        if (!quiet) {
+          showToast(
+            result.message || `${platform} saved & verified`,
+            result.needsToken ? 'error' : 'success',
+          )
+        }
+      } else if (!quiet) {
         showToast(result.error, 'error')
       }
       return result
@@ -1012,7 +1014,7 @@ export function AppDataProvider({ children }) {
           body: sanitizePublishedText(post.body),
           imageMediaId,
           imageUrl,
-          imageDataUrl: live ? null : imageDataUrl,
+          imageDataUrl,
           imageMeta: post.imageFile
             ? { name: post.imageFile.name, type: post.imageFile.type }
             : null,

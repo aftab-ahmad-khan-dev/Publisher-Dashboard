@@ -25,7 +25,19 @@ export async function hydratePostStateMedia(postState) {
   if (!id) return postState
 
   const media = await Media.findById(id)
-  if (!media?.data?.length) return postState
+  if (!media?.data?.length) {
+    // Media may have expired or been removed — fall back to inline imageDataUrl.
+    const inline = postState.imageDataUrl
+    if (inline?.startsWith('data:image/')) {
+      return {
+        ...postState,
+        imageUrl: postState.imageUrl && !postState.imageUrl.includes('/api/media/')
+          ? postState.imageUrl
+          : mediaPublicUrl(id),
+      }
+    }
+    return postState
+  }
 
   const contentType = media.contentType || 'image/jpeg'
   const b64 = Buffer.from(media.data).toString('base64')

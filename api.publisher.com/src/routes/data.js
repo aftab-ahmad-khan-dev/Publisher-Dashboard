@@ -17,6 +17,9 @@ import {
   stripPlaceholderSecrets,
 } from '../lib/configStore.js'
 import { consolidateUserWorkspacesOnce } from '../lib/workspaceMigration.js'
+import { planMissedPostReschedule } from '../lib/rescheduleMissed.js'
+import { DEFAULT_SCHEDULE_HOUR, DEFAULT_SCHEDULE_MINUTE } from '../lib/scheduleConstants.js'
+import { hydratePostStateMedia } from '../lib/mediaResolve.js'
 
 const router = Router()
 
@@ -246,6 +249,56 @@ router.put('/scheduled/:id', async (req, res, next) => {
   }
 })
 
+router.get('/scheduled/:id/image', async (req, res, next) => {
+  try {
+    const doc = await ScheduledPost.findOne({
+      _id: req.params.id,
+      workspaceId: req.workspaceId,
+    })
+    if (!doc) return res.status(404).end()
+
+    const hydrated = await hydratePostStateMedia(doc.postState || {})
+    const dataUrl = hydrated.imageDataUrl
+    if (!dataUrl?.startsWith('data:image/')) return res.status(404).end()
+
+    const [meta, b64] = dataUrl.split(',')
+    const contentType = /data:(.*?);/.exec(meta)?.[1] || 'image/jpeg'
+    res.set('Content-Type', contentType)
+    res.set('Cache-Control', 'private, max-age=300')
+    return res.send(Buffer.from(b64 || '', 'base64'))
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/scheduled/reschedule-missed', async (req, res, next) => {
+  try {
+    const { startDate, fromToday = true } = req.body || {}
+    const config = await getWorkspaceConfig(req.workspaceId)
+    const scheduleTime =
+      config.defaults?.scheduleTime || `${DEFAULT_SCHEDULE_HOUR}:${DEFAULT_SCHEDULE_MINUTE}`
+
+    const docs = await ScheduledPost.find({
+      workspaceId: req.workspaceId,
+      status: { $in: ['scheduled', 'failed'] },
+    })
+
+    const plan = planMissedPostReschedule(docs, { startDate, scheduleTime, fromToday })
+    let rescheduled = 0
+    for (const { doc, scheduledAt } of plan) {
+      doc.status = 'scheduled'
+      doc.error = undefined
+      doc.scheduledAt = scheduledAt
+      await doc.save()
+      rescheduled += 1
+    }
+
+    res.json({ ok: true, rescheduled, startDate: plan[0]?.scheduledAt?.toISOString?.() || null })
+  } catch (err) {
+    next(err)
+  }
+})
+
 router.post('/scheduled/fix-media', async (req, res, next) => {
   try {
     const docs = await ScheduledPost.find({
@@ -343,6 +396,8 @@ function mapDraft(d) {
 
 function mapScheduled(d) {
   const ps = d.postState || {}
+  const preview = ps.imagePreview || ps.imageUrl
+  const hasInlineImage = preview?.startsWith?.('data:image/')
   return {
     id: d._id.toString(),
     body: d.body,
@@ -352,8 +407,11 @@ function mapScheduled(d) {
     status: d.status,
     error: d.error,
     bulkTitle: ps.bulkTitle,
-    imagePreview: ps.imagePreview || ps.imageUrl,
+    imagePreview: hasInlineImage ? preview : null,
+    imagePreviewUrl: hasInlineImage ? preview : null,
+    imageMediaId: ps.imageMediaId || null,
     imageUrl: ps.imageUrl,
+    imageMissing: !hasInlineImage && Boolean(ps.imageMediaId || ps.imageUrl),
     // Extra fields so the post can be previewed accurately per platform.
     hashtags: ps.hashtags,
     imageType: ps.imageType,

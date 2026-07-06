@@ -121,10 +121,15 @@ export async function testThreadsConnection(threads) {
 
 export async function testLinkedInConnection(linkedin) {
   if (!isLinkedInConfigured(linkedin)) {
-    return { ok: false, error: 'Client ID and Client Secret are required (Org URN is optional for profile posts).' }
+    return {
+      ok: false,
+      error:
+        'LinkedIn Client ID is required. Add Client Secret for OAuth, or paste an Access Token from the LinkedIn developer portal.',
+    }
   }
   if (isLivePublishing()) {
-    return postBackend('/connections/linkedin/test', { linkedin })
+    const { linkedinPayloadForSave } = await import('./configUtils.js')
+    return postBackend('/connections/linkedin/test', { linkedin: linkedinPayloadForSave(linkedin) })
   }
   await delay(800)
   return {

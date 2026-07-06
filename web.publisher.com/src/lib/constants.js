@@ -7,14 +7,13 @@ export const COMMUNITY_PLATFORMS = ['reddit', 'quora']
 /** Platforms with native poll publishing in this app. */
 export const POLL_PLATFORMS = ['linkedin', 'reddit']
 
-export const PLATFORM_ORDER = ['instagram', 'facebook', 'linkedin', 'reddit', 'pinterest', 'threads']
+export const PLATFORM_ORDER = ['instagram', 'facebook', 'linkedin', 'reddit', 'threads']
 
 export const DEFAULT_PLATFORMS = {
   instagram: true,
   facebook: true,
   linkedin: true,
   reddit: false,
-  pinterest: false,
   threads: true,
 }
 
@@ -24,7 +23,6 @@ export const IMAGE_VISIBILITY_PLATFORMS = [
   'facebook',
   'linkedin',
   'reddit',
-  'pinterest',
   'threads',
 ]
 
@@ -105,6 +103,14 @@ export const PLATFORM_META = {
     color: 'bg-black',
     solid: '#000000',
     suite: 'Social',
+  },
+  gmail: {
+    key: 'gmail',
+    label: 'Gmail',
+    short: 'GM',
+    color: 'bg-white',
+    solid: '#EA4335',
+    suite: 'Email',
   },
 }
 

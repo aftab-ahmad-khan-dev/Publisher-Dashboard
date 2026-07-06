@@ -154,7 +154,12 @@ process.on("unhandledRejection", (reason) => {
 
 if (!isVercel) {
   ensureDbConnected()
-    .then(() => {
+    .then(async () => {
+      try {
+        await Media.collection.dropIndex('createdAt_1');
+      } catch {
+        /* legacy TTL index may already be gone */
+      }
       startScheduler();
       listen();
     })

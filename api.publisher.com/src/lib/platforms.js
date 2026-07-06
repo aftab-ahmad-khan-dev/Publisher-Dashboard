@@ -8,9 +8,13 @@ export function isMetaConfigured(meta) {
 /** App credentials saved. Org URN is optional (profile posts use w_member_social). */
 export function isLinkedInConfigured(linkedin) {
   const hasClientId = Boolean(linkedin?.clientId?.trim())
+  if (!hasClientId) return false
   const hasSecret =
     Boolean(linkedin?.clientSecret?.trim()) || Boolean(linkedin?.hasClientSecret)
-  return hasClientId && hasSecret
+  const hasToken =
+    Boolean(linkedin?.accessToken?.trim()) || Boolean(linkedin?.hasAccessToken)
+  // OAuth needs client secret; manual portal token can test/publish with client ID + token only.
+  return hasSecret || hasToken
 }
 
 export function canPublishLinkedIn(linkedin) {

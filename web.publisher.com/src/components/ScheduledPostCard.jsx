@@ -1,5 +1,6 @@
 import { PlatformIconGroup } from './PlatformIcon'
 import { formatScheduledISO } from '../lib/scheduleUtils'
+import { useScheduledImageUrl, ScheduledImagePlaceholder } from '../lib/scheduledImage.jsx'
 
 export function ScheduledPostListCard({ item, onPreview, onEdit, onDelete, style }) {
   const timeLabel =
@@ -58,8 +59,19 @@ export function ScheduledPostListCard({ item, onPreview, onEdit, onDelete, style
 }
 
 export function ScheduledPostGridCard({ item, onPreview, onEdit, onDelete, style }) {
+  const { url: thumbUrl, missing: imageMissing } = useScheduledImageUrl(item)
+
   return (
     <li className="scheduled-grid-card group flex flex-col" style={style}>
+      {(thumbUrl || imageMissing) && (
+        <div className="mb-3 overflow-hidden rounded-lg">
+          {thumbUrl ? (
+            <img src={thumbUrl} alt="" className="h-28 w-full object-cover" />
+          ) : (
+            <ScheduledImagePlaceholder className="py-4" />
+          )}
+        </div>
+      )}
       <div className="flex items-start justify-between gap-2">
         <span className="scheduled-time-badge shrink-0">
           <ClockIcon />

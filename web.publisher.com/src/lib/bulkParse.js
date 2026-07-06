@@ -227,8 +227,9 @@ async function renderCompressedJpeg(file, maxWidth, quality) {
 }
 
 /** Resize/compress for single-post publish. */
-export async function compressImageFile(file, maxWidth = 1200, quality = 0.82) {
+export async function compressImageFile(file, maxWidth = 4096, quality = 0.92) {
   if (!file.type.startsWith('image/')) return fileToDataUrl(file)
+  if (file.size <= 10_000_000) return fileToDataUrl(file)
   return renderCompressedJpeg(file, maxWidth, quality)
 }
 
@@ -252,23 +253,25 @@ export async function compressImageFileForBulk(file, maxBytes = 160_000) {
 }
 
 /**
- * Per-image upload compression for Figma exports (large PNGs).
- * Targets ~1.8 MB decoded so JSON stays under Vercel's request cap.
+ * Upload / schedule compression. Keeps original dimensions when the file is
+ * under the byte cap (full-quality publish). Only downscales when necessary.
  */
-export async function compressImageFileForUpload(file, maxBytes = 2_400_000) {
+export async function compressImageFileForUpload(file, maxBytes = 10_000_000) {
   if (!file.type.startsWith('image/')) return fileToDataUrl(file)
 
-  let maxWidth = 2048
-  let quality = 0.82
+  if (file.size <= maxBytes) return fileToDataUrl(file)
 
-  for (let attempt = 0; attempt < 10; attempt++) {
+  let maxWidth = 4096
+  let quality = 0.92
+
+  for (let attempt = 0; attempt < 12; attempt++) {
     const dataUrl = await renderCompressedJpeg(file, maxWidth, quality)
     const b64 = dataUrl.split(',')[1] || ''
     const approxBytes = (b64.length * 3) / 4
     if (approxBytes <= maxBytes) return dataUrl
-    quality = Math.max(0.45, quality - 0.05)
-    maxWidth = Math.round(maxWidth * 0.88)
+    quality = Math.max(0.5, quality - 0.04)
+    maxWidth = Math.round(maxWidth * 0.9)
   }
 
-  return renderCompressedJpeg(file, 1280, 0.55)
+  return renderCompressedJpeg(file, 2560, 0.72)
 }

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppData } from '../contexts/AppDataContext'
+import { rescheduleMissedRemote } from '../lib/backendApi'
+import { showToast } from '../lib/toast'
 import PageHeader from '../components/PageHeader'
 import PageShell, { PageScroll, EmptyState, PageStatsRow, PageStat } from '../components/PageShell'
 import ViewToggle from '../components/ViewToggle'
@@ -20,12 +22,28 @@ function loadView() {
 }
 
 export default function ScheduledPage() {
-  const { queue, cancelScheduled, cancelAllScheduled, editScheduled } = useAppData()
+  const { queue, cancelScheduled, cancelAllScheduled, editScheduled, refreshFromServer } = useAppData()
   const [view, setView] = useState(loadView)
   const [previewing, setPreviewing] = useState(null)
   const [editing, setEditing] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [deletingAll, setDeletingAll] = useState(false)
+  const [rescheduling, setRescheduling] = useState(false)
+
+  const missingImages = queue.filter((item) => item.imageMissing).length
+
+  const handleRescheduleMissed = async () => {
+    setRescheduling(true)
+    try {
+      const result = await rescheduleMissedRemote({ fromToday: true })
+      await refreshFromServer?.()
+      showToast(`Rescheduled ${result.rescheduled} post(s) from today onward`, 'success')
+    } catch (err) {
+      showToast(err.message || 'Could not reschedule posts', 'error')
+    } finally {
+      setRescheduling(false)
+    }
+  }
 
   const setViewAndPersist = (v) => {
     setView(v)
@@ -62,6 +80,30 @@ export default function ScheduledPage() {
         <PageStat label="Status" value="Auto-publish" tone="emerald" hint="Scheduler runs every 30s" />
         <PageStat label="Timezone" value={Intl.DateTimeFormat().resolvedOptions().timeZone.split('/').pop()} />
       </PageStatsRow>
+
+      {missingImages > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-amber-100/90">
+          <strong className="font-semibold">{missingImages} post(s)</strong> are missing images.
+          Re-upload via{' '}
+          <Link to="/bulk" className="text-amber-200 underline underline-offset-2 hover:text-white">
+            Bulk Upload
+          </Link>{' '}
+          to restore them, then use Reschedule from today.
+        </div>
+      )}
+
+      {queue.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={handleRescheduleMissed}
+            disabled={rescheduling}
+            className="btn-secondary px-3 py-1.5 text-xs"
+          >
+            {rescheduling ? 'Rescheduling…' : 'Reschedule from today'}
+          </button>
+        </div>
+      )}
 
       <PageScroll>
         {queue.length === 0 ? (

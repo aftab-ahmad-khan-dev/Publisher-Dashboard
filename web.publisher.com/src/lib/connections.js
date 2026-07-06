@@ -10,9 +10,12 @@ export function isMetaConfigured(meta) {
 /** App credentials saved. Org URN is optional (profile posts use w_member_social). */
 export function isLinkedInConfigured(linkedin) {
   const hasClientId = Boolean(linkedin?.clientId?.trim());
+  if (!hasClientId) return false;
   const hasSecret =
     Boolean(linkedin?.clientSecret?.trim()) || Boolean(linkedin?.hasClientSecret);
-  return hasClientId && hasSecret;
+  const hasToken =
+    Boolean(linkedin?.accessToken?.trim()) || Boolean(linkedin?.hasAccessToken);
+  return hasSecret || hasToken;
 }
 
 export function isLinkedInPublishReady(linkedin) {
@@ -102,7 +105,6 @@ export function getConnectionSummary(apiConfig) {
     metaReady,
     linkedInReady,
     redditReady,
-    pinterestReady,
     threadsReady,
     gmailReady,
   ].filter(Boolean).length;

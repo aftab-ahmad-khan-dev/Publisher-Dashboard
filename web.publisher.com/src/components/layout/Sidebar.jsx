@@ -61,10 +61,19 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
   const { user } = useAuth()
   const app = useAppData()
   const navGroups = getNavGroups(user?.email)
-  const { metaReady, linkedInReady, linkedInPublish, redditReady, pinterestReady, threadsReady, connectedCount } =
-    getConnectionSummary(app.apiConfig)
+  const {
+    metaReady,
+    linkedInReady,
+    linkedInPublish,
+    redditReady,
+    threadsReady,
+    gmailReady,
+    connectedCount,
+  } = getConnectionSummary(app.apiConfig)
   const linkedInLabel = linkedInPublish ? 'Live' : linkedInReady ? 'Setup' : 'Off'
-  const healthPct = Math.round((connectedCount / 6) * 100)
+  const gmailSendReady = app.apiConfig?.gmail?.sendReady || app.apiConfig?.gmail?.hasRefreshToken
+  const gmailLabel = gmailSendReady ? 'Live' : gmailReady ? 'Setup' : 'Off'
+  const healthPct = Math.round((connectedCount / 5) * 100)
 
   return (
     <aside
@@ -195,11 +204,11 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
               <ConnectionRow ready={redditReady} label={redditReady ? 'Live' : 'Off'}>
                 <PlatformIcon platform="reddit" size="sm" />
               </ConnectionRow>
-              <ConnectionRow ready={pinterestReady} label={pinterestReady ? 'Live' : 'Off'}>
-                <PlatformIcon platform="pinterest" size="sm" />
-              </ConnectionRow>
               <ConnectionRow ready={threadsReady} label={threadsReady ? 'Live' : 'Off'}>
                 <PlatformIcon platform="threads" size="sm" />
+              </ConnectionRow>
+              <ConnectionRow ready={gmailReady} label={gmailLabel}>
+                <PlatformIcon platform="gmail" size="sm" />
               </ConnectionRow>
             </div>
           </div>

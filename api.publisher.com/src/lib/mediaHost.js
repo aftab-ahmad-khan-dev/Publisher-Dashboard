@@ -1,6 +1,7 @@
 import { Media } from '../models/Media.js'
 import { apiPublicBase } from './publicUrl.js'
 import { mediaPublicUrl } from './mediaResolve.js'
+import { isPubliclyFetchableUrl } from './metaImageUrl.js'
 
 /**
  * Instagram and Threads require a PUBLIC image URL (they can't take an upload or
@@ -11,10 +12,12 @@ import { mediaPublicUrl } from './mediaResolve.js'
 export async function resolvePublicImageUrl({ postState, workspaceId, platform = 'instagram' }) {
   if (postState?.imageVisibility?.[platform] === false) return null
 
-  if (postState?.imageUrl) return postState.imageUrl
+  if (postState?.imageUrl && isPubliclyFetchableUrl(postState.imageUrl)) {
+    return postState.imageUrl
+  }
 
   const fromStored = mediaPublicUrl(postState?.imageMediaId)
-  if (fromStored) return fromStored
+  if (fromStored && isPubliclyFetchableUrl(fromStored)) return fromStored
 
   const dataUrl = postState?.imageDataUrl
   if (!dataUrl?.startsWith('data:image/')) return null

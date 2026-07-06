@@ -205,6 +205,10 @@ export async function updateScheduledRemote(id, payload) {
   return apiFetch(`/scheduled/${id}`, { method: "PUT", body: payload });
 }
 
+export async function rescheduleMissedRemote(payload = {}) {
+  return apiFetch("/scheduled/reschedule-missed", { method: "POST", body: payload });
+}
+
 export async function scheduleBulkRemote(payload) {
   return apiFetch("/bulk/schedule", { method: "POST", body: payload });
 }

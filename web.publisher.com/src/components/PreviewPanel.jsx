@@ -2,7 +2,6 @@ import InstagramPreview from './InstagramPreview'
 import FacebookPreview from './FacebookPreview'
 import LinkedInPreview from './LinkedInPreview'
 import RedditPreview from './RedditPreview'
-import PinterestPreview from './PinterestPreview'
 import ThreadsPreview from './ThreadsPreview'
 
 function getHashtagString(hashtags, platform) {
@@ -66,12 +65,6 @@ export default function PreviewPanel({ state, compact = false }) {
       />
 
       <RedditPreview enabled={state.platforms.reddit} body={state.body} poll={state.poll} />
-
-      <PinterestPreview
-        enabled={state.platforms.pinterest}
-        body={state.body}
-        imagePreviewUrl={state.imagePreviewUrl}
-      />
 
       <ThreadsPreview enabled={state.platforms.threads} body={state.body} />
     </div>

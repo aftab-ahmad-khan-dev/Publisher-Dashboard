@@ -14,7 +14,7 @@ import { isPollEnabled } from '../lib/pollUtils'
 import { isMultiPostComposer } from '../lib/composerPosts'
 
 /** Platforms that cannot publish without an attached image or video. */
-const MEDIA_REQUIRED_PLATFORMS = ['instagram', 'pinterest']
+const MEDIA_REQUIRED_PLATFORMS = ['instagram']
 
 export default function ComposerPanel({
   state,
