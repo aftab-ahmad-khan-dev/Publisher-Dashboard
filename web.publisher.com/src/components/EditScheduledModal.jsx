@@ -1,16 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Modal from './Modal'
 import DateTimePicker from './DateTimePicker'
 import PlatformIcon from './PlatformIcon'
-import { PLATFORM_META } from '../lib/constants'
+import { PLATFORM_META, PLATFORM_ORDER } from '../lib/constants'
 import { toDatetimeLocalValue } from '../lib/scheduleUtils'
-
-const PLATFORM_KEYS = Object.keys(PLATFORM_META)
+import { useScheduledImageUrl, ScheduledImagePlaceholder } from '../lib/scheduledImage.jsx'
 
 /**
- * Edit a scheduled post's time, body, and platforms. `onSave` receives
- * { body, platforms, scheduledAt (datetime-local string), timezone } and may be
- * async; the dialog stays open with a busy state until it resolves.
+ * Edit a scheduled post's time, body, platforms, and image. `onSave` receives
+ * { body, platforms, scheduledAt, timezone, imageFile?, removeImage? } and may
+ * be async; the dialog stays open with a busy state until it resolves.
  */
 export default function EditScheduledModal({ open, item, onClose, onSave }) {
   const [body, setBody] = useState('')
@@ -18,21 +17,59 @@ export default function EditScheduledModal({ open, item, onClose, onSave }) {
   const [scheduledAt, setScheduledAt] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  // Re-seed local state whenever a different post is opened for editing.
+  const [imageFile, setImageFile] = useState(null)
+  const [newPreviewUrl, setNewPreviewUrl] = useState(null)
+  const [imageRemoved, setImageRemoved] = useState(false)
+  const fileInputRef = useRef(null)
   const [seededId, setSeededId] = useState(null)
+
+  const { url: existingUrl, missing: existingMissing } = useScheduledImageUrl(
+    open && item && !imageFile && !imageRemoved ? item : null,
+  )
+
+  useEffect(() => {
+    if (!newPreviewUrl) return undefined
+    return () => URL.revokeObjectURL(newPreviewUrl)
+  }, [newPreviewUrl])
 
   if (open && item && seededId !== item.id) {
     setSeededId(item.id)
     setBody(item.body || '')
     setPlatforms(Array.isArray(item.platforms) ? item.platforms : [])
     setScheduledAt(toDatetimeLocalValue(item.scheduledAt))
+    setImageFile(null)
+    setNewPreviewUrl(null)
+    setImageRemoved(false)
     setError('')
   }
+
+  const displayUrl = imageRemoved ? null : newPreviewUrl || existingUrl
+  const showMissing = !displayUrl && (imageRemoved ? false : existingMissing)
 
   const togglePlatform = (key) => {
     setPlatforms((prev) =>
       prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key],
     )
+  }
+
+  const handlePickImage = (fileList) => {
+    const file = fileList?.[0]
+    if (!file?.type?.startsWith('image/')) {
+      setError('Choose a JPG, PNG, GIF, or WEBP image.')
+      return
+    }
+    setError('')
+    setImageRemoved(false)
+    setImageFile(file)
+    setNewPreviewUrl(URL.createObjectURL(file))
+  }
+
+  const handleRemoveImage = () => {
+    setImageFile(null)
+    if (newPreviewUrl) URL.revokeObjectURL(newPreviewUrl)
+    setNewPreviewUrl(null)
+    setImageRemoved(true)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const handleSave = async () => {
@@ -52,6 +89,8 @@ export default function EditScheduledModal({ open, item, onClose, onSave }) {
         platforms,
         scheduledAt,
         timezone: item?.timezone,
+        imageFile: imageFile || undefined,
+        removeImage: imageRemoved && !imageFile,
       })
       if (result && result.ok === false) {
         setError(result.error || 'Could not update the post.')
@@ -97,9 +136,49 @@ export default function EditScheduledModal({ open, item, onClose, onSave }) {
         </div>
 
         <div>
+          <label className="field-label">Image</label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            className="hidden"
+            onChange={(e) => handlePickImage(e.target.files)}
+          />
+          {displayUrl ? (
+            <div className="overflow-hidden rounded-xl border border-white/10">
+              <img src={displayUrl} alt="" className="max-h-48 w-full object-cover" />
+            </div>
+          ) : showMissing ? (
+            <ScheduledImagePlaceholder className="py-6" />
+          ) : (
+            <p className="text-xs text-slate-500">No image attached.</p>
+          )}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="btn-secondary px-3 py-1.5 text-xs"
+              disabled={busy}
+            >
+              {displayUrl || showMissing ? 'Replace image' : 'Add image'}
+            </button>
+            {(displayUrl || showMissing) && (
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                className="rounded-xl px-3 py-1.5 text-xs font-semibold text-rose-400 ring-1 ring-rose-500/25 hover:bg-rose-500/10"
+                disabled={busy}
+              >
+                Remove image
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div>
           <label className="field-label">Platforms</label>
           <div className="flex flex-wrap gap-2">
-            {PLATFORM_KEYS.map((key) => {
+            {PLATFORM_ORDER.map((key) => {
               const active = platforms.includes(key)
               return (
                 <button

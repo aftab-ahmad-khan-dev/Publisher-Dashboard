@@ -19,7 +19,7 @@ import {
 import { consolidateUserWorkspacesOnce } from '../lib/workspaceMigration.js'
 import { planMissedPostReschedule } from '../lib/rescheduleMissed.js'
 import { DEFAULT_SCHEDULE_HOUR, DEFAULT_SCHEDULE_MINUTE } from '../lib/scheduleConstants.js'
-import { hydratePostStateMedia } from '../lib/mediaResolve.js'
+import { hydratePostStateMedia, mediaPublicUrl } from '../lib/mediaResolve.js'
 
 const router = Router()
 
@@ -195,7 +195,16 @@ router.get('/scheduled', async (req, res, next) => {
 
 router.put('/scheduled/:id', async (req, res, next) => {
   try {
-    const { body, platforms, scheduledAt, timezone } = req.body || {}
+    const {
+      body,
+      platforms,
+      scheduledAt,
+      timezone,
+      imageMediaId,
+      imageUrl,
+      imageDataUrl,
+      removeImage,
+    } = req.body || {}
     const doc = await ScheduledPost.findOne({
       _id: req.params.id,
       workspaceId: req.workspaceId,
@@ -238,6 +247,31 @@ router.put('/scheduled/:id', async (req, res, next) => {
     }
 
     if (timezone) doc.timezone = timezone
+
+    if (removeImage === true) {
+      const ps = { ...(doc.postState || {}) }
+      ps.imageMediaId = null
+      ps.imageUrl = null
+      ps.imageDataUrl = null
+      ps.imagePreview = null
+      doc.postState = ps
+      doc.markModified('postState')
+    } else if (
+      imageDataUrl?.startsWith?.('data:image/') ||
+      (imageMediaId && String(imageMediaId).trim())
+    ) {
+      const ps = { ...(doc.postState || {}) }
+      if (imageDataUrl?.startsWith?.('data:image/')) {
+        ps.imageDataUrl = imageDataUrl
+        ps.imagePreview = imageDataUrl
+      }
+      if (imageMediaId) {
+        ps.imageMediaId = String(imageMediaId).trim()
+        ps.imageUrl = imageUrl || mediaPublicUrl(ps.imageMediaId)
+      }
+      doc.postState = ps
+      doc.markModified('postState')
+    }
 
     // Editing re-arms the post: a previously failed post becomes pending again.
     doc.status = 'scheduled'

@@ -1152,13 +1152,40 @@ export function AppDataProvider({ children }) {
   )
 
   const editScheduled = useCallback(
-    async (id, { body, platforms, scheduledAt, timezone } = {}) => {
-      // scheduledAt comes in as a naive datetime-local string; convert to a
-      // real UTC instant so the backend stores the exact moment intended.
+    async (id, { body, platforms, scheduledAt, timezone, imageFile, removeImage } = {}) => {
       const iso = scheduledAt ? datetimeLocalToISO(scheduledAt) : undefined
+      let imagePayload = {}
+
+      if (removeImage) {
+        imagePayload = { removeImage: true }
+      } else if (imageFile) {
+        try {
+          const imageDataUrl = await compressImageFileForUpload(imageFile)
+          if (live) {
+            const up = await uploadMediaRemote(imageDataUrl)
+            imagePayload = {
+              imageMediaId: up.id,
+              imageUrl: up.url,
+              imageDataUrl,
+            }
+          } else {
+            imagePayload = { imageDataUrl }
+          }
+        } catch (err) {
+          showToast(err.message || 'Image upload failed', 'error')
+          return { ok: false, error: err.message || 'Image upload failed' }
+        }
+      }
+
       if (live) {
         try {
-          await updateScheduledRemote(id, { body, platforms, scheduledAt: iso, timezone })
+          await updateScheduledRemote(id, {
+            body,
+            platforms,
+            scheduledAt: iso,
+            timezone,
+            ...imagePayload,
+          })
           await refreshFromServer()
           showToast('Scheduled post updated')
           return { ok: true }
@@ -1175,6 +1202,16 @@ export function AppDataProvider({ children }) {
               ...(platforms !== undefined ? { platforms } : {}),
               ...(iso ? { scheduledAt: iso } : {}),
               ...(timezone ? { timezone } : {}),
+              ...(imagePayload.imageDataUrl
+                ? {
+                    imagePreview: imagePayload.imageDataUrl,
+                    imagePreviewUrl: imagePayload.imageDataUrl,
+                    imageMissing: false,
+                  }
+                : {}),
+              ...(removeImage
+                ? { imagePreview: null, imagePreviewUrl: null, imageMissing: true }
+                : {}),
             }
           : item,
       )
