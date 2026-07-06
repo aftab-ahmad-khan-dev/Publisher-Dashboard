@@ -29,7 +29,7 @@ function Breadcrumb() {
 }
 
 export default function TopBar() {
-  const { queue, drafts, syncing } = useAppData()
+  const { queue, drafts, processing, processingLabel } = useAppData()
   const live = isLivePublishing()
   const scheduled = queue?.length ?? 0
   const draftCount = drafts?.length ?? 0
@@ -42,10 +42,10 @@ export default function TopBar() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
-          {syncing && (
+          {processing && (
             <span className="hidden items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-slate-400 lg:inline-flex">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-400" />
-              Syncing
+              {processingLabel || 'Processing'}
             </span>
           )}
 

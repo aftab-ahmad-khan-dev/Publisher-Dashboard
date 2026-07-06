@@ -14,10 +14,31 @@ const PHASE_TITLES = {
   publish: 'Publishing post',
 }
 
-export default function UploadProgressOverlay() {
-  const { uploadProgress } = useAppData()
-  if (!uploadProgress) return null
+function SpinnerRing({ children }) {
+  return (
+    <div className="relative flex h-11 w-11 shrink-0 items-center justify-center">
+      <svg
+        className="absolute inset-0 h-full w-full -rotate-90 animate-spin-slow text-violet-500/30"
+        viewBox="0 0 36 36"
+        aria-hidden
+      >
+        <circle
+          cx="18"
+          cy="18"
+          r="15"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeDasharray="94"
+          strokeLinecap="round"
+        />
+      </svg>
+      {children}
+    </div>
+  )
+}
 
+function DetailedProgressOverlay({ uploadProgress }) {
   const {
     phase = 'upload',
     percent = 0,
@@ -43,34 +64,15 @@ export default function UploadProgressOverlay() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="upload-progress-title"
+      aria-busy="true"
     >
       <div className="card-premium mx-4 w-full max-w-sm p-6">
         <div className="flex items-center gap-3">
-          <div className="relative flex h-11 w-11 shrink-0 items-center justify-center">
-            <svg
-              className="absolute inset-0 h-full w-full -rotate-90 animate-spin-slow text-violet-500/30"
-              viewBox="0 0 36 36"
-            >
-              <circle
-                cx="18"
-                cy="18"
-                r="15"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeDasharray="94"
-                strokeLinecap="round"
-              />
-            </svg>
-            <span className="font-display text-sm font-bold text-violet-300">
-              {clamped}%
-            </span>
-          </div>
+          <SpinnerRing>
+            <span className="font-display text-sm font-bold text-violet-300">{clamped}%</span>
+          </SpinnerRing>
           <div className="min-w-0 flex-1">
-            <p
-              id="upload-progress-title"
-              className="text-sm font-semibold text-white"
-            >
+            <p id="upload-progress-title" className="text-sm font-semibold text-white">
               {phaseTitle}
             </p>
             <p className="mt-0.5 truncate text-xs text-slate-400">{detail}</p>
@@ -85,9 +87,7 @@ export default function UploadProgressOverlay() {
         </div>
 
         {fileName && (
-          <p className="mt-3 truncate text-center text-[10px] text-slate-500">
-            {fileName}
-          </p>
+          <p className="mt-3 truncate text-center text-[10px] text-slate-500">{fileName}</p>
         )}
 
         <p className="mt-3 text-center text-[10px] text-slate-600">
@@ -96,4 +96,46 @@ export default function UploadProgressOverlay() {
       </div>
     </div>
   )
+}
+
+function GenericProcessOverlay({ message }) {
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#06080f]/85 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="process-overlay-title"
+      aria-busy="true"
+    >
+      <div className="card-premium mx-4 w-full max-w-sm p-6">
+        <div className="flex items-center gap-3">
+          <SpinnerRing>
+            <span className="h-2 w-2 animate-pulse rounded-full bg-violet-400" />
+          </SpinnerRing>
+          <div className="min-w-0 flex-1">
+            <p id="process-overlay-title" className="text-sm font-semibold text-white">
+              Working…
+            </p>
+            <p className="mt-0.5 truncate text-xs text-slate-400">{message}</p>
+          </div>
+        </div>
+
+        <p className="mt-5 text-center text-[10px] text-slate-600">
+          Please keep this tab open until processing finishes.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default function UploadProgressOverlay() {
+  const { uploadProgress, processingLabel } = useAppData()
+
+  if (uploadProgress) {
+    return <DetailedProgressOverlay uploadProgress={uploadProgress} />
+  }
+
+  if (!processingLabel) return null
+
+  return <GenericProcessOverlay message={processingLabel} />
 }

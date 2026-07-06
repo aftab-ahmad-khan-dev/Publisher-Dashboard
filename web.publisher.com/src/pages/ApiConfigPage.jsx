@@ -41,7 +41,9 @@ export default function ApiConfigPage() {
     testPlatformConnection,
     requestNotificationPermission,
     refreshFromServer,
-    syncing,
+    processing,
+    processingLabel,
+    runWithLoading,
   } = useAppData();
   const live = isLivePublishing();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -454,7 +456,7 @@ export default function ApiConfigPage() {
             </button>
             <span className='saas-status-pill saas-status-pill--live hidden sm:inline-flex'>
               {summary.connectedCount}/5 ready
-              {syncing || testingAll ? " · syncing…" : ""}
+              {processing ? ` · ${processingLabel || "working…"}` : ""}
             </span>
           </div>
         }

@@ -22,28 +22,25 @@ function loadView() {
 }
 
 export default function ScheduledPage() {
-  const { queue, cancelScheduled, cancelAllScheduled, editScheduled, refreshFromServer } = useAppData()
+  const { queue, cancelScheduled, cancelAllScheduled, editScheduled, refreshFromServer, runWithLoading, processing } = useAppData()
   const [view, setView] = useState(loadView)
   const [previewing, setPreviewing] = useState(null)
   const [editing, setEditing] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [deletingAll, setDeletingAll] = useState(false)
-  const [rescheduling, setRescheduling] = useState(false)
 
   const missingImages = queue.filter((item) => item.imageMissing).length
 
-  const handleRescheduleMissed = async () => {
-    setRescheduling(true)
-    try {
-      const result = await rescheduleMissedRemote({ fromToday: true })
-      await refreshFromServer?.()
-      showToast(`Rescheduled ${result.rescheduled} post(s) from today onward`, 'success')
-    } catch (err) {
-      showToast(err.message || 'Could not reschedule posts', 'error')
-    } finally {
-      setRescheduling(false)
-    }
-  }
+  const handleRescheduleMissed = () =>
+    runWithLoading('Rescheduling missed posts…', async () => {
+      try {
+        const result = await rescheduleMissedRemote({ fromToday: true })
+        await refreshFromServer?.()
+        showToast(`Rescheduled ${result.rescheduled} post(s) from today onward`, 'success')
+      } catch (err) {
+        showToast(err.message || 'Could not reschedule posts', 'error')
+      }
+    })
 
   const setViewAndPersist = (v) => {
     setView(v)
@@ -97,10 +94,10 @@ export default function ScheduledPage() {
           <button
             type="button"
             onClick={handleRescheduleMissed}
-            disabled={rescheduling}
+            disabled={processing}
             className="btn-secondary px-3 py-1.5 text-xs"
           >
-            {rescheduling ? 'Rescheduling…' : 'Reschedule from today'}
+            {processing ? 'Rescheduling…' : 'Reschedule from today'}
           </button>
         </div>
       )}

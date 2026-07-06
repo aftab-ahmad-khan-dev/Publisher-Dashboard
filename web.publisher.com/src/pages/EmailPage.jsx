@@ -46,7 +46,7 @@ function StatusBadge({ status }) {
 }
 
 export default function EmailPage() {
-  const { apiConfig, showToast } = useAppData()
+  const { apiConfig, showToast, runWithLoading } = useAppData()
   const live = isLivePublishing()
   const gmailReady = isGmailConfigured(apiConfig?.gmail)
   // Open tracking needs a publicly reachable API; localhost can't be hit by mail clients.
@@ -112,26 +112,30 @@ export default function EmailPage() {
     if (!live) return
     setLoadingList(true)
     try {
-      const res = await listEmailCampaigns()
-      setCampaigns(res.campaigns || [])
+      await runWithLoading('Loading campaigns…', async () => {
+        const res = await listEmailCampaigns()
+        setCampaigns(res.campaigns || [])
+      })
     } catch {
       /* ignore */
     }
     setLoadingList(false)
-  }, [live])
+  }, [live, runWithLoading])
 
   const loadDetail = useCallback(
     async (id) => {
       if (!live || !id) return
       try {
-        const res = await getEmailCampaign(id)
-        setDetail(res)
-        setSelectedId(id)
+        await runWithLoading('Loading campaign…', async () => {
+          const res = await getEmailCampaign(id)
+          setDetail(res)
+          setSelectedId(id)
+        })
       } catch (err) {
         showToast(err.message, 'error')
       }
     },
-    [live, showToast],
+    [live, showToast, runWithLoading],
   )
 
   useEffect(() => {
@@ -206,6 +210,7 @@ export default function EmailPage() {
 
     setSending(true)
     try {
+      await runWithLoading('Sending campaign…', async () => {
       const wrapHtml = (raw) =>
         `<div style="font-family:sans-serif;line-height:1.5">${sanitizePublishedText(
           raw.includes('<') ? raw : raw.replace(/\n/g, '<br>\n'),
@@ -236,19 +241,26 @@ export default function EmailPage() {
           ? `Sending to ${res.recipientCount} recipients — rotating ${EMAIL_TEMPLATES.length} templates`
           : `Sending to ${res.recipientCount} recipients via Gmail…`,
       )
-      await loadCampaigns()
-      if (res.campaign?.id) loadDetail(res.campaign.id)
+      const listRes = await listEmailCampaigns()
+      setCampaigns(listRes.campaigns || [])
+      if (res.campaign?.id) {
+        const detailRes = await getEmailCampaign(res.campaign.id)
+        setDetail(detailRes)
+        setSelectedId(res.campaign.id)
+      }
+      })
     } catch (err) {
       showToast(err.message, 'error')
     }
     setSending(false)
   }
 
-  const connectGmail = async () => {
+  const connectGmail = () =>
+    runWithLoading('Connecting Gmail…', async () => {
     const url = await gmailOAuthUrl()
     if (url) window.location.href = url
     else showToast('API URL not configured', 'error')
-  }
+    })
 
   return (
     <PageShell>

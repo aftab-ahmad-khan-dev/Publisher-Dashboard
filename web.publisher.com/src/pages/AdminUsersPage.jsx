@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useAppData } from '../contexts/AppDataContext'
 import { isPlatformAdmin } from '../lib/admin'
 import { fetchAdminUsers } from '../lib/backendApi'
 import PageHeader from '../components/PageHeader'
@@ -132,6 +133,7 @@ function UserCard({ user, index }) {
 
 export default function AdminUsersPage() {
   const { user, ready } = useAuth()
+  const { runWithLoading } = useAppData()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -144,23 +146,25 @@ export default function AdminUsersPage() {
     let cancelled = false
     setLoading(true)
     setError('')
-    fetchAdminUsers()
-      .then((data) => {
-        if (!cancelled) {
-          setUsers(data.users || [])
-          setSourceNote(data.source === 'database' ? data.note || '' : '')
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.message || 'Failed to load users')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    runWithLoading('Loading users…', () =>
+      fetchAdminUsers()
+        .then((data) => {
+          if (!cancelled) {
+            setUsers(data.users || [])
+            setSourceNote(data.source === 'database' ? data.note || '' : '')
+          }
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err.message || 'Failed to load users')
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false)
+        }),
+    )
     return () => {
       cancelled = true
     }
-  }, [ready, isAdmin])
+  }, [ready, isAdmin, runWithLoading])
 
   if (ready && !isAdmin) {
     return <Navigate to="/compose" replace />

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   notifyViaServiceWorker,
   requestNotificationPermission,
@@ -208,6 +208,43 @@ export function AppDataProvider({ children }) {
   const [publishStatus, setPublishStatus] = useState('idle')
   const [uploadProgress, setUploadProgress] = useState(null)
   const [syncing, setSyncing] = useState(false)
+  const loadingIdRef = useRef(0)
+  const [loadingStack, setLoadingStack] = useState([])
+
+  const runWithLoading = useCallback(async (label, fn) => {
+    let taskLabel = label
+    let taskFn = fn
+    if (typeof label === 'function') {
+      taskFn = label
+      taskLabel = 'Working…'
+    }
+    const id = ++loadingIdRef.current
+    setLoadingStack((stack) => [...stack, { id, label: taskLabel || 'Working…' }])
+    try {
+      return await taskFn()
+    } finally {
+      setLoadingStack((stack) => stack.filter((item) => item.id !== id))
+    }
+  }, [])
+
+  const processing = useMemo(
+    () =>
+      Boolean(
+        uploadProgress ||
+          syncing ||
+          publishStatus === 'loading' ||
+          loadingStack.length > 0,
+      ),
+    [uploadProgress, syncing, publishStatus, loadingStack.length],
+  )
+
+  const processingLabel = useMemo(() => {
+    if (uploadProgress) return null
+    if (loadingStack.length > 0) return loadingStack[loadingStack.length - 1].label
+    if (publishStatus === 'loading') return 'Publishing…'
+    if (syncing) return 'Syncing data…'
+    return null
+  }, [uploadProgress, loadingStack, publishStatus, syncing])
 
   const clearUploadProgress = useCallback(() => setUploadProgress(null), [])
 
@@ -479,7 +516,8 @@ export function AppDataProvider({ children }) {
   )
 
   const testPlatformConnection = useCallback(
-    async (platform, config, { quiet = false } = {}) => {
+    async (platform, config, { quiet = false } = {}) =>
+      runWithLoading(`Testing ${platform}…`, async () => {
       const result =
         platform === 'meta'
           ? await testMetaConnection(config.meta)
@@ -522,8 +560,9 @@ export function AppDataProvider({ children }) {
         showToast(result.error, 'error')
       }
       return result
-    },
+      }),
     [
+      runWithLoading,
       saveLinkedInConfig,
       saveMetaConfig,
       saveRedditConfig,
@@ -1108,7 +1147,8 @@ export function AppDataProvider({ children }) {
   )
 
   const cancelScheduled = useCallback(
-    async (id) => {
+    async (id) =>
+      runWithLoading('Removing scheduled post…', async () => {
       if (live) {
         try {
           await deleteScheduledRemote(id)
@@ -1124,12 +1164,13 @@ export function AppDataProvider({ children }) {
       setQueue(next)
       localStorage.setItem(STORAGE_KEYS.scheduledQueue, JSON.stringify(next))
       showToast('Scheduled post removed')
-    },
-    [live, queue, showToast, refreshFromServer],
+      }),
+    [live, queue, showToast, refreshFromServer, runWithLoading],
   )
 
   const cancelAllScheduled = useCallback(
-    async () => {
+    async () =>
+      runWithLoading('Removing scheduled posts…', async () => {
       if (live) {
         try {
           const result = await deleteAllScheduledRemote()
@@ -1147,12 +1188,15 @@ export function AppDataProvider({ children }) {
       localStorage.setItem(STORAGE_KEYS.scheduledQueue, JSON.stringify([]))
       showToast(count ? `Removed ${count} scheduled posts` : 'No scheduled posts to remove')
       return { ok: true, removed: count }
-    },
-    [live, queue, showToast, refreshFromServer],
+      }),
+    [live, queue, showToast, refreshFromServer, runWithLoading],
   )
 
   const editScheduled = useCallback(
-    async (id, { body, platforms, scheduledAt, timezone, imageFile, removeImage } = {}) => {
+    async (id, { body, platforms, scheduledAt, timezone, imageFile, removeImage } = {}) =>
+      runWithLoading(
+        imageFile ? 'Uploading image…' : 'Saving scheduled post…',
+        async () => {
       const iso = scheduledAt ? datetimeLocalToISO(scheduledAt) : undefined
       let imagePayload = {}
 
@@ -1219,8 +1263,9 @@ export function AppDataProvider({ children }) {
       localStorage.setItem(STORAGE_KEYS.scheduledQueue, JSON.stringify(next))
       showToast('Scheduled post updated')
       return { ok: true }
-    },
-    [live, queue, showToast, refreshFromServer],
+      },
+      ),
+    [live, queue, showToast, refreshFromServer, runWithLoading],
   )
 
   const persistDrafts = useCallback(
@@ -1234,7 +1279,8 @@ export function AppDataProvider({ children }) {
   )
 
   const saveDraft = useCallback(
-    async (postState, editingDraftId = null) => {
+    async (postState, editingDraftId = null) =>
+      runWithLoading('Saving draft…', async () => {
       if (!postState.body.trim() && postState.hashtags.length === 0) {
         showToast('Add content before saving a draft.', 'error')
         return { ok: false }
@@ -1255,12 +1301,13 @@ export function AppDataProvider({ children }) {
       await persistDrafts(next)
       showToast(editingDraftId ? 'Draft updated' : 'Saved to drafts')
       return { ok: true, draft: next.find((d) => d.id === payload.id) }
-    },
-    [drafts, persistDrafts, showToast, live, refreshFromServer],
+      }),
+    [drafts, persistDrafts, showToast, live, refreshFromServer, runWithLoading],
   )
 
   const deleteDraft = useCallback(
-    async (id) => {
+    async (id) =>
+      runWithLoading('Deleting draft…', async () => {
       if (live) {
         try {
           await deleteDraftRemote(id)
@@ -1274,8 +1321,8 @@ export function AppDataProvider({ children }) {
       }
       await persistDrafts(drafts.filter((d) => d.id !== id))
       showToast('Draft deleted')
-    },
-    [drafts, persistDrafts, showToast, live, refreshFromServer],
+      }),
+    [drafts, persistDrafts, showToast, live, refreshFromServer, runWithLoading],
   )
 
   const getDraftById = useCallback((id) => drafts.find((d) => d.id === id), [drafts])
@@ -1290,6 +1337,9 @@ export function AppDataProvider({ children }) {
         publishStatus,
         uploadProgress,
         syncing,
+        processing,
+        processingLabel,
+        runWithLoading,
         showToast,
         saveApiConfig,
         saveLinkedInConfig,
