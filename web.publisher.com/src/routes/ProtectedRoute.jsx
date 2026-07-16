@@ -37,7 +37,7 @@ export default function ProtectedRoute() {
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+            className="btn-primary px-5 py-2.5"
           >
             Retry
           </button>
@@ -45,7 +45,13 @@ export default function ProtectedRoute() {
       )
     }
     // Branded loading state
-    return <SplashScreen visible />
+    return (
+      <SplashScreen
+        visible
+        message="Checking your session…"
+        subtitle="Secure sign-in with Publisher Suite"
+      />
+    )
   }
 
   if (!isSignedIn) {

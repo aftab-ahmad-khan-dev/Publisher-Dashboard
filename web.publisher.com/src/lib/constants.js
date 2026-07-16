@@ -116,12 +116,13 @@ export const PLATFORM_META = {
 
 export const NAV_ITEMS = [
   { path: '/compose', label: 'Compose', icon: 'compose' },
-  { path: '/email', label: 'Bulk Email', icon: 'email' },
+  { path: '/email', label: 'Mail Box', icon: 'email' },
   { path: '/bulk', label: 'Bulk Upload', icon: 'bulk' },
   { path: '/drafts', label: 'Drafts', icon: 'drafts' },
   { path: '/scheduled', label: 'Scheduled', icon: 'scheduled' },
   { path: '/calendar', label: 'Calendar', icon: 'calendar' },
   { path: '/api-config', label: 'Integrations', icon: 'api' },
+  { path: '/billing', label: 'Billing', icon: 'billing' },
   { path: '/guide', label: 'Setup Guide', icon: 'guide' },
 ]
 
@@ -133,7 +134,7 @@ export const NAV_GROUPS = [
     items: [
       { path: '/compose', label: 'Compose', icon: 'compose', description: 'Write & publish' },
       { path: '/bulk', label: 'Bulk Upload', icon: 'bulk', description: 'Multi-post days' },
-      { path: '/email', label: 'Bulk Email', icon: 'email', description: 'Campaigns' },
+      { path: '/email', label: 'Mail Box', icon: 'email', description: 'Outreach & campaigns' },
     ],
   },
   {
@@ -150,6 +151,7 @@ export const NAV_GROUPS = [
     label: 'Workspace',
     items: [
       { path: '/api-config', label: 'Integrations', icon: 'api', description: 'API keys' },
+      { path: '/billing', label: 'Billing', icon: 'billing', description: 'Plans & payment' },
       { path: '/guide', label: 'Setup Guide', icon: 'guide', description: 'Onboarding' },
     ],
   },

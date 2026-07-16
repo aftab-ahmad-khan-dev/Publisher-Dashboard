@@ -172,6 +172,28 @@ export function usePostState() {
     setRawState((s) => ({ ...s, cropHint }))
   }, [])
 
+  const replaceActiveMedia = useCallback((file) => {
+    if (!file || !ACCEPT_MEDIA(file)) return
+    setRawState((s) => {
+      const activeId = s.activeMediaId
+      if (!activeId) {
+        const item = fileToMediaItem(file, 1)
+        return { ...s, mediaItems: [item], activeMediaId: item.id }
+      }
+      const mediaItems = s.mediaItems.map((m) => {
+        if (m.id !== activeId) return m
+        if (m.previewUrl) URL.revokeObjectURL(m.previewUrl)
+        return {
+          ...m,
+          file,
+          previewUrl: URL.createObjectURL(file),
+          type: file.type.startsWith('video/') ? 'video' : 'image',
+        }
+      })
+      return { ...s, mediaItems }
+    })
+  }, [])
+
   const toggleImageVisibility = useCallback((platform) => {
     setRawState((s) => ({
       ...s,
@@ -329,6 +351,7 @@ export function usePostState() {
     setActiveMedia,
     clearMedia,
     setCropHint,
+    replaceActiveMedia,
     toggleImageVisibility,
     togglePlatform,
     addHashtag,

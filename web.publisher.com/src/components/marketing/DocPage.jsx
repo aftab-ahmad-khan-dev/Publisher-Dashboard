@@ -2,7 +2,7 @@
 export default function DocPage({ eyebrow, title, intro, sections = [], children }) {
   return (
     <section className="mx-auto max-w-3xl px-6 py-24">
-      {eyebrow && <p className="text-xs font-bold uppercase tracking-[0.12em] text-violet-400">{eyebrow}</p>}
+      {eyebrow && <p className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">{eyebrow}</p>}
       <h1 className="font-display mt-3 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">{title}</h1>
       {intro && <p className="mt-5 text-base leading-relaxed text-slate-400">{intro}</p>}
 

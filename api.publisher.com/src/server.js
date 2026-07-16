@@ -57,7 +57,7 @@ app.get("/api/email/click/:trackingId", async (req, res) => {
   const target = typeof req.query.u === "string" ? req.query.u : "";
   try {
     await ensureDbConnected();
-    await recordEmailClick(req.params.trackingId);
+    await recordEmailClick(req.params.trackingId, target);
   } catch {
     /* still redirect even if recording fails */
   }

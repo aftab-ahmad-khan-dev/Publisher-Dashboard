@@ -77,19 +77,21 @@ export function isThreadsConfigured(threads) {
 }
 
 export function isGmailConfigured(gmail) {
-  const hasSecrets = gmail?.hasClientSecret && gmail?.hasRefreshToken;
+  if (gmail?.smtpConfigured || gmail?.transport === 'smtp') return true
+  const hasSecrets = gmail?.hasClientSecret && gmail?.hasRefreshToken
   return Boolean(
     gmail?.sendReady ||
-    gmail?.connected ||
-    gmail?.hasRefreshToken ||
-    (Boolean(gmail?.clientId?.trim()) && hasSecrets),
-  );
+      gmail?.connected ||
+      gmail?.hasRefreshToken ||
+      (Boolean(gmail?.clientId?.trim()) && hasSecrets),
+  )
 }
 
 export function isGmailSendReady(gmail) {
+  if (gmail?.smtpConfigured || gmail?.transport === 'smtp' || gmail?.sendReady) return true
   return (
     isGmailConfigured(gmail) && Boolean(gmail?.hasRefreshToken || gmail?.sendReady)
-  );
+  )
 }
 
 export function getConnectionSummary(apiConfig) {

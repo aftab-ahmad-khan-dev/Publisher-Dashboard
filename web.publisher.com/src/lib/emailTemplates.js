@@ -1,148 +1,191 @@
 /**
- * Pain-first cold-email templates. Each uses merge tags ({{greeting}}, {{company}},
- * {{niche}}, {{painOpener}}, {{companyLabel}}…) and spintax {a|b|c} so every send
- * is personalized and varied. Used by the composer "Shuffle" button and, when
- * "rotate templates" is on, randomly per-recipient in a bulk send.
+ * Themed outreach + product (VorksPro) email templates with FOMO + signature.
+ * Merge tags: {{greeting}} {{firstName}} {{company}} {{designation}} {{city}}
+ * {{country}} {{region}} {{industry}} {{fomoLine}} {{meetingLink}}
  */
-export const EMAIL_TEMPLATES = [
+
+export const SIGNATURE = {
+  name: 'Aftab Ahmad Khan',
+  role: 'Solo Full-Stack Developer · MERN · Shopify · AI',
+  site: 'https://aftabahmadkhan.online',
+  email: 'aftabahmadkhan.dev@gmail.com',
+  product: 'https://vorkspro.com',
+}
+
+export function formatSignature({ includeMeeting = false, meetingLink = '' } = {}) {
+  const lines = [
+    SIGNATURE.name,
+    SIGNATURE.role,
+    SIGNATURE.site,
+    SIGNATURE.email,
+  ]
+  if (includeMeeting && meetingLink) {
+    lines.push(`Schedule a meeting (pick a free slot): ${meetingLink}`)
+  }
+  return lines.join('\n')
+}
+
+export const OUTREACH_TEMPLATES = [
   {
-    name: 'Ops bottleneck',
-    subject: 'A {{niche}} ops pattern teams at {{company}} run into',
+    id: 'outreach-direct',
+    name: 'Direct hire',
+    type: 'outreach',
+    subject: '{{firstName}}, production software without the agency overhead',
     body: `{{greeting}},
 
-{{painOpener}} often hit the same bottleneck: {growth stalls because manual follow-up eats the week|manual follow-up quietly caps growth|the week disappears into follow-up instead of closing}.
+I help founders ship production MERN, Shopify, SaaS, and AI products end-to-end — solo, no outsourcing.
 
-I have been mapping {what separates teams that fix that quietly vs. teams that stay stuck|which teams break through vs. plateau|the pattern behind teams that recover vs. stay in the grind}. No pitch, just the pattern.
+{{fomoLine}}. If {{company}} needs a senior builder who owns scope, milestones, and handoff, I may be a fit.
 
-If it resonates at {{companyLabel}}, happy to share the one-pager.
+Portfolio & proof: https://aftabahmadkhan.online
+(97+ projects · 5.0 feedback · clients in 14+ countries)
 
-{Worth a quick reply?|Open to a quick reply?|Would a short reply be useful?}
+If you prefer to start the contract on Fiverr or Upwork, that works for me too — happy to meet you where your process already is.
 
-Alex`,
+Worth a short reply?
+
+Prefer a quick call? Schedule a meeting (pick a free slot): {{meetingLink}}
+
+${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
   },
   {
-    name: 'Time leak',
-    subject: 'Where {{company}} likely loses 5 hours/week',
+    id: 'outreach-ceo',
+    name: 'CEO / founder',
+    type: 'outreach',
+    subject: 'For {{designation}} at {{company}} — senior delivery, direct hire',
     body: `{{greeting}},
 
-Most {{nicheLabel}} teams I talk to lose {4-6 hours a week|most of a day each week|a surprising chunk of the week} to {copy-pasting between tools|chasing status updates|manual reporting}.
+Most {{industry}} teams I talk to in {{country}} don't need another agency slide deck. They need someone who ships.
 
-I put together a short breakdown of {where that time goes and how to claw it back|the three biggest leaks and the fix}. Not a sales thing, genuinely useful.
+I'm Aftab — solo full-stack (MERN, Shopify, AI automation). {{fomoLine}}.
 
-Want me to send it over to {{companyLabel}}?
+Happy to share a short case study relevant to {{company}}. If contracting via Fiverr/Upwork is easier on your side, I'm fine with that as well.
 
-Alex`,
+Prefer a quick call? Schedule a meeting: {{meetingLink}}
+
+${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
   },
   {
-    name: 'Competitor angle',
-    subject: 'How faster {{niche}} teams are pulling ahead',
+    id: 'outreach-fomo',
+    name: 'Region FOMO',
+    type: 'outreach',
+    subject: '{{city}} / {{country}} teams are tightening their build stack',
     body: `{{greeting}},
 
-The {{nicheLabel}} teams growing fastest right now aren't working harder, they've just {removed the busywork between tools|automated the boring follow-up|stopped doing the same task five times}.
+{{fomoLine}} — especially around MERN SaaS, Shopify ops, and AI workflows.
 
-I wrote up {what they do differently|the playbook} in a page. Happy to share it with {{companyLabel}} if it's relevant.
+I partner directly with founders (no junior handoff). Details: https://aftabahmadkhan.online
 
-{Want it?|Should I send it?|Worth a look?}
+Open to a quick reply if {{company}} is evaluating a build or rebuild. Fiverr/Upwork contracts are fine if that's your preferred start.
 
-Alex`,
-  },
-  {
-    name: 'Quick question',
-    subject: 'Quick question about {{company}}',
-    body: `{{greeting}},
+Prefer a quick call? Schedule a meeting: {{meetingLink}}
 
-Quick one: who owns {content and outreach|publishing and follow-up|growth ops} at {{companyLabel}}?
-
-I ask because most {{nicheLabel}} teams have that {split across three tools|spread too thin|stuck on one person}, and it's usually an easy fix once you see it.
-
-If that's you, I'll send over a short breakdown.
-
-Alex`,
-  },
-  {
-    name: 'Result-led',
-    subject: '{{firstName}}, cut your posting time by ~80%',
-    body: `{{greeting}},
-
-Teams like {{company}} usually spend {hours|half a day|too long} reformatting one update for every channel.
-
-We've seen {{nicheLabel}} teams take that {from two hours to ten minutes|down to a few clicks|off their plate entirely}. Same message, every platform, scheduled once.
-
-Want the 2-minute version of how?
-
-Alex`,
-  },
-  {
-    name: 'Empathy open',
-    subject: 'Running {{niche}} marketing solo is brutal',
-    body: `{{greeting}},
-
-If you're handling {{niche}} marketing at {{companyLabel}} {mostly alone|with a small team|on top of everything else}, you already know the problem isn't ideas, it's {the hours|the tab-switching|the follow-through}.
-
-I help teams get that time back. {Mind if I share how?|Open to a quick idea?|Want the short version?}
-
-Alex`,
-  },
-  {
-    name: 'Before/after',
-    subject: 'Before vs after for {{company}}',
-    body: `{{greeting}},
-
-Before: {five tabs, five logins, one idea posted five times|notes here, tasks there, nothing connected}.
-After: {compose once, publish everywhere, on schedule|one workspace, every channel, automated}.
-
-That's the shift most {{nicheLabel}} teams are making. Want to see what it'd look like for {{companyLabel}}?
-
-Alex`,
-  },
-  {
-    name: 'Social proof',
-    subject: 'What other {{niche}} teams switched to',
-    body: `{{greeting}},
-
-A few {{nicheLabel}} teams recently moved off {scattered tools|manual posting|three separate subscriptions} and onto one workflow, and the first thing they mention is {getting their week back|how much faster shipping got|never missing prime time again}.
-
-Happy to share what they changed at {{companyLabel}}. {Worth a reply?|Interested?}
-
-Alex`,
-  },
-  {
-    name: 'Curiosity gap',
-    subject: "The {{niche}} mistake that's easy to miss",
-    body: `{{greeting}},
-
-There's one {{nicheLabel}} habit that quietly caps growth, and almost nobody notices it because it {feels productive|looks like normal work|hides in the day-to-day}.
-
-I broke it down in a page. {Want me to send it?|Should I share it with {{companyLabel}}?}
-
-No pitch, just the pattern.
-
-Alex`,
-  },
-  {
-    name: 'Direct value',
-    subject: 'One workspace for all of {{company}}\'s channels',
-    body: `{{greeting}},
-
-{{painOpener}} usually juggle a different tool for every channel. {{companyLabel}} probably does too.
-
-We put {posting, scheduling, previews and email|every channel and the calendar} in one place, so one update goes everywhere, formatted right, on time.
-
-Want a 2-minute look?
-
-Alex`,
-  },
-  {
-    name: 'Low-key follow-up',
-    subject: 'Re: {{niche}} workflow at {{company}}',
-    body: `{{greeting}},
-
-Circling back, no worries if now's not the time.
-
-The short version: {{nicheLabel}} teams using one workspace for publishing {save hours a week|ship more consistently|stop missing windows}. If that's useful for {{companyLabel}}, I'll send the one-pager.
-
-{Just say the word.|Reply "yes" and it's yours.}
-
-Alex`,
+${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
   },
 ]
+
+export const PRODUCT_TEMPLATES = [
+  {
+    id: 'product-intro',
+    name: 'VorksPro intro',
+    type: 'product',
+    subject: '{{company}} — a faster ops stack with VorksPro',
+    body: `{{greeting}},
+
+{{fomoLine}}. I built VorksPro to help teams cut the busywork between tools and get publishing + outreach under control.
+
+Product: https://vorkspro.com
+
+If it looks relevant for {{company}}, pick a time on my calendar that works for you — availability is live:
+{{meetingLink}}
+
+${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
+  },
+  {
+    id: 'product-meeting',
+    name: 'Book a demo',
+    type: 'product',
+    subject: '15 min on VorksPro for {{company}}?',
+    body: `{{greeting}},
+
+Quick context: VorksPro helps {{industry}} teams in {{region}} ship and follow up without tab chaos.
+
+See it here: https://vorkspro.com
+
+Schedule a meeting — you'll only see times I'm free:
+{{meetingLink}}
+
+Looking forward to it if the timing works.
+
+${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
+  },
+  {
+    id: 'product-fomo',
+    name: 'Region + product',
+    type: 'product',
+    subject: '{{country}} teams are booking VorksPro walkthroughs',
+    body: `{{greeting}},
+
+{{fomoLine}}. VorksPro is the product I use with founders who want outreach + publishing in one place.
+
+https://vorkspro.com
+
+Book a walkthrough when it suits you — the link shows my live availability:
+{{meetingLink}}
+
+${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
+  },
+]
+
+/** Legacy pain-first templates kept for shuffle compatibility */
+export const EMAIL_TEMPLATES = [
+  ...OUTREACH_TEMPLATES.map((t) => ({ name: t.name, subject: t.subject, body: t.body })),
+  ...PRODUCT_TEMPLATES.map((t) => ({ name: t.name, subject: t.subject, body: t.body })),
+]
+
+export function templatesForType(type) {
+  if (type === 'product') return PRODUCT_TEMPLATES
+  if (type === 'outreach') return OUTREACH_TEMPLATES
+  return [...OUTREACH_TEMPLATES, ...PRODUCT_TEMPLATES]
+}
+
+export function toCampaignTemplates(list, meetingLink = '') {
+  return list.map((t) => {
+    const link = meetingLink || '{{meetingLink}}'
+    const body = String(t.body || '').replaceAll('{{meetingLink}}', link)
+    const scheduleBtn = link
+      ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px 0 4px;">
+  <tr>
+    <td style="padding-right:10px;padding-bottom:8px;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="border-radius:10px;background:#0f172a;">
+          <a href="${SIGNATURE.site}" style="display:inline-block;padding:12px 20px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;">View portfolio</a>
+        </td>
+      </tr></table>
+    </td>
+    <td style="padding-bottom:8px;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="border-radius:10px;background:#4f46e5;">
+          <a href="${link}" style="display:inline-block;padding:12px 20px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;">Schedule a meeting</a>
+        </td>
+      </tr></table>
+    </td>
+  </tr>
+</table>
+<p style="font-size:12px;color:#64748b;margin:0 0 16px;">Schedule opens my Google Calendar — only available times are shown.</p>`
+      : ''
+    const htmlBody = body.includes('<table role="presentation"')
+      ? body
+      : `<div style="font-family:system-ui,sans-serif;line-height:1.55;color:#111">${body
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\n/g, '<br>\n')}</div>${scheduleBtn}`
+    return {
+      name: t.name,
+      subject: t.subject,
+      textBody: body,
+      htmlBody,
+    }
+  })
+}

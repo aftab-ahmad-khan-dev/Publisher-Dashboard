@@ -22,7 +22,7 @@ function barColor(key, status) {
   if (status === 'warning' || status === 'approaching') return 'bg-amber-400'
   const meta = PLATFORM_META[key]
   if (meta.gradient) return 'instagram-gradient'
-  return meta.color || 'bg-violet-500'
+  return meta.color || 'bg-indigo-500'
 }
 
 export default function CharacterCounter({ getFullLength }) {

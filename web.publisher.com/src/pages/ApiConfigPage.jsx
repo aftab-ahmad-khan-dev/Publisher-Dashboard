@@ -115,7 +115,7 @@ export default function ApiConfigPage() {
       refreshFromServer();
       setLastTest((t) => ({ ...t, gmail: "ok" }));
       writeJsonStorage(STORAGE_KEYS.gmailTestStatus, "ok");
-      showToast("Gmail connected — you can send bulk mail from Email.", "success");
+      showToast("Gmail + Calendar connected — set your booking link in Mail Box → Meetings.", "success");
       setSearchParams({}, { replace: true });
     } else if (status === "error") {
       setLastTest((t) => ({ ...t, gmail: "error" }));
@@ -609,9 +609,9 @@ export default function ApiConfigPage() {
                     />
                     <p className='sm:col-span-2 text-[10px] leading-relaxed text-slate-500'>
                       Portal token needs{" "}
-                      <code className='text-violet-300/90'>w_member_social</code> for
+                      <code className='text-indigo-300/90'>w_member_social</code> for
                       your profile, or{" "}
-                      <code className='text-violet-300/90'>
+                      <code className='text-indigo-300/90'>
                         w_organization_social
                       </code>{" "}
                       for a company page. Use Copy access token (full string).
@@ -719,7 +719,7 @@ export default function ApiConfigPage() {
                         href={redditEnvSetup?.appsUrl || "https://www.reddit.com/prefs/apps"}
                         target='_blank'
                         rel='noreferrer'
-                        className='text-violet-300 underline'
+                        className='text-indigo-300 underline'
                       >
                         reddit.com/prefs/apps
                       </a>{" "}
@@ -780,8 +780,7 @@ export default function ApiConfigPage() {
                           Gmail (Mailsuite compatible)
                         </h3>
                         <p className='text-[10px] text-slate-500'>
-                          Bulk send from your inbox · opens in Publisher Suite + Mailsuite
-                          extension in Gmail
+                          Bulk send · Calendar Meet invites & sync · Sheets write-back
                         </p>
                       </div>
                     </div>
@@ -809,6 +808,15 @@ export default function ApiConfigPage() {
                   {form.gmail?.fromEmail && (
                     <p className='mt-1 text-[11px] text-emerald-400/90'>
                       Sending as {form.gmail.fromEmail}
+                    </p>
+                  )}
+                  {(form.gmail?.hasRefreshToken || form.gmail?.calendarReady) && (
+                    <p className='mt-1 text-[11px] text-indigo-300/90'>
+                      Calendar scopes granted — use Mail Box → Meetings to save your booking URL,
+                      Sync events, and Invite with Meet.
+                      {form.gmail?.calendarBookingUrl
+                        ? ` Booking link saved.`
+                        : ''}
                     </p>
                   )}
                   <div className='flex-1' aria-hidden />
@@ -886,7 +894,7 @@ export default function ApiConfigPage() {
                   </div>
                   <p className='mt-2 text-[11px] leading-relaxed text-slate-500'>
                     Create a token via{" "}
-                    <a href='https://developers.facebook.com/docs/threads' target='_blank' rel='noreferrer' className='text-violet-300 underline'>
+                    <a href='https://developers.facebook.com/docs/threads' target='_blank' rel='noreferrer' className='text-indigo-300 underline'>
                       Meta’s Threads API
                     </a>
                     . Test to auto-fill your user ID.
@@ -1007,7 +1015,7 @@ function Field({
             href={help}
             target='_blank'
             rel='noreferrer'
-            className='shrink-0 text-[9px] font-semibold text-violet-400 hover:text-violet-300'
+            className='shrink-0 text-[9px] font-semibold text-indigo-400 hover:text-indigo-300'
             title={`Where to get ${label}`}
           >
             Where to get it ↗
@@ -1192,6 +1200,14 @@ function getPlatformStatus(platform, form, summary, lastTest) {
         message: "Check OAuth client ID/secret and reconnect.",
       });
     }
+    if (form.gmail?.smtpConfigured || form.gmail?.transport === "smtp" || form.gmail?.sendReady) {
+      return withAlive({
+        tier: "functional",
+        title: "Ready to send (SMTP)",
+        message:
+          "SMTP is configured in api .env — Mail Box can send without Connect Gmail. OAuth is optional for Sheets write-back.",
+      });
+    }
     if (!summary.gmailReady) {
       const hasPartial =
         Boolean(form.gmail?.clientId?.trim()) || form.gmail?.hasClientSecret;
@@ -1200,16 +1216,16 @@ function getPlatformStatus(platform, form, summary, lastTest) {
         title: "Not connected",
         message: hasPartial
           ? "Credentials saved — click Connect Gmail to authorize sending."
-          : "Save Google OAuth credentials (or set GMAIL_* in api .env), then Connect Gmail.",
+          : "SMTP in .env or Gmail OAuth both work. Set SMTP_* or Connect Gmail.",
       });
     }
     const gmailVerified = lastTest === "ok" || Boolean(form.gmail?.hasRefreshToken);
     if (gmailVerified) {
       return withAlive({
         tier: "functional",
-        title: "Ready to send bulk mail",
+        title: "Ready to send from Mail Box",
         message:
-          "Gmail OAuth active. Bulk sends appear in Sent — use Mailsuite in Gmail for opens/clicks.",
+          "Gmail OAuth active. Calendar Meet + sync available in Mail Box → Meetings.",
       });
     }
     return withAlive({

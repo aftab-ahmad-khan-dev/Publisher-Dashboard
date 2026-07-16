@@ -13,9 +13,9 @@ export default function BrandLogo({ className = 'h-10 w-10' }) {
     >
       <defs>
         <linearGradient id={gid} x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#EC4899" />
-          <stop offset="0.55" stopColor="#A855F7" />
-          <stop offset="1" stopColor="#7C3AED" />
+          <stop stopColor="#818CF8" />
+          <stop offset="0.5" stopColor="#6366F1" />
+          <stop offset="1" stopColor="#38BDF8" />
         </linearGradient>
       </defs>
       <path

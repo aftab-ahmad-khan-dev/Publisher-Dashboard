@@ -25,6 +25,7 @@ export default function ComposerPanel({
   clearMedia,
   setCropHint,
   toggleImageVisibility,
+  replaceActiveMedia,
   togglePlatform,
   addHashtag,
   removeHashtag,
@@ -103,6 +104,7 @@ export default function ComposerPanel({
           clearMedia={clearMedia}
           setCropHint={setCropHint}
           toggleImageVisibility={toggleImageVisibility}
+          replaceActiveMedia={replaceActiveMedia}
         />
       )}
 

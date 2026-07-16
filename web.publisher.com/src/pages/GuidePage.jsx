@@ -106,7 +106,7 @@ function GuideCard({ g }) {
             href={g.portal[1]}
             target="_blank"
             rel="noreferrer"
-            className="text-xs text-violet-300 hover:text-violet-200"
+            className="text-xs text-indigo-300 hover:text-indigo-200"
           >
             {g.portal[0]} ↗
           </a>
@@ -120,10 +120,10 @@ function GuideCard({ g }) {
             href={g.fieldLinks?.[f] || g.portal[1]}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-medium text-violet-200 transition hover:bg-violet-500/20"
+            className="inline-flex items-center gap-1 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-medium text-indigo-200 transition hover:bg-indigo-500/20"
           >
             {f}
-            <span className="text-violet-400">↗</span>
+            <span className="text-indigo-400">↗</span>
           </a>
         ))}
       </div>
@@ -131,7 +131,7 @@ function GuideCard({ g }) {
       <ol className="mt-4 space-y-2">
         {g.steps.map((s, i) => (
           <li key={i} className="flex gap-2.5 text-[13px] leading-relaxed text-slate-400">
-            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-[10px] font-bold text-violet-300">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-[10px] font-bold text-indigo-300">
               {i + 1}
             </span>
             {s}
@@ -167,7 +167,7 @@ export default function GuidePage() {
       <PageScroll className="space-y-4 pb-4">
         <InfoBanner tone="violet">
           Connect each platform once in{' '}
-          <a href="/api-config" className="font-semibold text-violet-200 hover:text-white">
+          <a href="/api-config" className="font-semibold text-indigo-200 hover:text-white">
             Integrations
           </a>
           . Tokens are encrypted per account and never shared across tenants.

@@ -12,10 +12,11 @@ import {
   computeBulkScheduleDate,
   parseScheduleTime,
 } from '../lib/bulkSchedule.js'
+import { requirePlanFeature } from '../middleware/planGate.js'
 
 const router = Router()
 
-router.post('/bulk/schedule', async (req, res, next) => {
+router.post('/bulk/schedule', requirePlanFeature('bulk'), async (req, res, next) => {
   try {
     const { posts, platforms, timezone, startDate } = req.body || {}
 

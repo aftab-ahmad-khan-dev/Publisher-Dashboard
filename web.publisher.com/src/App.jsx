@@ -26,6 +26,7 @@ import GuidePage from './pages/GuidePage'
 import BulkUploadPage from './pages/BulkUploadPage'
 import EmailPage from './pages/EmailPage'
 import AdminUsersPage from './pages/AdminUsersPage'
+import BillingPage from './pages/BillingPage'
 import AppToaster from './components/AppToaster'
 import AppErrorBoundary from './components/AppErrorBoundary'
 import UploadProgressOverlay from './components/UploadProgressOverlay'
@@ -78,6 +79,7 @@ function AppRoutes() {
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="api-config" element={<ApiConfigPage />} />
               <Route path="guide" element={<GuidePage />} />
+              <Route path="billing" element={<BillingPage />} />
               <Route path="admin/users" element={<AdminUsersPage />} />
             </Route>
           </Route>
@@ -112,8 +114,8 @@ function MissingKeyScreen() {
       <BrandLogo className="h-14 w-14" />
       <h1 className="font-display text-2xl font-bold text-white">Auth not configured</h1>
       <p className="max-w-md text-sm leading-relaxed text-slate-400">
-        Set <code className="rounded bg-white/10 px-1.5 py-0.5 text-violet-300">VITE_CLERK_PUBLISHABLE_KEY</code> in{' '}
-        <code className="rounded bg-white/10 px-1.5 py-0.5 text-violet-300">web.publisher.com/.env.local</code>, then restart the dev server.
+        Set <code className="rounded bg-white/10 px-1.5 py-0.5 text-indigo-300">VITE_CLERK_PUBLISHABLE_KEY</code> in{' '}
+        <code className="rounded bg-white/10 px-1.5 py-0.5 text-indigo-300">web.publisher.com/.env.local</code>, then restart the dev server.
       </p>
       <a
         href="https://dashboard.clerk.com"
@@ -131,7 +133,7 @@ export default function App() {
   const [splash, setSplash] = useState(true)
 
   useEffect(() => {
-    const t = setTimeout(() => setSplash(false), 2400)
+    const t = setTimeout(() => setSplash(false), 2800)
     return () => clearTimeout(t)
   }, [])
 
@@ -147,7 +149,10 @@ export default function App() {
             <AppDataProvider>
               <UploadProgressOverlay />
               <AppToaster />
-              <SplashScreen visible={splash} />
+              <SplashScreen
+                visible={splash}
+                subtitle="Compose · schedule · publish across every channel"
+              />
               <div
                 className={splash ? 'opacity-0' : 'opacity-100 transition-opacity duration-500'}
               >

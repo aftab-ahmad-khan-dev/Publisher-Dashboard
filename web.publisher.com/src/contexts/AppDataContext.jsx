@@ -42,6 +42,7 @@ import {
   scheduleBulkRemote,
   uploadMediaRemote,
   subscribeRealtime,
+  fetchBillingMe,
 } from '../lib/backendApi'
 import { compressImageFile, compressImageFileForUpload, computeScheduleDate } from '../lib/bulkParse'
 import {
@@ -205,21 +206,33 @@ export function AppDataProvider({ children }) {
   const [drafts, setDrafts] = useState([])
   const [published, setPublished] = useState([])
   const [apiConfig, setApiConfig] = useState(loadApiConfigLocal)
+  const [subscription, setSubscription] = useState({
+    plan: 'none',
+    status: 'unpaid',
+    isAdmin: false,
+  })
   const [publishStatus, setPublishStatus] = useState('idle')
   const [uploadProgress, setUploadProgress] = useState(null)
   const [syncing, setSyncing] = useState(false)
   const loadingIdRef = useRef(0)
   const [loadingStack, setLoadingStack] = useState([])
 
-  const runWithLoading = useCallback(async (label, fn) => {
-    let taskLabel = label
-    let taskFn = fn
-    if (typeof label === 'function') {
-      taskFn = label
-      taskLabel = 'Working…'
+  const runWithLoading = useCallback(async (labelOrFn, fnOrOpts, maybeOpts) => {
+    let taskLabel = 'Working…'
+    let taskFn
+    let opts = {}
+    if (typeof labelOrFn === 'function') {
+      taskFn = labelOrFn
+      opts = typeof fnOrOpts === 'object' && fnOrOpts ? fnOrOpts : {}
+    } else {
+      taskLabel = labelOrFn || 'Working…'
+      taskFn = fnOrOpts
+      opts = typeof maybeOpts === 'object' && maybeOpts ? maybeOpts : {}
     }
+    if (typeof taskFn !== 'function') throw new Error('runWithLoading requires a function')
+    const blocking = Boolean(opts.blocking)
     const id = ++loadingIdRef.current
-    setLoadingStack((stack) => [...stack, { id, label: taskLabel || 'Working…' }])
+    setLoadingStack((stack) => [...stack, { id, label: taskLabel, blocking }])
     try {
       return await taskFn()
     } finally {
@@ -231,20 +244,28 @@ export function AppDataProvider({ children }) {
     () =>
       Boolean(
         uploadProgress ||
-          syncing ||
           publishStatus === 'loading' ||
           loadingStack.length > 0,
       ),
-    [uploadProgress, syncing, publishStatus, loadingStack.length],
+    [uploadProgress, publishStatus, loadingStack.length],
+  )
+
+  const blockingLoading = useMemo(
+    () =>
+      Boolean(
+        uploadProgress ||
+          publishStatus === 'loading' ||
+          loadingStack.some((item) => item.blocking),
+      ),
+    [uploadProgress, publishStatus, loadingStack],
   )
 
   const processingLabel = useMemo(() => {
     if (uploadProgress) return null
     if (loadingStack.length > 0) return loadingStack[loadingStack.length - 1].label
     if (publishStatus === 'loading') return 'Publishing…'
-    if (syncing) return 'Syncing data…'
     return null
-  }, [uploadProgress, loadingStack, publishStatus, syncing])
+  }, [uploadProgress, loadingStack, publishStatus])
 
   const clearUploadProgress = useCallback(() => setUploadProgress(null), [])
 
@@ -313,12 +334,47 @@ export function AppDataProvider({ children }) {
         data = await loadBootstrap()
       }
       applyBootstrap(data)
+      try {
+        const billing = await fetchBillingMe()
+        setSubscription({
+          plan: billing.plan || 'none',
+          rawPlan: billing.rawPlan || billing.plan || 'none',
+          status: billing.status || 'unpaid',
+          isAdmin: Boolean(billing.isAdmin),
+          activatedAt: billing.activatedAt || null,
+          userEmail: billing.userEmail || '',
+          prices: billing.prices || null,
+        })
+      } catch {
+        /* billing optional if older API */
+      }
     } catch (err) {
       showToast(err.message || 'Could not sync with API', 'error')
     } finally {
       setSyncing(false)
     }
   }, [live, isAuthenticated, showToast, migrateLocalConfigToDb, applyBootstrap])
+
+  const refreshSubscription = useCallback(async () => {
+    if (!live || !isAuthenticated) return null
+    try {
+      const billing = await fetchBillingMe()
+      const next = {
+        plan: billing.plan || 'none',
+        rawPlan: billing.rawPlan || billing.plan || 'none',
+        status: billing.status || 'unpaid',
+        isAdmin: Boolean(billing.isAdmin),
+        activatedAt: billing.activatedAt || null,
+        userEmail: billing.userEmail || '',
+        prices: billing.prices || null,
+      }
+      setSubscription(next)
+      return next
+    } catch (err) {
+      showToast(err.message || 'Could not load plan', 'error')
+      return null
+    }
+  }, [live, isAuthenticated, showToast])
 
   useEffect(() => {
     if (isAuthenticated) refreshFromServer()
@@ -516,8 +572,7 @@ export function AppDataProvider({ children }) {
   )
 
   const testPlatformConnection = useCallback(
-    async (platform, config, { quiet = false } = {}) =>
-      runWithLoading(`Testing ${platform}…`, async () => {
+    async (platform, config, { quiet = false } = {}) => {
       const result =
         platform === 'meta'
           ? await testMetaConnection(config.meta)
@@ -560,9 +615,8 @@ export function AppDataProvider({ children }) {
         showToast(result.error, 'error')
       }
       return result
-      }),
+    },
     [
-      runWithLoading,
       saveLinkedInConfig,
       saveMetaConfig,
       saveRedditConfig,
@@ -1147,8 +1201,7 @@ export function AppDataProvider({ children }) {
   )
 
   const cancelScheduled = useCallback(
-    async (id) =>
-      runWithLoading('Removing scheduled post…', async () => {
+    async (id) => {
       if (live) {
         try {
           await deleteScheduledRemote(id)
@@ -1164,13 +1217,12 @@ export function AppDataProvider({ children }) {
       setQueue(next)
       localStorage.setItem(STORAGE_KEYS.scheduledQueue, JSON.stringify(next))
       showToast('Scheduled post removed')
-      }),
-    [live, queue, showToast, refreshFromServer, runWithLoading],
+    },
+    [live, queue, showToast, refreshFromServer],
   )
 
   const cancelAllScheduled = useCallback(
-    async () =>
-      runWithLoading('Removing scheduled posts…', async () => {
+    async () => {
       if (live) {
         try {
           const result = await deleteAllScheduledRemote()
@@ -1188,8 +1240,8 @@ export function AppDataProvider({ children }) {
       localStorage.setItem(STORAGE_KEYS.scheduledQueue, JSON.stringify([]))
       showToast(count ? `Removed ${count} scheduled posts` : 'No scheduled posts to remove')
       return { ok: true, removed: count }
-      }),
-    [live, queue, showToast, refreshFromServer, runWithLoading],
+    },
+    [live, queue, showToast, refreshFromServer],
   )
 
   const editScheduled = useCallback(
@@ -1279,8 +1331,7 @@ export function AppDataProvider({ children }) {
   )
 
   const saveDraft = useCallback(
-    async (postState, editingDraftId = null) =>
-      runWithLoading('Saving draft…', async () => {
+    async (postState, editingDraftId = null) => {
       if (!postState.body.trim() && postState.hashtags.length === 0) {
         showToast('Add content before saving a draft.', 'error')
         return { ok: false }
@@ -1301,13 +1352,12 @@ export function AppDataProvider({ children }) {
       await persistDrafts(next)
       showToast(editingDraftId ? 'Draft updated' : 'Saved to drafts')
       return { ok: true, draft: next.find((d) => d.id === payload.id) }
-      }),
-    [drafts, persistDrafts, showToast, live, refreshFromServer, runWithLoading],
+    },
+    [drafts, persistDrafts, showToast, live, refreshFromServer],
   )
 
   const deleteDraft = useCallback(
-    async (id) =>
-      runWithLoading('Deleting draft…', async () => {
+    async (id) => {
       if (live) {
         try {
           await deleteDraftRemote(id)
@@ -1321,8 +1371,8 @@ export function AppDataProvider({ children }) {
       }
       await persistDrafts(drafts.filter((d) => d.id !== id))
       showToast('Draft deleted')
-      }),
-    [drafts, persistDrafts, showToast, live, refreshFromServer, runWithLoading],
+    },
+    [drafts, persistDrafts, showToast, live, refreshFromServer],
   )
 
   const getDraftById = useCallback((id) => drafts.find((d) => d.id === id), [drafts])
@@ -1334,11 +1384,13 @@ export function AppDataProvider({ children }) {
         drafts,
         published,
         apiConfig,
+        subscription,
         publishStatus,
         uploadProgress,
         syncing,
         processing,
         processingLabel,
+        blockingLoading,
         runWithLoading,
         showToast,
         saveApiConfig,
@@ -1361,6 +1413,7 @@ export function AppDataProvider({ children }) {
         deleteDraft,
         getDraftById,
         refreshFromServer,
+        refreshSubscription,
         requestNotificationPermission,
         isLivePublishing,
         storageKeys: STORAGE_KEYS,

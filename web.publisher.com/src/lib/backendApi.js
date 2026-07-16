@@ -20,17 +20,19 @@ async function getClerkToken() {
   return null;
 }
 
-/** Local API without CLERK_SECRET_KEY uses this header for admin routes only. */
-function getAdminEmailHeader() {
+/** Local API without CLERK_SECRET_KEY uses these headers for identity. */
+function getIdentityHeaders() {
   try {
     const email = window.Clerk?.user?.primaryEmailAddress?.emailAddress;
+    if (!email) return {};
+    const headers = { "X-User-Email": email };
     if (isPlatformAdmin(email)) {
-      return { "X-Admin-Email": email };
+      headers["X-Admin-Email"] = email;
     }
+    return headers;
   } catch {
-    /* Clerk not ready */
+    return {};
   }
-  return {};
 }
 
 export function hasBackend() {
@@ -45,7 +47,7 @@ export async function apiFetch(path, { method = "GET", body } = {}) {
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...getAdminEmailHeader(),
+      ...getIdentityHeaders(),
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
@@ -157,8 +159,11 @@ export async function getEmailTemplateDraft() {
   return apiFetch("/email/template-draft");
 }
 
-export async function saveEmailTemplateDraft(subject, body) {
-  return apiFetch("/email/template-draft", { method: "PUT", body: { subject, body } });
+export async function saveEmailTemplateDraft(subject, body, extra = {}) {
+  return apiFetch("/email/template-draft", {
+    method: "PUT",
+    body: { subject, body, ...extra },
+  });
 }
 
 export async function listEmailCampaigns() {
@@ -173,12 +178,149 @@ export async function createEmailCampaign(payload) {
   return apiFetch("/email/campaigns", { method: "POST", body: payload });
 }
 
-export async function sendEmailCampaign(id) {
-  return apiFetch(`/email/campaigns/${id}/send`, { method: "POST" });
+export async function sendEmailCampaign(id, body = {}) {
+  return apiFetch(`/email/campaigns/${id}/send`, { method: "POST", body });
+}
+
+export async function pauseEmailCampaign(id) {
+  return apiFetch(`/email/campaigns/${id}/pause`, { method: "POST" });
+}
+
+export async function resumeEmailCampaign(id) {
+  return apiFetch(`/email/campaigns/${id}/resume`, { method: "POST" });
+}
+
+export async function cancelEmailCampaign(id) {
+  return apiFetch(`/email/campaigns/${id}/cancel`, { method: "POST" });
 }
 
 export async function deleteEmailCampaign(id) {
   return apiFetch(`/email/campaigns/${id}`, { method: "DELETE" });
+}
+
+export async function moveMailboxToJunk(id) {
+  return apiFetch(`/email/mailbox/${id}/junk`, { method: "POST", body: {} });
+}
+
+export async function restoreMailboxFromJunk(id) {
+  return apiFetch(`/email/mailbox/${id}/restore`, { method: "POST", body: {} });
+}
+
+export async function deleteMailboxForever(id) {
+  return apiFetch(`/email/mailbox/${id}`, { method: "DELETE" });
+}
+
+export async function bulkMailboxAction({ ids, action }) {
+  return apiFetch("/email/mailbox/bulk", {
+    method: "POST",
+    body: { ids, action },
+  });
+}
+
+export async function fetchEmailMailbox(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.folder) qs.set("folder", params.folder);
+  if (params.q) qs.set("q", params.q);
+  if (params.campaignId) qs.set("campaignId", params.campaignId);
+  if (params.limit) qs.set("limit", String(params.limit));
+  const q = qs.toString();
+  return apiFetch(`/email/mailbox${q ? `?${q}` : ""}`);
+}
+
+export async function fetchEmailMailboxMessage(id) {
+  return apiFetch(`/email/mailbox/${id}`);
+}
+
+export async function uploadLeadWorkbook({ dataBase64, fileName, sheetNames, skipAlreadyEmailed, dedupe }) {
+  return apiFetch("/email/leads/upload", {
+    method: "POST",
+    body: { dataBase64, fileName, sheetNames, skipAlreadyEmailed, dedupe },
+  });
+}
+
+export async function importLeadGoogleSheet({ url, sheetNames, skipAlreadyEmailed, dedupe }) {
+  return apiFetch("/email/leads/sheets", {
+    method: "POST",
+    body: { url, sheetNames, skipAlreadyEmailed, dedupe },
+  });
+}
+
+export async function listLeadSources() {
+  return apiFetch("/email/leads");
+}
+
+export async function reparseLeadSource(id, body = {}) {
+  return apiFetch(`/email/leads/${id}/reparse`, { method: "POST", body });
+}
+
+export function leadSourceExportUrl(id) {
+  return `${API_BASE}/email/leads/${id}/export`;
+}
+
+export async function downloadLeadSourceExport(id, fileName = 'leads-updated.xlsx') {
+  if (!API_BASE) throw new Error('VITE_API_BASE_URL is not set');
+  const token = await getClerkToken();
+  const res = await fetch(`${API_BASE}/email/leads/${id}/export`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...getIdentityHeaders(),
+    },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `Export failed (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+  return { ok: true };
+}
+
+export async function createCalendarInvite(payload) {
+  return apiFetch("/email/calendar/invite", { method: "POST", body: payload });
+}
+
+export async function syncEmailCalendar() {
+  return apiFetch("/email/calendar/sync", { method: "POST", body: {} });
+}
+
+export async function saveCalendarSettings(body) {
+  return apiFetch("/email/settings/calendar", { method: "PUT", body });
+}
+
+export async function getEmailSettings() {
+  return apiFetch("/email/settings");
+}
+
+export async function listEmailTemplates(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.type) qs.set("type", params.type);
+  if (params.meetingLink) qs.set("meetingLink", params.meetingLink);
+  const q = qs.toString();
+  return apiFetch(`/email/templates${q ? `?${q}` : ""}`);
+}
+
+export async function listProcessedEmails(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.campaignId) qs.set("campaignId", params.campaignId);
+  if (params.limit) qs.set("limit", String(params.limit));
+  const q = qs.toString();
+  return apiFetch(`/email/processed${q ? `?${q}` : ""}`);
+}
+
+export async function listEmailMeetings(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.limit) qs.set("limit", String(params.limit));
+  const q = qs.toString();
+  return apiFetch(`/email/meetings${q ? `?${q}` : ""}`);
+}
+
+export async function updateEmailMeeting(id, body) {
+  return apiFetch(`/email/meetings/${id}`, { method: "PATCH", body });
 }
 
 export async function saveDraftRemote(draft) {
@@ -199,6 +341,39 @@ export async function deleteAllScheduledRemote() {
 
 export async function fetchAdminUsers() {
   return apiFetch("/admin/users");
+}
+
+export async function fetchAdminSignups() {
+  return apiFetch("/admin/signups");
+}
+
+export async function fetchAdminPayments(status = "") {
+  const q = status ? `?status=${encodeURIComponent(status)}` : "";
+  return apiFetch(`/admin/payments${q}`);
+}
+
+export async function activateAdminPayment(id) {
+  return apiFetch(`/admin/payments/${id}/activate`, { method: "POST", body: {} });
+}
+
+export async function rejectAdminPayment(id, reason = "") {
+  return apiFetch(`/admin/payments/${id}/reject`, { method: "POST", body: { reason } });
+}
+
+export async function fetchBillingMe() {
+  return apiFetch("/billing/me");
+}
+
+export async function fetchBillingBanks() {
+  return apiFetch("/billing/banks");
+}
+
+export async function fetchBillingPayments() {
+  return apiFetch("/billing/payments");
+}
+
+export async function submitBillingPayment(payload) {
+  return apiFetch("/billing/submit", { method: "POST", body: payload });
 }
 
 export async function updateScheduledRemote(id, payload) {

@@ -1,12 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useAppData } from '../contexts/AppDataContext'
 import { isPlatformAdmin } from '../lib/admin'
-import { fetchAdminUsers } from '../lib/backendApi'
+import {
+  fetchAdminUsers,
+  fetchAdminSignups,
+  fetchAdminPayments,
+  activateAdminPayment,
+  rejectAdminPayment,
+} from '../lib/backendApi'
 import PageHeader from '../components/PageHeader'
 import PageShell, { PageScroll, PageStatsRow, PageStat, EmptyState } from '../components/PageShell'
 import PlatformIcon from '../components/PlatformIcon'
+import { PLAN_META } from '../lib/plans'
+import { showToast } from '../lib/toast'
 
 const PLATFORM_LABELS = {
   meta: 'Meta',
@@ -16,6 +23,12 @@ const PLATFORM_LABELS = {
   threads: 'Threads',
   gmail: 'Gmail',
 }
+
+const TABS = [
+  { id: 'users', label: 'Users' },
+  { id: 'signups', label: 'Signups' },
+  { id: 'payments', label: 'Payments' },
+]
 
 function formatWhen(iso) {
   if (!iso) return '—'
@@ -41,6 +54,24 @@ function StatPill({ label, value, accent }) {
   )
 }
 
+function planBadge(plan, status) {
+  const name = PLAN_META[plan]?.name || plan || 'None'
+  const tone =
+    status === 'active'
+      ? 'bg-emerald-500/15 text-emerald-300'
+      : status === 'pending'
+        ? 'bg-amber-500/15 text-amber-300'
+        : status === 'rejected'
+          ? 'bg-rose-500/15 text-rose-300'
+          : 'bg-slate-500/15 text-slate-400'
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${tone}`}>
+      {name}
+      {status && status !== 'active' ? ` · ${status}` : ''}
+    </span>
+  )
+}
+
 function UserCard({ user, index }) {
   const connected = Object.entries(user.connections || {}).filter(([, on]) => on)
   const initials = user.name
@@ -49,10 +80,11 @@ function UserCard({ user, index }) {
     .join('')
     .slice(0, 2)
     .toUpperCase()
+  const sub = user.subscription || {}
 
   return (
     <li className="saas-user-card" style={{ animationDelay: `${index * 40}ms` }}>
-      <div className="border-b border-white/[0.06] bg-gradient-to-br from-violet-500/10 via-transparent to-fuchsia-500/5 px-4 py-4">
+      <div className="border-b border-white/[0.06] bg-gradient-to-br from-indigo-500/10 via-transparent to-sky-500/5 px-4 py-4">
         <div className="flex items-start gap-3">
           {user.imageUrl ? (
             <img
@@ -61,7 +93,7 @@ function UserCard({ user, index }) {
               className="h-12 w-12 shrink-0 rounded-xl object-cover ring-2 ring-white/10"
             />
           ) : (
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-500/20 font-display text-sm font-bold text-violet-200 ring-2 ring-white/10">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 font-display text-sm font-bold text-indigo-200 ring-2 ring-white/10">
               {initials || '?'}
             </div>
           )}
@@ -70,15 +102,7 @@ function UserCard({ user, index }) {
             <p className="truncate text-xs text-slate-400">{user.email || 'No email'}</p>
             <p className="mt-1 truncate font-mono text-[10px] text-slate-600">{user.workspaceId}</p>
           </div>
-          {user.hasApiConfig ? (
-            <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-500/25">
-              Active
-            </span>
-          ) : (
-            <span className="shrink-0 rounded-full bg-slate-500/10 px-2 py-0.5 text-[10px] font-semibold text-slate-500 ring-1 ring-white/10">
-              New
-            </span>
-          )}
+          {planBadge(sub.plan, sub.status)}
         </div>
       </div>
 
@@ -119,12 +143,6 @@ function UserCard({ user, index }) {
             <span>Last sign-in</span>
             <span className="text-slate-400">{formatWhen(user.lastSignInAt)}</span>
           </div>
-          {user.configUpdatedAt && (
-            <div className="flex justify-between gap-2">
-              <span>Config updated</span>
-              <span className="text-slate-400">{formatWhen(user.configUpdatedAt)}</span>
-            </div>
-          )}
         </div>
       </div>
     </li>
@@ -133,69 +151,117 @@ function UserCard({ user, index }) {
 
 export default function AdminUsersPage() {
   const { user, ready } = useAuth()
-  const { runWithLoading } = useAppData()
+  const [tab, setTab] = useState('payments')
   const [users, setUsers] = useState([])
+  const [signups, setSignups] = useState([])
+  const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [sourceNote, setSourceNote] = useState('')
+  const [receiptPreview, setReceiptPreview] = useState(null)
+  const [busyId, setBusyId] = useState('')
 
   const isAdmin = isPlatformAdmin(user?.email)
 
-  useEffect(() => {
-    if (!ready || !isAdmin) return
-    let cancelled = false
+  const load = useCallback(async () => {
     setLoading(true)
     setError('')
-    runWithLoading('Loading users…', () =>
-      fetchAdminUsers()
-        .then((data) => {
-          if (!cancelled) {
-            setUsers(data.users || [])
-            setSourceNote(data.source === 'database' ? data.note || '' : '')
-          }
-        })
-        .catch((err) => {
-          if (!cancelled) setError(err.message || 'Failed to load users')
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false)
-        }),
-    )
-    return () => {
-      cancelled = true
+    try {
+      const [usersRes, signupsRes, paymentsRes] = await Promise.all([
+        fetchAdminUsers(),
+        fetchAdminSignups(),
+        fetchAdminPayments(),
+      ])
+      setUsers(usersRes.users || [])
+      setSourceNote(usersRes.source === 'database' ? usersRes.note || '' : '')
+      setSignups(signupsRes.signups || [])
+      setPayments(paymentsRes.payments || [])
+    } catch (err) {
+      setError(err.message || 'Failed to load admin data')
+    } finally {
+      setLoading(false)
     }
-  }, [ready, isAdmin, runWithLoading])
+  }, [])
+
+  useEffect(() => {
+    if (!ready || !isAdmin) return
+    load()
+  }, [ready, isAdmin, load])
 
   if (ready && !isAdmin) {
     return <Navigate to="/compose" replace />
   }
 
   const activeCount = users.filter((u) => u.hasApiConfig).length
-  const connectedCount = users.filter((u) =>
-    Object.values(u.connections || {}).some(Boolean),
-  ).length
+  const pendingPayments = payments.filter((p) => p.status === 'pending').length
+
+  const onActivate = async (id) => {
+    setBusyId(id)
+    try {
+      await activateAdminPayment(id)
+      showToast('Plan activated — welcome email sent')
+      await load()
+    } catch (err) {
+      showToast(err.message || 'Activate failed', 'error')
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  const onReject = async (id) => {
+    const reason = window.prompt('Optional reject reason') || ''
+    setBusyId(id)
+    try {
+      await rejectAdminPayment(id, reason)
+      showToast('Payment rejected')
+      await load()
+    } catch (err) {
+      showToast(err.message || 'Reject failed', 'error')
+    } finally {
+      setBusyId('')
+    }
+  }
 
   return (
     <PageShell>
       <PageHeader
-        title="Platform Users"
-        subtitle="Registered accounts, activity, and integration health"
+        title="Platform Admin"
+        subtitle="Signups, payment receipts, and plan activation"
       />
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+              tab === t.id
+                ? 'bg-indigo-500/20 text-indigo-200 ring-1 ring-indigo-500/30'
+                : 'bg-white/[0.04] text-slate-400 hover:text-white'
+            }`}
+          >
+            {t.label}
+            {t.id === 'payments' && pendingPayments > 0 ? (
+              <span className="ml-1.5 rounded-full bg-amber-500/20 px-1.5 text-[10px] text-amber-300">
+                {pendingPayments}
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </div>
 
       <PageStatsRow>
         <PageStat label="Registered" value={loading ? '…' : users.length} tone="violet" />
         <PageStat label="Active" value={loading ? '…' : activeCount} tone="emerald" hint="With API config" />
-        <PageStat label="Connected" value={loading ? '…' : connectedCount} hint="Platforms linked" />
+        <PageStat label="Pending payments" value={loading ? '…' : pendingPayments} hint="Need review" />
         <PageStat label="Source" value={sourceNote ? 'DB' : 'Clerk'} />
       </PageStatsRow>
 
       <PageScroll>
-        {sourceNote && !error && !loading && (
-          <div className="saas-info-banner saas-info-banner--amber mb-3 text-xs">{sourceNote}</div>
-        )}
         {error ? (
           <div className="saas-content-card border border-rose-500/20 bg-rose-500/5 p-6 text-center">
-            <p className="font-medium text-rose-200">Could not load users</p>
+            <p className="font-medium text-rose-200">Could not load admin data</p>
             <p className="mt-1 text-xs text-rose-300/80">{error}</p>
           </div>
         ) : loading ? (
@@ -204,19 +270,127 @@ export default function AdminUsersPage() {
               <div key={i} className="saas-content-card h-64 animate-pulse" />
             ))}
           </div>
-        ) : users.length === 0 ? (
-          <EmptyState
-            title="No users found"
-            description="Registered Clerk users will appear here with stats and connection status."
-          />
+        ) : tab === 'users' ? (
+          users.length === 0 ? (
+            <EmptyState title="No users found" description="Registered Clerk users will appear here." />
+          ) : (
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {users.map((u, i) => (
+                <UserCard key={u.id} user={u} index={i} />
+              ))}
+            </ul>
+          )
+        ) : tab === 'signups' ? (
+          signups.length === 0 ? (
+            <EmptyState title="No signups yet" description="New accounts will show here with plan status." />
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-white/10">
+              <table className="saas-table w-full text-left text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-3 py-2.5">User</th>
+                    <th className="px-3 py-2.5">Joined</th>
+                    <th className="px-3 py-2.5">Plan</th>
+                    <th className="px-3 py-2.5">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {signups.map((s) => (
+                    <tr key={s.id}>
+                      <td className="px-3 py-2.5">
+                        <p className="font-medium text-white">{s.name}</p>
+                        <p className="text-xs text-slate-500">{s.email || s.workspaceId}</p>
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-400">{formatWhen(s.createdAt)}</td>
+                      <td className="px-3 py-2.5 text-slate-300">
+                        {PLAN_META[s.plan]?.name || s.plan || 'None'}
+                      </td>
+                      <td className="px-3 py-2.5">{planBadge(s.plan, s.status)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : payments.length === 0 ? (
+          <EmptyState title="No payments" description="Receipt submissions will appear here for activation." />
         ) : (
-          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {users.map((u, i) => (
-              <UserCard key={u.id} user={u} index={i} />
+          <ul className="space-y-3">
+            {payments.map((p) => (
+              <li
+                key={p.id}
+                className="rounded-2xl border border-white/10 bg-white/[0.02] p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-white">
+                      {p.userEmail || p.workspaceId} · {PLAN_META[p.planRequested]?.name || p.planRequested}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {p.bankMethod} · {formatWhen(p.createdAt)}
+                    </p>
+                    {p.note ? <p className="mt-2 text-xs text-slate-400">{p.note}</p> : null}
+                  </div>
+                  {planBadge(p.planRequested, p.status)}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {p.receiptUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => setReceiptPreview(p.receiptUrl)}
+                      className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/5"
+                    >
+                      View receipt
+                    </button>
+                  ) : null}
+                  {p.status === 'pending' && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={busyId === p.id}
+                        onClick={() => onActivate(p.id)}
+                        className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                      >
+                        Activate plan
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId === p.id}
+                        onClick={() => onReject(p.id)}
+                        className="rounded-full border border-rose-500/30 px-3 py-1.5 text-xs text-rose-300 disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+                </div>
+              </li>
             ))}
           </ul>
         )}
       </PageScroll>
+
+      {receiptPreview && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setReceiptPreview(null)}
+          onKeyDown={(e) => e.key === 'Escape' && setReceiptPreview(null)}
+          role="dialog"
+        >
+          <div className="max-h-[90vh] max-w-3xl overflow-auto rounded-2xl border border-white/10 bg-[#0c1220] p-4">
+            <img src={receiptPreview} alt="Payment receipt" className="max-h-[80vh] w-full object-contain" />
+            <a
+              href={receiptPreview}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-block text-sm text-indigo-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Open original
+            </a>
+          </div>
+        </div>
+      )}
     </PageShell>
   )
 }

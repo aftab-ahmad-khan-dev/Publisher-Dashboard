@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useMemo } from 'react'
 import { CROP_HINTS, getCropAspectRatio } from '../hooks/usePostState'
 import { IMAGE_VISIBILITY_PLATFORMS, PLATFORM_META, MAX_UPLOAD_IMAGES } from '../lib/constants'
 import PlatformIcon from './PlatformIcon'
+import ImageEditModal from './ImageEditModal'
 
 const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,video/mp4'
 
@@ -13,7 +14,7 @@ function MediaThumb({ item, selected, onSelect, onRemove }) {
       onClick={() => onSelect(item.id)}
       className={`group relative aspect-square overflow-hidden rounded-lg ring-2 transition-all ${
         selected
-          ? 'ring-violet-400 shadow-[0_0_12px_rgba(139,92,246,0.35)]'
+          ? 'ring-indigo-400 shadow-[0_0_12px_rgba(99,102,241,0.35)]'
           : 'ring-white/10 hover:ring-white/25'
       }`}
     >
@@ -26,7 +27,7 @@ function MediaThumb({ item, selected, onSelect, onRemove }) {
         #{label}
       </span>
       {selected && (
-        <span className="absolute bottom-1 left-1 rounded bg-violet-600/90 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+        <span className="absolute bottom-1 left-1 rounded bg-indigo-600/90 px-1.5 py-0.5 text-[9px] font-semibold text-white">
           Active
         </span>
       )}
@@ -69,7 +70,7 @@ function MediaPlatformChip({ platform, imageOn, publishOn, onToggle }) {
       title={`${meta?.label || platform}: ${imageOn ? 'include image' : 'text only'}`}
       className={`flex items-center gap-1.5 rounded-xl px-2 py-1.5 ring-1 transition-all ${
         imageOn
-          ? 'bg-violet-500/12 ring-violet-500/35 shadow-sm shadow-violet-500/10'
+          ? 'bg-indigo-500/12 ring-indigo-500/35 shadow-sm shadow-indigo-500/10'
           : 'bg-white/[0.03] ring-white/[0.08] opacity-55 hover:opacity-80'
       } ${!publishOn ? 'opacity-40' : ''}`}
     >
@@ -80,7 +81,7 @@ function MediaPlatformChip({ platform, imageOn, publishOn, onToggle }) {
       />
       <span className="text-[10px] font-semibold text-slate-200">{meta?.short || platform}</span>
       {imageOn && (
-        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-violet-500/30 text-[8px] text-violet-200">
+        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-indigo-500/30 text-[8px] text-indigo-200">
           ✓
         </span>
       )}
@@ -103,10 +104,12 @@ export default function ImageUploader({
   clearMedia,
   setCropHint,
   toggleImageVisibility,
+  replaceActiveMedia,
 }) {
   const inputRef = useRef(null)
   const [dragOver, setDragOver] = useState(false)
   const [limitHint, setLimitHint] = useState('')
+  const [editOpen, setEditOpen] = useState(false)
 
   const atLimit = mediaItems.length >= MAX_UPLOAD_IMAGES
   const remaining = MAX_UPLOAD_IMAGES - mediaItems.length
@@ -201,7 +204,7 @@ export default function ImageUploader({
           Select multiple · JPG, PNG, GIF, WEBP, MP4 · up to {MAX_UPLOAD_IMAGES} files
         </p>
         {!atLimit && remaining < MAX_UPLOAD_IMAGES && mediaItems.length > 0 && (
-          <p className="mt-1.5 text-[10px] font-medium text-violet-400/90">
+          <p className="mt-1.5 text-[10px] font-medium text-indigo-400/90">
             {remaining} slot{remaining === 1 ? '' : 's'} left
           </p>
         )}
@@ -274,6 +277,15 @@ export default function ImageUploader({
                 >
                   Clear all
                 </button>
+                {imageType !== 'video' && replaceActiveMedia && (
+                  <button
+                    type="button"
+                    onClick={() => setEditOpen(true)}
+                    className="absolute top-2 left-2 rounded-full bg-indigo-600/90 px-2.5 py-1 text-xs font-semibold text-white hover:bg-indigo-500"
+                  >
+                    Edit
+                  </button>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -327,6 +339,15 @@ export default function ImageUploader({
             </div>
           )}
         </>
+      )}
+
+      {editOpen && imagePreviewUrl && imageType !== 'video' && (
+        <ImageEditModal
+          file={image}
+          previewUrl={imagePreviewUrl}
+          onClose={() => setEditOpen(false)}
+          onApply={(nextFile) => replaceActiveMedia?.(nextFile)}
+        />
       )}
     </div>
   )

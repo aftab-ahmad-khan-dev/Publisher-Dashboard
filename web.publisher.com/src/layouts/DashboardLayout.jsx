@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import Sidebar from '../components/layout/Sidebar'
 import TopBar from '../components/layout/TopBar'
 import BottomNav from '../components/layout/BottomNav'
+import PlanGate from '../components/PlanGate'
+import { featureForPath } from '../lib/plans'
 
 const COLLAPSE_KEY = 'pulse_sidebar_collapsed'
 
@@ -16,6 +18,7 @@ export default function DashboardLayout() {
     }
   })
   const location = useLocation()
+  const feature = featureForPath(location.pathname)
 
   useEffect(() => {
     try {
@@ -39,12 +42,14 @@ export default function DashboardLayout() {
         <main className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden px-3 pb-[5.25rem] pt-3 sm:px-4 lg:pb-4 lg:pt-4">
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="saas-content-frame flex min-h-0 flex-1 flex-col"
           >
-            <Outlet />
+            <PlanGate feature={feature}>
+              <Outlet />
+            </PlanGate>
           </motion.div>
         </main>
       </div>

@@ -2,30 +2,38 @@ import { Link } from 'react-router-dom'
 
 const TIERS = [
   {
-    name: 'Free',
-    price: '$0',
-    cadence: 'forever',
-    blurb: 'Everything you need to publish across your channels.',
-    features: ['1 workspace', 'All 5 social platforms', 'Email campaigns', 'Scheduling & auto-publish', 'Per-platform previews'],
-    cta: 'Start free',
+    id: 'starter',
+    name: 'Starter',
+    price: '$5',
+    cadence: 'per month',
+    blurb: 'Publish and bulk-schedule across your social channels.',
+    features: ['Compose', 'Bulk Upload', 'Bank-transfer activation'],
+    cta: 'Get Starter',
     highlight: false,
   },
   {
-    name: 'Pro',
-    price: '$19',
+    id: 'growth',
+    name: 'Growth',
+    price: '$10',
     cadence: 'per month',
-    blurb: 'For creators who publish at volume across every network.',
-    features: ['Everything in Free', 'Bulk upload & calendar', 'Unlimited scheduled posts', 'Open tracking for email', 'Priority support'],
-    cta: 'Start free trial',
+    blurb: 'Add Mail Box outreach on top of publishing.',
+    features: ['Everything in Starter', 'Mail Box campaigns', 'Meetings & calendar CTAs'],
+    cta: 'Get Growth',
     highlight: true,
   },
   {
-    name: 'Team',
-    price: '$49',
+    id: 'pro',
+    name: 'Pro',
+    price: '$20',
     cadence: 'per month',
-    blurb: 'Multiple brands and teammates in isolated workspaces.',
-    features: ['Everything in Pro', 'Unlimited workspaces', 'Team members & roles', 'Per-tenant data isolation', 'Dedicated support'],
-    cta: 'Start free trial',
+    blurb: 'Full Publisher Suite — drafts, schedule, calendar, integrations.',
+    features: [
+      'Everything in Growth',
+      'Drafts & Scheduled',
+      'Content Calendar',
+      'Integrations & Setup Guide',
+    ],
+    cta: 'Get Pro',
     highlight: false,
   },
 ]
@@ -34,12 +42,13 @@ export default function PricingPage() {
   return (
     <section className="mx-auto max-w-5xl px-6 py-24">
       <div className="text-center">
-        <p className="text-xs font-bold uppercase tracking-[0.12em] text-violet-400">Pricing</p>
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">Pricing</p>
         <h1 className="font-display mx-auto mt-3 max-w-2xl text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
-          Simple pricing. Start free.
+          Simple plans. Pay by bank transfer.
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-base text-slate-400">
-          No credit card to begin. Upgrade when you need more volume, brands, or teammates.
+          Choose Starter, Growth, or Pro. Transfer to JazzCash, UBL, NayaPay, or Meezan, upload your
+          receipt, and we activate your plan.
         </p>
       </div>
 
@@ -48,11 +57,13 @@ export default function PricingPage() {
           <div
             key={t.name}
             className={`relative flex flex-col rounded-3xl border p-8 ${
-              t.highlight ? 'border-violet-500/40 bg-gradient-to-b from-violet-600/10 to-transparent' : 'border-white/[0.08] bg-white/[0.02]'
+              t.highlight
+                ? 'border-indigo-500/40 bg-gradient-to-b from-indigo-600/10 to-transparent'
+                : 'border-white/[0.08] bg-white/[0.02]'
             }`}
           >
             {t.highlight && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-fuchsia-500 to-violet-600 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
                 Most popular
               </span>
             )}
@@ -66,16 +77,20 @@ export default function PricingPage() {
               {t.features.map((f) => (
                 <li key={f} className="flex items-start gap-2.5 text-sm text-slate-300">
                   <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M20 6 9 17l-5-5" /></svg>
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20 6 9 17l-5-5" />
+                    </svg>
                   </span>
                   {f}
                 </li>
               ))}
             </ul>
             <Link
-              to="/sign-up"
+              to={`/sign-up?plan=${t.id}`}
               className={`mt-8 inline-flex items-center justify-center rounded-full px-6 py-3 font-display text-sm font-bold transition ${
-                t.highlight ? 'bg-gradient-to-r from-fuchsia-500 to-violet-600 text-white hover:opacity-90' : 'border border-white/15 text-white hover:bg-white/5'
+                t.highlight
+                  ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white hover:opacity-90'
+                  : 'border border-white/15 text-white hover:bg-white/5'
               }`}
             >
               {t.cta}
@@ -83,7 +98,9 @@ export default function PricingPage() {
           </div>
         ))}
       </div>
-      <p className="mt-8 text-center text-[11px] text-slate-600">Prices shown are illustrative for this demo.</p>
+      <p className="mt-8 text-center text-[11px] text-slate-600">
+        Manual bank transfer · no card required · plans activate after receipt review
+      </p>
     </section>
   )
 }

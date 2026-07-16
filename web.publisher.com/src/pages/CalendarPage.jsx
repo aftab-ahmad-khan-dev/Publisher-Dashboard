@@ -109,7 +109,7 @@ export default function CalendarPage() {
                     isSelected ? 'saas-calendar-day--selected' : posts.length ? 'calendar-day-has-post' : ''
                   } ${isToday ? 'saas-calendar-day--today' : ''}`}
                 >
-                  <span className={`text-xs font-bold ${isToday ? 'text-fuchsia-400' : 'text-slate-400'}`}>
+                  <span className={`text-xs font-bold ${isToday ? 'text-sky-400' : 'text-slate-400'}`}>
                     {day.getDate()}
                   </span>
                   {platforms.length > 0 && (
@@ -140,7 +140,7 @@ export default function CalendarPage() {
                   <button type="button" onClick={() => setPreviewing(item)} className="saas-list-item">
                     <PlatformIconGroup platforms={item.platforms} size="xs" />
                     <p className="mt-1.5 line-clamp-2 text-xs text-slate-300">{item.body}</p>
-                    <p className="mt-1 text-[10px] font-medium text-violet-300">
+                    <p className="mt-1 text-[10px] font-medium text-indigo-300">
                       {formatScheduledISO(item.scheduledAt, item.timezone)}
                     </p>
                   </button>

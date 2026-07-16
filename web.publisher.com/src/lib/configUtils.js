@@ -60,6 +60,8 @@ export function configFromServer(server) {
       hasClientSecret: server.gmail?.hasClientSecret,
       hasRefreshToken: server.gmail?.hasRefreshToken,
       tokenExpiresAt: server.gmail?.tokenExpiresAt || null,
+      smtpConfigured: Boolean(server.gmail?.smtpConfigured),
+      transport: server.gmail?.transport || null,
     },
     webhookUrl: server.webhookUrl || '',
     notificationsEnabled: server.notificationsEnabled ?? true,

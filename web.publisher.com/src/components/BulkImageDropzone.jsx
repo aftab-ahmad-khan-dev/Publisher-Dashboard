@@ -29,7 +29,7 @@ function DropThumb({ file, indexLabel, onRemove }) {
     <li className="group relative aspect-square overflow-hidden rounded-lg ring-1 ring-white/10">
       {url && <img src={url} alt="" className="h-full w-full object-cover" />}
       {indexLabel != null && (
-        <span className="absolute left-1.5 top-1.5 flex h-5 min-w-5 items-center justify-center rounded-md bg-violet-600/90 px-1 text-[10px] font-bold text-white shadow">
+        <span className="absolute left-1.5 top-1.5 flex h-5 min-w-5 items-center justify-center rounded-md bg-indigo-600/90 px-1 text-[10px] font-bold text-white shadow">
           {indexLabel}
         </span>
       )}
@@ -124,13 +124,13 @@ export default function BulkImageDropzone({ files, onChange, maxFiles = BULK_IMA
           atLimit ? 'cursor-not-allowed opacity-60' : ''
         } ${
           dragOver
-            ? 'border-violet-400 bg-violet-500/15 shadow-[0_0_24px_rgba(139,92,246,0.2)]'
-            : 'border-white/[0.12] bg-gradient-to-b from-white/[0.03] to-transparent hover:border-violet-500/40 hover:bg-violet-500/[0.06]'
+            ? 'border-indigo-400 bg-indigo-500/15 shadow-[0_0_24px_rgba(99,102,241,0.2)]'
+            : 'border-white/[0.12] bg-gradient-to-b from-white/[0.03] to-transparent hover:border-indigo-500/40 hover:bg-indigo-500/[0.06]'
         }`}
       >
         <div
           className={`mb-3 flex h-12 w-12 items-center justify-center rounded-2xl transition-colors ${
-            dragOver ? 'bg-violet-500/30 text-violet-200' : 'bg-white/[0.05] text-slate-500'
+            dragOver ? 'bg-indigo-500/30 text-indigo-200' : 'bg-white/[0.05] text-slate-500'
           }`}
         >
           <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -152,7 +152,7 @@ export default function BulkImageDropzone({ files, onChange, maxFiles = BULK_IMA
           <span className="text-slate-500">2.png</span>, <span className="text-slate-500">post-3.webp</span>
         </p>
         {!atLimit && remaining < maxFiles && files.length > 0 && (
-          <p className="mt-2 text-[10px] font-medium text-violet-400/90">{remaining} slot{remaining === 1 ? '' : 's'} left</p>
+          <p className="mt-2 text-[10px] font-medium text-indigo-400/90">{remaining} slot{remaining === 1 ? '' : 's'} left</p>
         )}
         <input
           ref={inputRef}

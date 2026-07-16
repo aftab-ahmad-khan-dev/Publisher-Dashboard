@@ -48,12 +48,12 @@ export default function MultiPostPreview({ state }) {
       </div>
       <p className="relative mt-2 text-[10px] leading-relaxed text-slate-500">
         Each image is matched to its post/day number. Use headers like{' '}
-        <code className="rounded bg-white/[0.06] px-1 py-0.5 text-violet-300/90">Day 1</code>,{' '}
-        <code className="rounded bg-white/[0.06] px-1 py-0.5 text-violet-300/90">
+        <code className="rounded bg-white/[0.06] px-1 py-0.5 text-indigo-300/90">Day 1</code>,{' '}
+        <code className="rounded bg-white/[0.06] px-1 py-0.5 text-indigo-300/90">
           Post 1 (Day 1)
         </code>
         , or Unicode bold{' '}
-        <code className="rounded bg-white/[0.06] px-1 py-0.5 text-violet-300/90">𝗗𝗮𝘆 𝟭</code>
+        <code className="rounded bg-white/[0.06] px-1 py-0.5 text-indigo-300/90">𝗗𝗮𝘆 𝟭</code>
         , or rely on upload order (1.jpg, 2.png, …).
       </p>
       <ul className="relative mt-3 max-h-52 space-y-2 overflow-y-auto pr-1 scrollbar-gradient">
@@ -64,7 +64,7 @@ export default function MultiPostPreview({ state }) {
             <li key={post.id} className="feature-card__item">
               <PostThumb file={post.imageFile} />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-violet-300">{post.title}</p>
+                <p className="text-xs font-semibold text-indigo-300">{post.title}</p>
                 <p className="text-[10px] text-slate-500">
                   Image #{post.postNum}
                   {post.imageName ? ` · ${post.imageName}` : ''}
@@ -81,7 +81,7 @@ export default function MultiPostPreview({ state }) {
                     minute: '2-digit',
                   })}
                   {pollEnabled && pollEnd && (
-                    <span className="text-violet-400/80">
+                    <span className="text-indigo-400/80">
                       {' '}
                       · poll →{' '}
                       {formatScheduleDisplay(toDatetimeLocalValue(pollEnd), {

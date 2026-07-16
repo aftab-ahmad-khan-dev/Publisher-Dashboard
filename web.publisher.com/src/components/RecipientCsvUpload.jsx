@@ -67,8 +67,8 @@ export default function RecipientCsvUpload({
           disabled ? 'cursor-not-allowed opacity-50' : ''
         } ${
           dragOver
-            ? 'border-violet-400 bg-violet-500/15'
-            : 'border-white/[0.12] bg-white/[0.02] hover:border-violet-500/40 hover:bg-violet-500/[0.04]'
+            ? 'border-indigo-400 bg-indigo-500/15'
+            : 'border-white/[0.12] bg-white/[0.02] hover:border-indigo-500/40 hover:bg-indigo-500/[0.04]'
         }`}
       >
         <svg className="mb-2 h-8 w-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -113,7 +113,7 @@ export default function RecipientCsvUpload({
           {templateCsv && (
             <button
               type="button"
-              className="text-violet-400 hover:text-violet-300"
+              className="text-indigo-400 hover:text-indigo-300"
               onClick={(e) => {
                 e.stopPropagation()
                 onImport(templateCsv, 'sample-recipients.csv')

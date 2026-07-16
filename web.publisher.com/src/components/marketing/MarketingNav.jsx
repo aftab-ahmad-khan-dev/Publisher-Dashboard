@@ -35,7 +35,7 @@ export default function MarketingNav() {
           </Link>
           <Link
             to="/sign-up"
-            className="whitespace-nowrap rounded-full bg-gradient-to-r from-fuchsia-500 to-violet-600 px-3.5 py-2 text-sm font-bold text-white transition hover:opacity-90 sm:px-5"
+            className="whitespace-nowrap rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-3.5 py-2 text-sm font-bold text-white transition hover:opacity-90 sm:px-5"
           >
             <span className="sm:hidden">Start free</span>
             <span className="hidden sm:inline">Get started free</span>

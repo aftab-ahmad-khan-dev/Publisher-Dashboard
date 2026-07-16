@@ -1,655 +1,98 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppData } from '../contexts/AppDataContext'
 import { isLivePublishing } from '../lib/api'
 import { isLocalApi } from '../lib/apiBaseUrl'
-import { isGmailConfigured } from '../lib/connections'
+import { isGmailConfigured, isGmailSendReady } from '../lib/connections'
 import {
   createEmailCampaign,
   listEmailCampaigns,
-  getEmailCampaign,
-  sendEmailCampaign,
-  gmailOAuthUrl,
-  getEmailTemplateDraft,
+  pauseEmailCampaign,
+  resumeEmailCampaign,
+  cancelEmailCampaign,
+  downloadLeadSourceExport,
+  getEmailSettings,
   saveEmailTemplateDraft,
+  listEmailTemplates,
+  listProcessedEmails,
+  listEmailMeetings,
+  updateEmailMeeting,
+  fetchEmailMailbox,
+  fetchEmailMailboxMessage,
+  moveMailboxToJunk,
+  restoreMailboxFromJunk,
+  deleteMailboxForever,
+  bulkMailboxAction,
+  createCalendarInvite,
+  syncEmailCalendar,
+  saveCalendarSettings,
 } from '../lib/backendApi'
-import { parseRecipients, mergeTemplate, MERGE_TAG_HELP, analyzePainFocusedEmail } from '../lib/emailParse'
-import { EMAIL_TEMPLATES } from '../lib/emailTemplates'
-import { sanitizePublishedText } from '../lib/contentSanitize'
-import PainPointEmailGuide from '../components/PainPointEmailGuide'
-import RecipientCsvUpload from '../components/RecipientCsvUpload'
-import { downloadTextFile } from '../lib/recipientFile'
+import { mergeTemplate } from '../lib/emailParse'
+import {
+  OUTREACH_TEMPLATES,
+  PRODUCT_TEMPLATES,
+  SIGNATURE,
+} from '../lib/emailTemplates'
+import LeadSourcePanel from '../components/email/LeadSourcePanel'
+import PageShell from '../components/PageShell'
 import PageHeader from '../components/PageHeader'
-import PageShell, { PageBody, PageScroll, PageSection, PageStatsRow, PageStat, InfoBanner } from '../components/PageShell'
-import Modal from '../components/Modal'
 
-const SAMPLE_RECIPIENTS = `email,name,company,niche
-sarah@acmecorp.com,Sarah Chen,Acme Corp,SaaS
-mike@brightlocal.io,Mike Torres,Bright Local,dental marketing
-jordan@shopnest.co,Jordan Lee,ShopNest,e-commerce`
+const TABS = [
+  { id: 'mailbox', label: 'Mail Box' },
+  { id: 'campaigns', label: 'Campaigns' },
+  { id: 'processed', label: 'Processed mail' },
+  { id: 'meetings', label: 'Meetings' },
+]
 
-const SAMPLE_SUBJECT = EMAIL_TEMPLATES[0].subject
-const SAMPLE_BODY = EMAIL_TEMPLATES[0].body
+const MAILBOX_FOLDERS = [
+  { id: 'queued', label: 'Queued' },
+  { id: 'sent', label: 'Sent' },
+  { id: 'opened', label: 'Opened' },
+  { id: 'failed', label: 'Failed' },
+  { id: 'all', label: 'All mail' },
+  { id: 'junk', label: 'Junk' },
+]
 
-function StatusBadge({ status }) {
+const MEETING_STATUSES = [
+  { id: 'invited', label: 'Invited' },
+  { id: 'link_clicked', label: 'Link clicked' },
+  { id: 'scheduled', label: 'Scheduled' },
+  { id: 'completed', label: 'Completed' },
+  { id: 'no_show', label: 'No show' },
+  { id: 'none', label: 'None' },
+]
+
+function StatusChip({ status }) {
   const styles = {
-    draft: 'bg-slate-500/20 text-slate-400',
+    queued: 'bg-slate-500/20 text-slate-300',
     sending: 'bg-amber-500/20 text-amber-300',
-    completed: 'bg-emerald-500/20 text-emerald-400',
-    failed: 'bg-rose-500/20 text-rose-400',
+    sent: 'bg-sky-500/20 text-sky-300',
+    opened: 'bg-emerald-500/20 text-emerald-300',
+    clicked: 'bg-indigo-500/20 text-indigo-300',
+    failed: 'bg-rose-500/20 text-rose-300',
+    cancelled: 'bg-slate-600/30 text-slate-500',
+    paused: 'bg-amber-500/20 text-amber-200',
+    draft: 'bg-slate-500/20 text-slate-400',
+    completed: 'bg-emerald-500/20 text-emerald-300',
+    invited: 'bg-sky-500/20 text-sky-300',
+    link_clicked: 'bg-indigo-500/20 text-indigo-300',
+    scheduled: 'bg-emerald-500/20 text-emerald-300',
+    no_show: 'bg-rose-500/20 text-rose-300',
+    none: 'bg-white/5 text-slate-500',
   }
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${styles[status] || styles.draft}`}>
-      {status}
+    <span
+      className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+        styles[status] || styles.queued
+      }`}
+    >
+      {String(status || '').replace(/_/g, ' ')}
     </span>
   )
 }
 
-export default function EmailPage() {
-  const { apiConfig, showToast, runWithLoading } = useAppData()
-  const live = isLivePublishing()
-  const gmailReady = isGmailConfigured(apiConfig?.gmail)
-  // Open tracking needs a publicly reachable API; localhost can't be hit by mail clients.
-  const trackingUnreachable = live && isLocalApi()
-
-  const [subject, setSubject] = useState(SAMPLE_SUBJECT)
-  const [body, setBody] = useState(SAMPLE_BODY)
-  const [recipientsRaw, setRecipientsRaw] = useState('')
-  const [previewIndex, setPreviewIndex] = useState(0)
-  const [recipientFileName, setRecipientFileName] = useState('')
-  const [trackOpens, setTrackOpens] = useState(true)
-  const [templateIndex, setTemplateIndex] = useState(0)
-  const [rotateTemplates, setRotateTemplates] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [campaigns, setCampaigns] = useState([])
-  const [selectedId, setSelectedId] = useState(null)
-  const [detail, setDetail] = useState(null)
-  const [loadingList, setLoadingList] = useState(false)
-  const [viewingRecipient, setViewingRecipient] = useState(null)
-
-  const recipients = useMemo(() => parseRecipients(recipientsRaw), [recipientsRaw])
-
-  const preview = useMemo(() => {
-    if (recipients.length === 0) return null
-    const idx = Math.min(previewIndex, recipients.length - 1)
-    const data = recipients[idx].mergeData
-    return {
-      idx,
-      recipient: recipients[idx],
-      subject: mergeTemplate(subject, data),
-      body: mergeTemplate(body, data),
-    }
-  }, [subject, body, recipients, previewIndex])
-
-  const loadPainSample = () => {
-    setRecipientsRaw(SAMPLE_RECIPIENTS)
-    setRecipientFileName('sample-recipients.csv')
-    setTemplateIndex(0)
-    setSubject(EMAIL_TEMPLATES[0].subject)
-    setBody(EMAIL_TEMPLATES[0].body)
-    setPreviewIndex(0)
-  }
-
-  // Load a different template into the composer (cycles through the library).
-  const shuffleTemplate = () => {
-    const next = (templateIndex + 1) % EMAIL_TEMPLATES.length
-    setTemplateIndex(next)
-    setSubject(EMAIL_TEMPLATES[next].subject)
-    setBody(EMAIL_TEMPLATES[next].body)
-  }
-
-  const handleRecipientImport = (text, name) => {
-    setRecipientsRaw(text)
-    setRecipientFileName(name || '')
-    setPreviewIndex(0)
-  }
-
-  const downloadTemplate = () => {
-    downloadTextFile('recipients-template.csv', SAMPLE_RECIPIENTS)
-  }
-
-  const loadCampaigns = useCallback(async () => {
-    if (!live) return
-    setLoadingList(true)
-    try {
-      await runWithLoading('Loading campaigns…', async () => {
-        const res = await listEmailCampaigns()
-        setCampaigns(res.campaigns || [])
-      })
-    } catch {
-      /* ignore */
-    }
-    setLoadingList(false)
-  }, [live, runWithLoading])
-
-  const loadDetail = useCallback(
-    async (id) => {
-      if (!live || !id) return
-      try {
-        await runWithLoading('Loading campaign…', async () => {
-          const res = await getEmailCampaign(id)
-          setDetail(res)
-          setSelectedId(id)
-        })
-      } catch (err) {
-        showToast(err.message, 'error')
-      }
-    },
-    [live, showToast, runWithLoading],
-  )
-
-  useEffect(() => {
-    loadCampaigns()
-    const t = setInterval(loadCampaigns, 8000)
-    return () => clearInterval(t)
-  }, [loadCampaigns])
-
-  // Show the most recent campaign's email by default (no click needed).
-  useEffect(() => {
-    if (!selectedId && campaigns.length > 0) {
-      loadDetail(campaigns[0].id)
-    }
-  }, [campaigns, selectedId, loadDetail])
-
-  // Load this user's autosaved composer draft on mount.
-  const draftLoaded = useRef(false)
-  useEffect(() => {
-    if (!live) {
-      draftLoaded.current = true
-      return undefined
-    }
-    let cancelled = false
-    getEmailTemplateDraft()
-      .then((res) => {
-        if (cancelled) return
-        if (res?.draft && (res.draft.subject || res.draft.body)) {
-          setSubject(res.draft.subject || '')
-          setBody(res.draft.body || '')
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        draftLoaded.current = true
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [live])
-
-  // Autosave composer edits to the user's workspace (debounced).
-  useEffect(() => {
-    if (!live || !draftLoaded.current) return undefined
-    const t = setTimeout(() => {
-      saveEmailTemplateDraft(subject, body).catch(() => {})
-    }, 800)
-    return () => clearTimeout(t)
-  }, [subject, body, live])
-
-  const handleSend = async () => {
-    if (!gmailReady) {
-      showToast('Connect Gmail in API Config first.', 'error')
-      return
-    }
-    if (!subject.trim() || !body.trim()) {
-      showToast('Subject and body are required.', 'error')
-      return
-    }
-    const emailCheck = analyzePainFocusedEmail(subject, body)
-    if (emailCheck.issues.some((i) => i.severity === 'error')) {
-      showToast(emailCheck.issues.find((i) => i.severity === 'error').message, 'error')
-      return
-    }
-    if (recipients.length === 0) {
-      showToast('Add at least one recipient.', 'error')
-      return
-    }
-    if (!live) {
-      showToast('Set VITE_API_BASE_URL to send email.', 'error')
-      return
-    }
-
-    setSending(true)
-    try {
-      await runWithLoading('Sending campaign…', async () => {
-      const wrapHtml = (raw) =>
-        `<div style="font-family:sans-serif;line-height:1.5">${sanitizePublishedText(
-          raw.includes('<') ? raw : raw.replace(/\n/g, '<br>\n'),
-        )}</div>`
-      const cleanSubject = sanitizePublishedText(subject)
-      const cleanBody = sanitizePublishedText(body)
-      // When rotation is on, send the whole library so each recipient gets a random template.
-      const templates = rotateTemplates
-        ? EMAIL_TEMPLATES.map((t) => ({
-            subject: sanitizePublishedText(t.subject),
-            textBody: sanitizePublishedText(t.body),
-            htmlBody: wrapHtml(t.body),
-          }))
-        : []
-      const res = await createEmailCampaign({
-        subject: cleanSubject,
-        htmlBody: wrapHtml(body),
-        textBody: cleanBody,
-        templates,
-        recipients,
-        trackOpens,
-        sendNow: true,
-        batchSize: 25,
-        batchDelayMs: 3000,
-      })
-      showToast(
-        rotateTemplates
-          ? `Sending to ${res.recipientCount} recipients — rotating ${EMAIL_TEMPLATES.length} templates`
-          : `Sending to ${res.recipientCount} recipients via Gmail…`,
-      )
-      const listRes = await listEmailCampaigns()
-      setCampaigns(listRes.campaigns || [])
-      if (res.campaign?.id) {
-        const detailRes = await getEmailCampaign(res.campaign.id)
-        setDetail(detailRes)
-        setSelectedId(res.campaign.id)
-      }
-      })
-    } catch (err) {
-      showToast(err.message, 'error')
-    }
-    setSending(false)
-  }
-
-  const connectGmail = () =>
-    runWithLoading('Connecting Gmail…', async () => {
-    const url = await gmailOAuthUrl()
-    if (url) window.location.href = url
-    else showToast('API URL not configured', 'error')
-    })
-
-  return (
-    <PageShell>
-      <PageHeader
-        title="Bulk Email"
-        subtitle="Personalized campaigns with open tracking via Gmail"
-        action={
-          <Link to="/api-config" className="btn-secondary px-3 py-1.5 text-xs">
-            Gmail setup
-          </Link>
-        }
-      />
-
-      <PageStatsRow>
-        <PageStat label="Recipients" value={recipients.length} tone="violet" />
-        <PageStat label="Campaigns" value={campaigns.length} />
-        <PageStat label="Gmail" value={gmailReady ? 'Connected' : 'Setup'} tone={gmailReady ? 'emerald' : 'amber'} />
-        <PageStat label="Templates" value={EMAIL_TEMPLATES.length} hint="Pain-first library" />
-      </PageStatsRow>
-
-      <PageBody className="saas-page-grid min-h-0 flex-1">
-        <PageScroll className="space-y-3">
-          {!gmailReady && (
-            <InfoBanner tone="amber">
-              <p className="text-sm font-medium text-amber-100">Connect Gmail</p>
-              <p className="mt-1 text-[11px] opacity-90">
-                Bulk mail sends through your Gmail account. Messages land in Sent for open/click tracking.
-              </p>
-              <button type="button" onClick={connectGmail} className="btn-primary mt-3 text-xs">
-                Connect Gmail
-              </button>
-            </InfoBanner>
-          )}
-
-          <PainPointEmailGuide subject={subject} body={body} />
-
-          <section className="saas-content-card rounded-xl p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-white">
-                Compose
-                <span className="ml-1.5 text-[10px] font-normal text-slate-500">
-                  template {templateIndex + 1}/{EMAIL_TEMPLATES.length}
-                </span>
-              </h2>
-              <div className="flex items-center gap-3">
-                <button type="button" onClick={loadPainSample} className="text-[11px] text-violet-400 hover:text-violet-300">
-                  Load pain-first sample
-                </button>
-                <button
-                  type="button"
-                  onClick={shuffleTemplate}
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-slate-200 hover:bg-white/[0.08]"
-                >
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
-                  </svg>
-                  Shuffle template
-                </button>
-              </div>
-            </div>
-            <label className="mt-2 flex items-start gap-2 rounded-lg border border-violet-500/20 bg-violet-500/[0.06] px-3 py-2 text-[11px] text-slate-300">
-              <input
-                type="checkbox"
-                checked={rotateTemplates}
-                onChange={(e) => setRotateTemplates(e.target.checked)}
-                className="mt-0.5 h-3.5 w-3.5 rounded"
-              />
-              <span>
-                <span className="font-medium text-violet-200">Rotate all {EMAIL_TEMPLATES.length} templates on send</span> — each
-                recipient gets a randomly chosen template (great for bulk deliverability).
-              </span>
-            </label>
-            <details className="mt-2 text-[11px] text-slate-500">
-              <summary className="cursor-pointer text-violet-400/90">Merge tags for recipients</summary>
-              <ul className="mt-2 grid gap-1 sm:grid-cols-2">
-                {MERGE_TAG_HELP.map(({ tag, desc }) => (
-                  <li key={tag}>
-                    <code className="text-slate-400">{tag}</code>
-                    <span className="text-slate-600"> — {desc}</span>
-                  </li>
-                ))}
-              </ul>
-            </details>
-            <input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="e.g. A {{niche}} challenge teams at {{company}} see"
-              className="input-premium mt-3 w-full text-sm"
-            />
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={10}
-              placeholder="Email body…"
-              className="input-premium mt-2 w-full resize-y font-mono text-xs leading-relaxed"
-            />
-            <label className="mt-3 flex items-center gap-2 text-xs text-slate-400">
-              <input
-                type="checkbox"
-                checked={trackOpens}
-                onChange={(e) => setTrackOpens(e.target.checked)}
-                className="h-4 w-4 rounded"
-              />
-              Track opens in Publisher Suite dashboard (tracking pixel)
-            </label>
-            {apiConfig?.gmail?.fromEmail && (
-              <p className="mt-2 text-[11px] text-slate-500">
-                From: <span className="text-slate-300">{apiConfig.gmail.fromEmail}</span>
-              </p>
-            )}
-          </section>
-
-          <section className="saas-content-card rounded-xl p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-white">Recipients</h2>
-              <button type="button" onClick={downloadTemplate} className="text-[11px] text-violet-400">
-                Download template
-              </button>
-            </div>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Upload your list from Google Sheets / Excel (export as CSV). Columns:{' '}
-              <code className="text-slate-400">email</code>, <code className="text-slate-400">name</code>,{' '}
-              <code className="text-slate-400">company</code>, <code className="text-slate-400">niche</code>
-            </p>
-
-            <div className="mt-3">
-              <RecipientCsvUpload
-                fileName={recipientFileName}
-                recipientCount={recipients.length}
-                templateCsv={SAMPLE_RECIPIENTS}
-                onImport={handleRecipientImport}
-                onClear={() => {
-                  setRecipientsRaw('')
-                  setRecipientFileName('')
-                  setPreviewIndex(0)
-                }}
-              />
-            </div>
-
-            <p className="mt-3 text-[10px] font-medium uppercase tracking-wider text-slate-600">
-              Or paste / edit
-            </p>
-            <textarea
-              value={recipientsRaw}
-              onChange={(e) => {
-                setRecipientsRaw(e.target.value)
-                setRecipientFileName('')
-                setPreviewIndex(0)
-              }}
-              rows={6}
-              placeholder={'email,name,company,niche\ncontact@firm.com,Jane Doe,Acme Inc,real estate'}
-              className="input-premium mt-1 w-full resize-y font-mono text-xs"
-            />
-            <p className="mt-2 text-[11px] text-slate-500">
-              {recipients.length} unique recipient{recipients.length === 1 ? '' : 's'}
-            </p>
-            {recipients.length > 0 && (
-              <div className="mt-2 max-h-32 overflow-x-auto overflow-y-auto rounded-lg border border-white/[0.06]">
-                <table className="w-full min-w-[360px] text-left text-[10px]">
-                  <thead className="bg-black/30 text-slate-500">
-                    <tr>
-                      <th className="px-2 py-1">Email</th>
-                      <th className="px-2 py-1">Name</th>
-                      <th className="px-2 py-1">Company</th>
-                      <th className="px-2 py-1">Niche</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recipients.slice(0, 8).map((r) => (
-                      <tr key={r.email} className="border-t border-white/[0.04] text-slate-400">
-                        <td className="truncate px-2 py-1 max-w-[100px]">{r.email}</td>
-                        <td className="px-2 py-1">{r.name || '—'}</td>
-                        <td className="px-2 py-1">{r.company || '—'}</td>
-                        <td className="px-2 py-1">{r.niche || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {recipients.length > 8 && (
-                  <p className="px-2 py-1 text-[10px] text-slate-600">+{recipients.length - 8} more</p>
-                )}
-              </div>
-            )}
-          </section>
-
-          {preview && (
-            <section className="saas-content-card rounded-xl p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Preview for recipient
-                </h2>
-                {recipients.length > 1 && (
-                  <select
-                    value={preview.idx}
-                    onChange={(e) => setPreviewIndex(Number(e.target.value))}
-                    className="rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-[11px] text-slate-300"
-                  >
-                    {recipients.map((r, i) => (
-                      <option key={r.email} value={i}>
-                        {r.name || r.email}
-                        {r.company ? ` · ${r.company}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              <p className="mt-1 text-[10px] text-slate-600">
-                {preview.recipient.email}
-                {preview.recipient.niche ? ` · ${preview.recipient.niche}` : ''}
-                {recipients.length > 1 ? ' · Each recipient gets a unique spintax + paragraph order' : ''}
-              </p>
-              <p className="mt-2 text-sm font-medium text-white">{preview.subject}</p>
-              <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-slate-400">{preview.body}</p>
-            </section>
-          )}
-
-          <button
-            type="button"
-            disabled={sending || !gmailReady}
-            onClick={handleSend}
-            className="btn-primary w-full py-3 text-sm disabled:opacity-50"
-          >
-            {sending ? 'Starting send…' : `Send to ${recipients.length || 0} recipients`}
-          </button>
-        </PageScroll>
-
-        <PageScroll className="space-y-3">
-          <section className="saas-content-card min-h-[200px] rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-white">Campaigns & delivery</h2>
-              <button type="button" onClick={loadCampaigns} className="text-[11px] text-violet-400">
-                {loadingList ? '…' : 'Refresh'}
-              </button>
-            </div>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Sent / opened / failed counts. For Mailsuite tracking, check Gmail Sent folder with extension enabled.
-            </p>
-            {trackingUnreachable && (
-              <div className="mt-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-[11px] leading-relaxed text-amber-200/80">
-                <span className="font-medium text-amber-200">Opens can’t be tracked on localhost.</span> Mail clients
-                can’t reach a local API, so the open pixel never loads and counts stay 0. Set{' '}
-                <code className="rounded bg-black/30 px-1 text-amber-200/90">API_PUBLIC_URL</code> on the server to a
-                public URL (deploy, or an ngrok/cloudflared tunnel) to count opens. See the{' '}
-                <Link to="/guide" className="font-medium text-violet-300 hover:text-violet-200">Setup Guide</Link>.
-              </div>
-            )}
-
-            {campaigns.length === 0 ? (
-              <p className="mt-8 text-center text-xs text-slate-500">No campaigns yet</p>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {campaigns.map((c) => (
-                  <li key={c.id}>
-                    <button
-                      type="button"
-                      onClick={() => loadDetail(c.id)}
-                      className={`w-full rounded-lg border p-3 text-left transition ${
-                        selectedId === c.id
-                          ? 'border-violet-500/40 bg-violet-500/10'
-                          : 'border-white/[0.06] bg-black/20 hover:border-white/10'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="truncate text-sm font-medium text-white">{c.subject}</p>
-                        <StatusBadge status={c.status} />
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-slate-500">
-                        <span>
-                          <span className="text-emerald-400">{c.stats?.sent ?? 0}</span> sent
-                        </span>
-                        <span>
-                          <span className="text-sky-400">{c.stats?.opened ?? 0}</span> opened
-                        </span>
-                        <span>
-                          <span className="text-violet-300">{c.stats?.clicked ?? 0}</span> clicked
-                        </span>
-                        <span>
-                          <span className="text-rose-400">{c.stats?.failed ?? 0}</span> failed
-                        </span>
-                        <span>of {c.stats?.total ?? 0}</span>
-                      </div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          {detail?.campaign && (
-            <section className="saas-content-card rounded-xl p-4">
-              <h2 className="text-sm font-semibold text-white">Original email</h2>
-              <p className="mt-3 text-[10px] font-medium uppercase tracking-wider text-slate-600">Subject</p>
-              <p className="mt-0.5 text-sm font-medium text-white">{detail.campaign.subject}</p>
-              <p className="mt-3 text-[10px] font-medium uppercase tracking-wider text-slate-600">Body</p>
-              <div className="mt-1 max-h-[280px] overflow-y-auto rounded-lg border border-white/[0.06] bg-black/20 p-3">
-                <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-300">
-                  {detail.campaign.textBody?.trim() ||
-                    detail.campaign.htmlBody?.replace(/<[^>]+>/g, '').trim() ||
-                    'No body content'}
-                </p>
-              </div>
-              <p className="mt-2 text-[10px] text-slate-600">
-                Template with merge tags — click any recipient below to see the exact email they received.
-              </p>
-            </section>
-          )}
-
-          {detail?.recipients && (
-            <section className="saas-content-card rounded-xl p-4">
-              <h2 className="text-sm font-semibold text-white">Recipient delivery</h2>
-              <div className="mt-2 max-h-[320px] overflow-x-auto overflow-y-auto">
-                <table className="w-full min-w-[480px] text-left text-[11px]">
-                  <thead className="sticky top-0 bg-[#0a0c12] text-slate-500">
-                    <tr>
-                      <th className="py-1 pr-2">Email</th>
-                      <th className="py-1 pr-2">Company</th>
-                      <th className="py-1 pr-2">Status</th>
-                      <th className="py-1 pr-2">Opens</th>
-                      <th className="py-1 pr-2">Clicks</th>
-                      <th className="py-1"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detail.recipients.map((r) => (
-                      <tr
-                        key={r.id}
-                        onClick={() => setViewingRecipient(r)}
-                        className="cursor-pointer border-t border-white/[0.04] text-slate-400 transition-colors hover:bg-white/[0.03]"
-                      >
-                        <td className="py-1.5 pr-2 truncate max-w-[80px] sm:max-w-[120px]">{r.email}</td>
-                        <td className="py-1.5 pr-2 truncate max-w-[80px] text-slate-500">{r.company || r.niche || '—'}</td>
-                        <td className="py-1.5 pr-2">
-                          <DeliveryStatus status={r.status} sentAt={r.sentAt} />
-                        </td>
-                        <td className="py-1.5 pr-2" title={r.openedAt ? `First opened ${fmtTime(r.openedAt)}` : 'No opens recorded yet'}>
-                          {r.openCount > 0 ? (
-                            <span className="text-emerald-400">{r.openCount}×</span>
-                          ) : (
-                            <span className="text-slate-600">—</span>
-                          )}
-                        </td>
-                        <td className="py-1.5 pr-2" title={r.clickedAt ? `First clicked ${fmtTime(r.clickedAt)}` : 'No clicks recorded yet'}>
-                          {r.clickCount > 0 ? (
-                            <span className="text-violet-300">{r.clickCount}×</span>
-                          ) : (
-                            <span className="text-slate-600">—</span>
-                          )}
-                        </td>
-                        <td className="py-1.5 text-right text-violet-300">View</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {detail.campaign?.status === 'draft' && (
-                <button
-                  type="button"
-                  className="btn-secondary mt-3 w-full text-xs"
-                  onClick={async () => {
-                    await sendEmailCampaign(detail.campaign.id)
-                    showToast('Sending started')
-                    loadDetail(detail.campaign.id)
-                    loadCampaigns()
-                  }}
-                >
-                  Send campaign
-                </button>
-              )}
-              <p className="mt-2 text-[10px] leading-relaxed text-slate-600">
-                Opens use a 1×1 pixel and are best-effort (Gmail proxies/caches images, and "don't
-                load images" suppresses them). Clicks are tracked first-party via redirected links,
-                so they register reliably regardless of the recipient's mail client or extensions.
-              </p>
-            </section>
-          )}
-        </PageScroll>
-      </PageBody>
-
-      <SentEmailModal
-        recipient={viewingRecipient}
-        campaign={detail?.campaign}
-        onClose={() => setViewingRecipient(null)}
-      />
-    </PageShell>
-  )
-}
-
 function fmtTime(iso) {
-  if (!iso) return ''
+  if (!iso) return '—'
   try {
     return new Date(iso).toLocaleString(undefined, {
       month: 'short',
@@ -658,94 +101,1716 @@ function fmtTime(iso) {
       minute: '2-digit',
     })
   } catch {
-    return ''
+    return '—'
   }
 }
 
-const STATUS_STYLES = {
-  queued: { label: 'Queued', cls: 'bg-slate-500/10 text-slate-400 ring-slate-500/20' },
-  sending: { label: 'Sending', cls: 'bg-amber-500/10 text-amber-300 ring-amber-500/25' },
-  sent: { label: 'Sent', cls: 'bg-sky-500/10 text-sky-300 ring-sky-500/25' },
-  opened: { label: 'Opened', cls: 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/25' },
-  clicked: { label: 'Clicked', cls: 'bg-violet-500/10 text-violet-300 ring-violet-500/25' },
-  failed: { label: 'Failed', cls: 'bg-rose-500/10 text-rose-300 ring-rose-500/25' },
+function inputClass() {
+  return 'saas-input'
 }
 
-/** Delivery-status pill: Queued → Sending → Sent → Opened (or Failed), with the send time. */
-function DeliveryStatus({ status, sentAt }) {
-  const s = STATUS_STYLES[status] || STATUS_STYLES.queued
-  return (
-    <span className="inline-flex flex-col gap-0.5">
-      <span className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${s.cls}`}>
-        {s.label}
-      </span>
-      {sentAt && <span className="text-[9px] text-slate-600">{fmtTime(sentAt)}</span>}
-    </span>
+export default function EmailPage() {
+  const { apiConfig, showToast, runWithLoading } = useAppData()
+  const live = isLivePublishing()
+  const mailReady =
+    isGmailSendReady(apiConfig?.gmail) || isGmailConfigured(apiConfig?.gmail)
+  const mailTransport =
+    apiConfig?.gmail?.transport || (apiConfig?.gmail?.smtpConfigured ? 'smtp' : null)
+
+  const [tab, setTab] = useState('mailbox')
+  const [campaigns, setCampaigns] = useState([])
+  const [processed, setProcessed] = useState([])
+  const [meetings, setMeetings] = useState([])
+  const [globalMeetingLink, setGlobalMeetingLink] = useState('')
+  const [calendarConnected, setCalendarConnected] = useState(false)
+  const [bookingUrlDraft, setBookingUrlDraft] = useState('')
+  const [savingBooking, setSavingBooking] = useState(false)
+  const [syncingCalendar, setSyncingCalendar] = useState(false)
+  const [calendarAuthBroken, setCalendarAuthBroken] = useState(false)
+  const [invitingId, setInvitingId] = useState(null)
+
+  const [folder, setFolder] = useState('sent')
+  const [mailboxQuery, setMailboxQuery] = useState('')
+  const [messages, setMessages] = useState([])
+  const [folderCounts, setFolderCounts] = useState({})
+  const [sent24h, setSent24h] = useState(0)
+  const [selectedId, setSelectedId] = useState(null)
+  const [detail, setDetail] = useState(null)
+  const [selectedMailIds, setSelectedMailIds] = useState(() => new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [selectMode, setSelectMode] = useState(false)
+
+  const [mode, setMode] = useState('bulk')
+  const [templateType, setTemplateType] = useState('outreach')
+  const [apiTemplates, setApiTemplates] = useState([])
+  const [templateId, setTemplateId] = useState(OUTREACH_TEMPLATES[0].id)
+  const [subject, setSubject] = useState(OUTREACH_TEMPLATES[0].subject)
+  const [body, setBody] = useState(OUTREACH_TEMPLATES[0].body)
+  const [htmlBody, setHtmlBody] = useState('')
+  const [meetingLink, setMeetingLink] = useState('')
+  const [cooldownMinutes, setCooldownMinutes] = useState(8)
+  const [dailyCap, setDailyCap] = useState(200)
+  const [skipAlreadyEmailed, setSkipAlreadyEmailed] = useState(true)
+  const [leadPayload, setLeadPayload] = useState(null)
+  const [singleTo, setSingleTo] = useState('')
+  const [singleName, setSingleName] = useState('')
+  const [sending, setSending] = useState(false)
+  const [processedQuery, setProcessedQuery] = useState('')
+
+  const templateList = useMemo(() => {
+    const fromApi = apiTemplates.filter((t) => t.type === templateType)
+    if (fromApi.length) return fromApi
+    const fallback = templateType === 'product' ? PRODUCT_TEMPLATES : OUTREACH_TEMPLATES
+    return fallback.map((t) => ({ ...t, textBody: t.body, htmlBody: '' }))
+  }, [apiTemplates, templateType])
+
+  const loadCampaigns = useCallback(async () => {
+    if (!live) return
+    try {
+      const data = await listEmailCampaigns()
+      setCampaigns(data.campaigns || [])
+    } catch {
+      /* ignore */
+    }
+  }, [live])
+
+  const loadProcessed = useCallback(async () => {
+    if (!live) return
+    try {
+      const data = await listProcessedEmails({ limit: 250 })
+      setProcessed(data.rows || [])
+    } catch (err) {
+      showToast(err.message, 'error')
+    }
+  }, [live, showToast])
+
+  const loadMeetings = useCallback(async () => {
+    if (!live) return
+    try {
+      const data = await listEmailMeetings({ limit: 200 })
+      setMeetings(data.meetings || [])
+      if (data.meetingLink) setGlobalMeetingLink(data.meetingLink)
+      if (data.calendarBookingUrl != null) setBookingUrlDraft(data.calendarBookingUrl || data.meetingLink || '')
+      if (typeof data.calendarConnected === 'boolean') {
+        setCalendarConnected(data.calendarConnected)
+      }
+    } catch (err) {
+      showToast(err.message, 'error')
+    }
+  }, [live, showToast])
+
+  const loadMailbox = useCallback(async () => {
+    if (!live) return
+    try {
+      const data = await fetchEmailMailbox({
+        folder,
+        q: mailboxQuery,
+        limit: 80,
+      })
+      setMessages(data.recipients || [])
+      setFolderCounts(data.folderCounts || {})
+      setSent24h(data.sent24h || 0)
+    } catch (err) {
+      showToast(err.message, 'error')
+    }
+  }, [live, folder, mailboxQuery, showToast])
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([
+      loadCampaigns(),
+      loadProcessed(),
+      loadMeetings(),
+      loadMailbox(),
+    ])
+  }, [loadCampaigns, loadProcessed, loadMeetings, loadMailbox])
+
+  useEffect(() => {
+    refreshAll()
+    const t = setInterval(refreshAll, 12000)
+    return () => clearInterval(t)
+  }, [refreshAll])
+
+  useEffect(() => {
+    if (!selectedId || !live || tab !== 'mailbox') {
+      if (tab !== 'mailbox') setDetail(null)
+      return
+    }
+    fetchEmailMailboxMessage(selectedId)
+      .then((data) => setDetail(data))
+      .catch((err) => showToast(err.message, 'error'))
+  }, [selectedId, live, showToast, tab])
+
+  useEffect(() => {
+    if (!live) return
+    getEmailSettings()
+      .then((s) => {
+        const link = s.calendarBookingUrl || s.meetingLink || ''
+        if (link) {
+          setMeetingLink(link)
+          setGlobalMeetingLink(link)
+          setBookingUrlDraft(link)
+        }
+        if (typeof s.calendarConnected === 'boolean') {
+          setCalendarConnected(s.calendarConnected)
+        }
+        if (s.defaults?.cooldownMinutes) setCooldownMinutes(s.defaults.cooldownMinutes)
+        if (s.defaults?.dailyCap) setDailyCap(s.defaults.dailyCap)
+      })
+      .catch(() => {})
+    listEmailTemplates({ meetingLink: meetingLink || globalMeetingLink })
+      .then((d) => setApiTemplates(d.templates || []))
+      .catch(() => {})
+  }, [live, meetingLink, globalMeetingLink])
+
+  const workspaceBooking = (globalMeetingLink || meetingLink || bookingUrlDraft || '').trim()
+
+  const saveWorkspaceBooking = async () => {
+    setSavingBooking(true)
+    try {
+      const data = await saveCalendarSettings({
+        calendarBookingUrl: bookingUrlDraft.trim(),
+      })
+      const link = data.meetingLink || data.calendarBookingUrl || bookingUrlDraft.trim()
+      setGlobalMeetingLink(link)
+      setMeetingLink(link)
+      setBookingUrlDraft(link)
+      if (typeof data.calendarConnected === 'boolean') {
+        setCalendarConnected(data.calendarConnected)
+      }
+      showToast('Workspace booking link saved. All product campaigns will use it.', 'success')
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setSavingBooking(false)
+    }
+  }
+
+  const handleSyncCalendar = async () => {
+    setSyncingCalendar(true)
+    try {
+      const data = await syncEmailCalendar()
+      setCalendarAuthBroken(false)
+      showToast(
+        data.updated
+          ? `Synced ${data.updated} meeting${data.updated === 1 ? '' : 's'} from Google Calendar.`
+          : `No new matches (${data.eventsScanned || 0} events scanned).`,
+        'success',
+      )
+      await loadMeetings()
+    } catch (err) {
+      const msg = err.message || 'Sync failed'
+      showToast(msg, 'error')
+      if (/Reconnect Gmail|auth failed|invalid authentication/i.test(msg)) {
+        setCalendarAuthBroken(true)
+      }
+    } finally {
+      setSyncingCalendar(false)
+    }
+  }
+
+  const handleInviteMeet = async (m, startLocal) => {
+    if (!startLocal) {
+      showToast('Pick a date and time first.', 'error')
+      return
+    }
+    setInvitingId(m.id)
+    try {
+      const startIso = new Date(startLocal).toISOString()
+      await createCalendarInvite({
+        recipientId: m.id,
+        startIso,
+        durationMinutes: 30,
+        summary: `Meeting with ${m.name || m.email}`,
+      })
+      showToast('Google Meet invite sent and saved on this lead.', 'success')
+      await loadMeetings()
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setInvitingId(null)
+    }
+  }
+
+  const applyTemplate = (tpl) => {
+    setTemplateId(tpl.id)
+    setSubject(tpl.subject)
+    setBody(tpl.textBody || tpl.body || '')
+    setHtmlBody(tpl.htmlBody || '')
+  }
+
+  useEffect(() => {
+    if (templateList[0]) applyTemplate(templateList[0])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateType, apiTemplates])
+
+  const previewMerge = useMemo(() => {
+    const lead = leadPayload?.leads?.[0]
+    const previewName = lead?.name || singleName || ''
+    const previewFirst =
+      lead?.mergeData?.firstName ||
+      previewName.split(/\s+/).filter(Boolean)[0] ||
+      ''
+    const data = {
+      ...(lead?.mergeData || {
+        company: 'Acme',
+        designation: 'CEO',
+        city: 'Stockholm',
+        country: 'Sweden',
+        region: 'Sweden',
+        industry: 'SaaS',
+        fomoLine: 'Teams in Stockholm, Sweden are already moving on this',
+        companyLabel: 'Acme',
+      }),
+      name: previewName || lead?.mergeData?.name || 'Alex',
+      firstName: previewFirst || 'Alex',
+      greeting: previewFirst
+        ? `Hi ${previewFirst}`
+        : previewName
+          ? `Hi ${previewName}`
+          : 'Hi Alex',
+      meetingLink: workspaceBooking || 'https://calendar.google.com/...',
+      _previewKey: 'preview',
+    }
+    return {
+      subject: mergeTemplate(subject, data),
+      body: mergeTemplate(body, data),
+      html: htmlBody ? mergeTemplate(htmlBody, data) : '',
+    }
+  }, [subject, body, htmlBody, leadPayload, singleName, workspaceBooking])
+
+  const estFinish = useMemo(() => {
+    const n = mode === 'single' ? 1 : leadPayload?.leads?.length || 0
+    if (!n) return null
+    const mins = Math.max(cooldownMinutes, Math.ceil((24 * 60) / Math.max(dailyCap, 1)))
+    const totalMin = (n - 1) * mins
+    const hours = Math.floor(totalMin / 60)
+    const rem = totalMin % 60
+    return hours > 0 ? `~${hours}h ${rem}m` : `~${rem}m`
+  }, [mode, leadPayload, cooldownMinutes, dailyCap])
+
+  const filteredProcessed = useMemo(() => {
+    const q = processedQuery.trim().toLowerCase()
+    if (!q) return processed
+    return processed.filter(
+      (r) =>
+        r.email?.toLowerCase().includes(q) ||
+        r.name?.toLowerCase().includes(q) ||
+        r.company?.toLowerCase().includes(q) ||
+        r.campaignName?.toLowerCase().includes(q) ||
+        r.status?.toLowerCase().includes(q),
+    )
+  }, [processed, processedQuery])
+
+  const selectableIds = useMemo(() => {
+    if (tab === 'processed') return filteredProcessed.map((r) => r.id)
+    if (tab === 'mailbox') return messages.map((m) => m.id)
+    return []
+  }, [tab, filteredProcessed, messages])
+
+  const allSelected =
+    selectableIds.length > 0 && selectableIds.every((id) => selectedMailIds.has(id))
+  const selectedCount = selectedMailIds.size
+
+  useEffect(() => {
+    setSelectedMailIds(new Set())
+    setSelectMode(false)
+  }, [folder, tab, processedQuery, mailboxQuery])
+
+  const exitSelectMode = () => {
+    setSelectMode(false)
+    setSelectedMailIds(new Set())
+  }
+
+  const toggleMailSelect = (id) => {
+    setSelectedMailIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedMailIds(new Set())
+      return
+    }
+    setSelectedMailIds(new Set(selectableIds))
+  }
+
+  const runBulkMailbox = async (action) => {
+    const ids = [...selectedMailIds]
+    if (!ids.length) {
+      showToast('Select at least one message.', 'error')
+      return
+    }
+    if (action === 'delete') {
+      if (
+        !window.confirm(
+          `Delete ${ids.length} message${ids.length === 1 ? '' : 's'} forever? This cannot be undone.`,
+        )
+      ) {
+        return
+      }
+    }
+    setBulkBusy(true)
+    try {
+      const data = await bulkMailboxAction({ ids, action })
+      const n = data.updated || data.deleted || ids.length
+      showToast(
+        action === 'junk'
+          ? `Moved ${n} to Junk`
+          : action === 'restore'
+            ? `Restored ${n}`
+            : `Deleted ${n} forever`,
+        'success',
+      )
+      setSelectedMailIds(new Set())
+      setSelectMode(false)
+      if (selectedId && ids.includes(selectedId)) {
+        setSelectedId(null)
+        setDetail(null)
+      }
+      await Promise.all([loadMailbox(), loadProcessed()])
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  const handleStartCampaign = async () => {
+    if (!mailReady) {
+      showToast('Mail is not ready. Set SMTP in api .env or connect Gmail.', 'error')
+      return
+    }
+    if (!live) {
+      showToast('Set VITE_API_BASE_URL to send email.', 'error')
+      return
+    }
+    if (templateType === 'product' && !workspaceBooking) {
+      showToast(
+        'Save your Google Calendar booking link once in the Meetings tab (or connect Calendar).',
+        'error',
+      )
+      setTab('meetings')
+      return
+    }
+
+    let recipients = []
+    if (mode === 'single') {
+      const email = singleTo.trim().toLowerCase()
+      if (!email.includes('@')) {
+        showToast('Enter a valid recipient email.', 'error')
+        return
+      }
+      recipients = [
+        {
+          email,
+          name: singleName,
+          mergeData: {
+            email,
+            name: singleName,
+            firstName: singleName.split(/\s+/).filter(Boolean)[0] || '',
+            greeting: singleName.trim()
+              ? `Hi ${singleName.split(/\s+/).filter(Boolean)[0] || singleName.trim()}`
+              : 'Hi there',
+            meetingLink: workspaceBooking,
+            fomoLine: 'Teams in your market are already moving on this',
+          },
+        },
+      ]
+    } else {
+      recipients = leadPayload?.leads || []
+      if (!recipients.length) {
+        showToast('Upload an Excel file or paste a Google Sheets link first.', 'error')
+        return
+      }
+    }
+
+    const booking = workspaceBooking
+    const dualCtaHtml = booking
+      ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0 8px;"><tr>
+<td style="padding-right:10px;padding-bottom:8px;"><a href="https://aftabahmadkhan.online" style="display:inline-block;padding:12px 20px;border-radius:10px;background:#0f172a;color:#fff;font-weight:700;text-decoration:none;font-size:14px;">View portfolio</a></td>
+<td style="padding-bottom:8px;"><a href="${booking}" style="display:inline-block;padding:12px 20px;border-radius:10px;background:#4f46e5;color:#fff;font-weight:700;text-decoration:none;font-size:14px;">Schedule a meeting</a></td>
+</tr></table>
+<p style="font-size:12px;color:#64748b;margin:0 0 12px;">Schedule opens my Google Calendar — pick a time that works for you.</p>`
+      : ''
+    let sendHtml = htmlBody
+    if (sendHtml && booking && !/Schedule a meeting/i.test(sendHtml)) {
+      sendHtml = sendHtml.replace(
+        /(<\/td>\s*<\/tr>\s*<\/table>\s*<hr)/i,
+        `${dualCtaHtml}$1`,
+      )
+      if (!/Schedule a meeting/i.test(sendHtml)) {
+        sendHtml = `${sendHtml}${dualCtaHtml}`
+      }
+    }
+    if (!sendHtml) {
+      sendHtml = `<div style="font-family:system-ui,sans-serif;line-height:1.55">${body
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>\n')}</div>${dualCtaHtml}`
+    }
+    const primary = {
+      name: 'Selected',
+      subject,
+      textBody: body,
+      htmlBody: sendHtml,
+    }
+
+    setSending(true)
+    try {
+      await runWithLoading(
+        'Starting campaign…',
+        async () => {
+          await createEmailCampaign({
+            name: `${templateType === 'product' ? 'VorksPro' : templateType === 'outreach' ? 'Outreach' : 'Email'} · ${new Date().toLocaleDateString()}`,
+            subject: primary.subject,
+            textBody: primary.textBody,
+            htmlBody: primary.htmlBody,
+            templates: [primary],
+            templateType,
+            recipients: recipients.map((r) => {
+              const nm = String(r.name || r.mergeData?.name || '').trim()
+              const fn =
+                String(r.mergeData?.firstName || '').trim() ||
+                nm.split(/\s+/).filter(Boolean)[0] ||
+                ''
+              return {
+                email: r.email,
+                name: nm,
+                company: r.company,
+                designation: r.designation,
+                location: r.location,
+                sheetName: r.sheetName,
+                rowNumber: r.rowNumber,
+                niche: r.industry || r.niche,
+                mergeData: {
+                  ...(r.mergeData || {}),
+                  name: nm || r.mergeData?.name || '',
+                  firstName: fn,
+                  greeting: fn ? `Hi ${fn}` : nm ? `Hi ${nm}` : 'Hi there',
+                  meetingLink: booking || r.mergeData?.meetingLink,
+                },
+              }
+            }),
+            leadSourceId: leadPayload?.source?.id,
+            meetingLink: booking,
+            trackOpens: true,
+            sendNow: true,
+            cooldownMinutes: mode === 'single' ? 1 : cooldownMinutes,
+            dailyCap,
+          })
+          await saveEmailTemplateDraft(subject, body, { meetingLink: booking, templateType })
+        },
+        { blocking: mode === 'bulk' && recipients.length > 5 },
+      )
+      showToast(
+        mode === 'single'
+          ? 'Email queued'
+          : `Campaign started · ${recipients.length} leads · ${cooldownMinutes} min cooldown`,
+      )
+      setTab('processed')
+      await refreshAll()
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const activeCampaigns = campaigns.filter((c) =>
+    ['sending', 'paused', 'draft'].includes(c.status),
   )
-}
-
-/** Shows the exact personalized email a recipient received. Falls back to a
- *  best-effort merge of the template for campaigns sent before render storage. */
-function SentEmailModal({ recipient, campaign, onClose }) {
-  if (!recipient) return null
-
-  const data = {
-    ...(recipient.mergeData || {}),
-    email: recipient.email,
-    name: recipient.name,
-    company: recipient.company,
-    niche: recipient.niche,
-  }
-  const hasStored = !!(recipient.renderedSubject || recipient.renderedText || recipient.renderedHtml)
-
-  const subject = hasStored
-    ? recipient.renderedSubject
-    : mergeTemplate(campaign?.subject || '', data)
-
-  const templateBody =
-    campaign?.textBody?.trim() || campaign?.htmlBody?.replace(/<[^>]+>/g, '').trim() || ''
-  const body = hasStored
-    ? recipient.renderedText || recipient.renderedHtml?.replace(/<[^>]+>/g, '').trim() || ''
-    : mergeTemplate(templateBody, data)
 
   return (
-    <Modal open={!!recipient} onClose={onClose} title="Sent email">
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-          <span className="font-medium text-white">{recipient.email}</span>
-          {recipient.company && <span>· {recipient.company}</span>}
-          <span
-            className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-              hasStored
-                ? 'bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/25'
-                : 'bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/25'
-            }`}
-          >
-            {hasStored ? 'Exact copy sent' : 'Reconstructed from template'}
-          </span>
-        </div>
+    <PageShell>
+      <PageHeader
+        title="Mail Box"
+        subtitle={
+          mailReady
+            ? mailTransport === 'smtp'
+              ? 'Sending via SMTP · campaigns, tracking & meetings'
+              : 'Gmail connected · campaigns, tracking & meetings'
+            : 'Configure SMTP or Gmail to send'
+        }
+        action={
+          <div className="saas-tabs">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={`saas-tab ${tab === t.id ? 'saas-tab--active' : ''}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
-        <div>
-          <p className="field-label">Subject</p>
-          <p className="text-sm font-medium text-white">{subject || '—'}</p>
-        </div>
+      {!live && (
+        <p className="mb-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          Connect the API (`VITE_API_BASE_URL`) to use Mail Box.
+        </p>
+      )}
 
-        <div>
-          <p className="field-label">Body</p>
-          <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-white/[0.06] bg-black/20 p-3">
-            <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-200">
-              {body || 'No body content'}
-            </p>
+      {/* ─── Native Mail Box ─── */}
+      {tab === 'mailbox' && (
+        <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#080a12]">
+          <aside className="hidden w-44 shrink-0 flex-col border-r border-white/[0.06] bg-[#070910] sm:flex">
+            <div className="p-3">
+              <button
+                type="button"
+                className="btn-primary w-full py-2 text-sm"
+                onClick={() => setTab('campaigns')}
+              >
+                Compose
+              </button>
+            </div>
+            <nav className="saas-scroll flex-1 space-y-0.5 overflow-y-auto px-2">
+              {MAILBOX_FOLDERS.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setFolder(f.id)}
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
+                    folder === f.id
+                      ? 'bg-indigo-500/15 font-semibold text-white ring-1 ring-indigo-400/25'
+                      : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                  }`}
+                >
+                  <span>{f.label}</span>
+                  <span className="tabular-nums text-[10px] text-slate-500">
+                    {folderCounts[f.id] ?? ''}
+                  </span>
+                </button>
+              ))}
+            </nav>
+            <div className="border-t border-white/[0.06] p-3 text-[10px] text-slate-500">
+              <p>
+                Sent last 24h:{' '}
+                <span className="text-slate-300">{sent24h}</span>
+              </p>
+            </div>
+          </aside>
+
+          <section className="flex w-full min-w-0 flex-col border-r border-white/[0.06] sm:w-[340px] lg:w-[380px]">
+            <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2">
+              <input
+                value={mailboxQuery}
+                onChange={(e) => setMailboxQuery(e.target.value)}
+                placeholder="Search mail"
+                className="saas-input min-w-0 flex-1 py-1.5 text-xs"
+              />
+              {!selectMode ? (
+                <button
+                  type="button"
+                  className="shrink-0 rounded-lg border border-white/10 px-2 py-1.5 text-[10px] font-semibold text-slate-300 hover:bg-white/[0.06] disabled:opacity-40"
+                  disabled={!messages.length}
+                  onClick={() => setSelectMode(true)}
+                >
+                  Select
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="shrink-0 rounded-lg border border-white/10 px-2 py-1.5 text-[10px] font-semibold text-slate-400 hover:bg-white/[0.06]"
+                  onClick={exitSelectMode}
+                >
+                  Done
+                </button>
+              )}
+              <select
+                className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[11px] text-slate-300 sm:hidden"
+                value={folder}
+                onChange={(e) => setFolder(e.target.value)}
+              >
+                {MAILBOX_FOLDERS.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectMode && tab === 'mailbox' && (
+              <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.06] bg-indigo-500/[0.07] px-3 py-2">
+                <label className="mr-1 flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-indigo-200">
+                  <input
+                    type="checkbox"
+                    checked={allSelected && messages.length > 0}
+                    onChange={toggleSelectAll}
+                    disabled={!messages.length}
+                    className="rounded border-white/20"
+                  />
+                  Select all
+                </label>
+                {selectedCount > 0 && (
+                  <span className="text-[10px] text-slate-400">{selectedCount} selected</span>
+                )}
+                {selectedCount > 0 &&
+                  (folder === 'junk' ? (
+                    <>
+                      <button
+                        type="button"
+                        className="rounded-lg bg-emerald-500/20 px-2 py-1 text-[10px] font-semibold text-emerald-200 disabled:opacity-50"
+                        disabled={bulkBusy}
+                        onClick={() => runBulkMailbox('restore')}
+                      >
+                        Restore
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg bg-rose-500/20 px-2 py-1 text-[10px] font-semibold text-rose-300 disabled:opacity-50"
+                        disabled={bulkBusy}
+                        onClick={() => runBulkMailbox('delete')}
+                      >
+                        Delete forever
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="rounded-lg bg-amber-500/20 px-2 py-1 text-[10px] font-semibold text-amber-200 disabled:opacity-50"
+                      disabled={bulkBusy}
+                      onClick={() => runBulkMailbox('junk')}
+                    >
+                      Move to Junk
+                    </button>
+                  ))}
+              </div>
+            )}
+
+            <div className="saas-scroll min-h-0 flex-1 overflow-y-auto">
+              {!live && (
+                <p className="p-4 text-sm text-slate-500">Connect the API to use the mailbox.</p>
+              )}
+              {live && messages.length === 0 && (
+                <p className="p-4 text-sm text-slate-500">No messages in this folder.</p>
+              )}
+              {messages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`flex w-full items-start gap-2 border-b border-white/[0.04] px-3 py-2.5 transition hover:bg-white/[0.03] ${
+                    selectedId === m.id ? 'bg-white/[0.06]' : ''
+                  } ${selectMode && selectedMailIds.has(m.id) ? 'bg-indigo-500/[0.08]' : ''}`}
+                >
+                  {selectMode && (
+                    <input
+                      type="checkbox"
+                      checked={selectedMailIds.has(m.id)}
+                      onChange={() => toggleMailSelect(m.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-1 rounded border-white/20"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectMode) {
+                        toggleMailSelect(m.id)
+                        return
+                      }
+                      setSelectedId(m.id)
+                    }}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="truncate text-sm font-medium text-white">
+                        {m.name || m.email}
+                      </p>
+                      <span className="shrink-0 text-[10px] text-slate-500">
+                        {fmtTime(m.sentAt || m.createdAt)}
+                      </span>
+                    </div>
+                    <p className="truncate text-xs text-slate-400">
+                      {m.renderedSubject || m.company || m.email}
+                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <StatusChip status={m.status} />
+                      {m.openCount > 0 && (
+                        <span className="text-[10px] text-emerald-400/80">
+                          {m.openCount} open{m.openCount > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {m.meetingStatus && m.meetingStatus !== 'none' && (
+                        <StatusChip status={m.meetingStatus} />
+                      )}
+                    </div>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="hidden min-w-0 flex-1 flex-col lg:flex">
+            {!detail?.recipient ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
+                <p className="font-display text-lg text-slate-400">Mail Box</p>
+                <p className="max-w-sm text-sm text-slate-600">
+                  Select a message to read it, or open Campaigns to compose and send.
+                </p>
+              </div>
+            ) : (
+              <>
+                <header className="border-b border-white/[0.06] px-5 py-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 className="font-display text-lg font-semibold text-white">
+                        {detail.recipient.renderedSubject || 'No subject'}
+                      </h2>
+                      <p className="mt-1 text-sm text-slate-400">
+                        To:{' '}
+                        {detail.recipient.name
+                          ? `${detail.recipient.name} <${detail.recipient.email}>`
+                          : detail.recipient.email}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                        <StatusChip status={detail.recipient.status} />
+                        {detail.recipient.company && <span>{detail.recipient.company}</span>}
+                        {detail.recipient.location && <span>{detail.recipient.location}</span>}
+                        {detail.recipient.meetingStatus &&
+                          detail.recipient.meetingStatus !== 'none' && (
+                            <StatusChip status={detail.recipient.meetingStatus} />
+                          )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="text-right text-[11px] text-slate-500">
+                        <p>Opens: {detail.recipient.openCount || 0}</p>
+                        <p>Clicks: {detail.recipient.clickCount || 0}</p>
+                        <p>Sent: {fmtTime(detail.recipient.sentAt)}</p>
+                        {detail.recipient.meetingLink && (
+                          <a
+                            href={detail.recipient.meetingLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 block text-indigo-300 hover:underline"
+                          >
+                            Meeting link
+                          </a>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                        {detail.recipient.mailboxFolder === 'junk' ? (
+                          <>
+                            <button
+                              type="button"
+                              className="btn-secondary px-2.5 py-1 text-[11px]"
+                              onClick={async () => {
+                                try {
+                                  await restoreMailboxFromJunk(detail.recipient.id)
+                                  showToast('Restored to inbox', 'success')
+                                  setSelectedId(null)
+                                  setDetail(null)
+                                  await loadMailbox()
+                                } catch (err) {
+                                  showToast(err.message, 'error')
+                                }
+                              }}
+                            >
+                              Move to inbox
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-danger px-2.5 py-1 text-[11px]"
+                              onClick={async () => {
+                                if (
+                                  !window.confirm(
+                                    'Delete this message forever? This cannot be undone.',
+                                  )
+                                ) {
+                                  return
+                                }
+                                try {
+                                  await deleteMailboxForever(detail.recipient.id)
+                                  showToast('Deleted forever', 'success')
+                                  setSelectedId(null)
+                                  setDetail(null)
+                                  await loadMailbox()
+                                } catch (err) {
+                                  showToast(err.message, 'error')
+                                }
+                              }}
+                            >
+                              Delete forever
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn-secondary px-2.5 py-1 text-[11px]"
+                            onClick={async () => {
+                              try {
+                                await moveMailboxToJunk(detail.recipient.id)
+                                showToast('Moved to Junk', 'success')
+                                setSelectedId(null)
+                                setDetail(null)
+                                await loadMailbox()
+                              } catch (err) {
+                                showToast(err.message, 'error')
+                              }
+                            }}
+                          >
+                            Move to Junk
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </header>
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                  {detail.recipient.renderedHtml ? (
+                    <div
+                      className="prose prose-invert prose-sm max-w-none text-slate-200"
+                      dangerouslySetInnerHTML={{
+                        __html: detail.recipient.renderedHtml,
+                      }}
+                    />
+                  ) : (
+                    <pre className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
+                      {detail.recipient.renderedText || 'Content not captured yet.'}
+                    </pre>
+                  )}
+                  {detail.recipient.error && (
+                    <p className="mt-4 rounded-lg bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+                      {detail.recipient.error}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      )}
+
+      {/* ─── Campaigns tab ─── */}
+      {tab === 'campaigns' && (
+        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-4">
+            <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 saas-panel">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Lead source</h3>
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    Upload Excel or link a Google Sheet, then start the campaign.
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  {['bulk', 'single'].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMode(m)}
+                      className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold capitalize ${
+                        mode === m
+                          ? 'bg-indigo-500/25 text-indigo-200'
+                          : 'bg-white/[0.04] text-slate-500'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {mode === 'bulk' ? (
+                <LeadSourcePanel
+                  skipAlreadyEmailed={skipAlreadyEmailed}
+                  onSkipChange={setSkipAlreadyEmailed}
+                  onLoaded={setLeadPayload}
+                  disabled={sending}
+                />
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <input
+                    className={inputClass()}
+                    placeholder="To email"
+                    value={singleTo}
+                    onChange={(e) => setSingleTo(e.target.value)}
+                  />
+                  <input
+                    className={inputClass()}
+                    placeholder="Name"
+                    value={singleName}
+                    onChange={(e) => setSingleName(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {leadPayload?.source?.id && (
+                <button
+                  type="button"
+                  className="mt-3 text-xs text-indigo-300 hover:underline"
+                  onClick={() =>
+                    downloadLeadSourceExport(
+                      leadPayload.source.id,
+                      leadPayload.source.fileName || 'leads-updated.xlsx',
+                    ).catch((e) => showToast(e.message, 'error'))
+                  }
+                >
+                  Download updated Excel (status columns)
+                </button>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+              <h3 className="mb-3 text-sm font-semibold text-white">Template & send settings</h3>
+
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {['outreach', 'product'].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTemplateType(t)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold capitalize ${
+                      templateType === t
+                        ? 'bg-emerald-500/20 text-emerald-200'
+                        : 'bg-white/[0.04] text-slate-500'
+                    }`}
+                  >
+                    {t === 'product' ? 'VorksPro' : 'Outreach'}
+                  </button>
+                ))}
+                {templateList.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => applyTemplate(t)}
+                    className={`rounded-md px-2 py-1 text-[10px] ${
+                      templateId === t.id
+                        ? 'bg-white/10 text-white'
+                        : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mb-3">
+                <label className="mb-1 block text-[11px] font-medium text-slate-400">
+                  Meeting booking link
+                  {templateType === 'product' ? ' (from workspace)' : ' (optional)'}
+                </label>
+                {workspaceBooking ? (
+                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5">
+                    <p className="text-[11px] text-emerald-300/90">Using workspace booking link</p>
+                    <a
+                      href={workspaceBooking}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-0.5 block truncate text-xs text-indigo-300 hover:underline"
+                    >
+                      {workspaceBooking}
+                    </a>
+                    <button
+                      type="button"
+                      className="mt-1.5 text-[11px] font-medium text-slate-400 hover:text-white"
+                      onClick={() => setTab('meetings')}
+                    >
+                      Change in Meetings →
+                    </button>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-3 py-2.5 text-xs text-amber-100/90">
+                    No workspace booking link yet.{' '}
+                    <button
+                      type="button"
+                      className="font-semibold underline"
+                      onClick={() => setTab('meetings')}
+                    >
+                      Set it once in Meetings
+                    </button>
+                    {templateType === 'product' ? ' (required for VorksPro).' : '.'}
+                  </div>
+                )}
+              </div>
+
+              {mode === 'bulk' && (
+                <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div>
+                    <label className="mb-1 block text-[11px] text-slate-400">Cooldown (min)</label>
+                    <input
+                      type="number"
+                      min={7}
+                      max={30}
+                      className={inputClass()}
+                      value={cooldownMinutes}
+                      onChange={(e) => setCooldownMinutes(Number(e.target.value) || 8)}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[11px] text-slate-400">Max / 24h</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={500}
+                      className={inputClass()}
+                      value={dailyCap}
+                      onChange={(e) => setDailyCap(Number(e.target.value) || 200)}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <p className="text-[11px] text-slate-500">
+                      Est. {estFinish || '—'} · {leadPayload?.leads?.length || 0} leads
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <input
+                className={`${inputClass()} mb-2 font-medium`}
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Subject"
+              />
+              <textarea
+                className={`${inputClass()} min-h-[140px] leading-relaxed`}
+                value={body}
+                onChange={(e) => {
+                  setBody(e.target.value)
+                  setHtmlBody('')
+                }}
+                placeholder="Body"
+              />
+
+              {isLocalApi() && (
+                <p className="mt-2 text-[11px] text-slate-500">
+                  Open/click tracking needs a public API_PUBLIC_URL in production.
+                </p>
+              )}
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-primary px-4 py-2 text-sm"
+                  disabled={sending || !mailReady}
+                  onClick={handleStartCampaign}
+                >
+                  {sending ? 'Starting…' : 'Start campaign'}
+                </button>
+                {!mailReady && (
+                  <Link to="/api-config" className="btn-secondary px-3 py-2 text-xs">
+                    Fix mail setup
+                  </Link>
+                )}
+              </div>
+            </section>
+          </div>
+
+          <div className="space-y-4">
+            <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+              <h3 className="mb-3 text-sm font-semibold text-white">Active campaigns</h3>
+              {activeCampaigns.length === 0 && (
+                <p className="text-xs text-slate-500">No running campaigns. Start one from the left.</p>
+              )}
+              <div className="space-y-2">
+                {activeCampaigns.map((c) => (
+                  <div
+                    key={c.id}
+                    className="rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-white">{c.name}</p>
+                        <p className="truncate text-[11px] text-slate-500">{c.subject}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <StatusChip status={c.status} />
+                          <span className="text-[10px] text-slate-500">
+                            {c.stats?.sent || 0}/{c.stats?.total || 0} sent · {c.stats?.opened || 0}{' '}
+                            opens · {c.stats?.clicked || 0} clicks
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 flex-col gap-1">
+                        {c.status === 'sending' && (
+                          <button
+                            type="button"
+                            className="rounded-lg bg-amber-500/15 px-2 py-1 text-[10px] font-semibold text-amber-200"
+                            onClick={() =>
+                              pauseEmailCampaign(c.id)
+                                .then(refreshAll)
+                                .catch((e) => showToast(e.message, 'error'))
+                            }
+                          >
+                            Stop / Pause
+                          </button>
+                        )}
+                        {c.status === 'paused' && (
+                          <button
+                            type="button"
+                            className="rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200"
+                            onClick={() =>
+                              resumeEmailCampaign(c.id)
+                                .then(refreshAll)
+                                .catch((e) => showToast(e.message, 'error'))
+                            }
+                          >
+                            Resume
+                          </button>
+                        )}
+                        {['sending', 'paused', 'draft'].includes(c.status) && (
+                          <button
+                            type="button"
+                            className="rounded-lg bg-rose-500/15 px-2 py-1 text-[10px] font-semibold text-rose-300"
+                            onClick={() =>
+                              cancelEmailCampaign(c.id)
+                                .then(refreshAll)
+                                .catch((e) => showToast(e.message, 'error'))
+                            }
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {c.meetingLink && (
+                      <a
+                        href={c.meetingLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 block truncate text-[10px] text-indigo-300 hover:underline"
+                      >
+                        Meeting: {c.meetingLink}
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {campaigns.filter((c) => !['sending', 'paused', 'draft'].includes(c.status)).length >
+                0 && (
+                <div className="mt-4 border-t border-white/[0.06] pt-3">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Recent
+                  </p>
+                  <div className="max-h-48 space-y-1.5 overflow-y-auto">
+                    {campaigns
+                      .filter((c) => !['sending', 'paused', 'draft'].includes(c.status))
+                      .slice(0, 8)
+                      .map((c) => (
+                        <div
+                          key={c.id}
+                          className="flex items-center justify-between gap-2 text-[11px]"
+                        >
+                          <span className="truncate text-slate-400">{c.name}</span>
+                          <StatusChip status={c.status} />
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                Preview
+              </p>
+              <p className="mt-1 text-sm font-medium text-white">{previewMerge.subject}</p>
+              {previewMerge.html ? (
+                <div className="mt-3 max-h-56 overflow-auto rounded-lg border border-white/5 bg-white">
+                  <iframe
+                    title="Email preview"
+                    className="h-56 w-full"
+                    sandbox=""
+                    srcDoc={previewMerge.html}
+                  />
+                </div>
+              ) : (
+                <pre className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-slate-400">
+                  {previewMerge.body}
+                </pre>
+              )}
+              <p className="mt-2 text-[10px] text-slate-600">
+                {SIGNATURE.name} · {SIGNATURE.site}
+              </p>
+            </section>
           </div>
         </div>
+      )}
 
-        {!hasStored && (
-          <p className="text-[10px] text-slate-600">
-            This campaign was sent before per-recipient copies were stored, so spintax choices
-            may differ from what was actually delivered. Newly sent campaigns show the exact copy.
-          </p>
-        )}
-      </div>
-    </Modal>
+      {/* ─── Processed mail table ─── */}
+      {tab === 'processed' && (
+        <div className="saas-table-wrap flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-4 py-3">
+            <input
+              className={`${inputClass()} max-w-xs`}
+              placeholder="Search email, name, company…"
+              value={processedQuery}
+              onChange={(e) => setProcessedQuery(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn-secondary px-3 py-1.5 text-xs"
+              onClick={loadProcessed}
+            >
+              Refresh
+            </button>
+            <span className="text-[11px] text-slate-500">{filteredProcessed.length} rows</span>
+            {!selectMode ? (
+              <button
+                type="button"
+                className="ml-auto rounded-lg border border-white/10 px-2.5 py-1.5 text-[10px] font-semibold text-slate-300 hover:bg-white/[0.06] disabled:opacity-40"
+                disabled={!filteredProcessed.length}
+                onClick={() => setSelectMode(true)}
+              >
+                Select
+              </button>
+            ) : (
+              <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                <label className="flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-indigo-200">
+                  <input
+                    type="checkbox"
+                    checked={allSelected && filteredProcessed.length > 0}
+                    onChange={toggleSelectAll}
+                    disabled={!filteredProcessed.length}
+                    className="rounded border-white/20"
+                  />
+                  Select all
+                </label>
+                {selectedCount > 0 && (
+                  <>
+                    <span className="text-[10px] text-slate-400">{selectedCount} selected</span>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-amber-500/20 px-2.5 py-1 text-[10px] font-semibold text-amber-200 disabled:opacity-50"
+                      disabled={bulkBusy}
+                      onClick={() => runBulkMailbox('junk')}
+                    >
+                      Move to Junk
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-emerald-500/20 px-2.5 py-1 text-[10px] font-semibold text-emerald-200 disabled:opacity-50"
+                      disabled={bulkBusy}
+                      onClick={() => runBulkMailbox('restore')}
+                    >
+                      Restore
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-rose-500/20 px-2.5 py-1 text-[10px] font-semibold text-rose-300 disabled:opacity-50"
+                      disabled={bulkBusy}
+                      onClick={() => runBulkMailbox('delete')}
+                    >
+                      Delete forever
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-400 hover:bg-white/[0.06]"
+                  onClick={exitSelectMode}
+                >
+                  Done
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="saas-scroll min-h-0 flex-1 overflow-auto">
+            <table className="saas-table w-full min-w-[1100px] text-left text-xs">
+              <thead>
+                <tr>
+                  {selectMode && (
+                    <th className="w-10 px-3 py-2.5">
+                      <span className="sr-only">Select</span>
+                    </th>
+                  )}
+                  <th className="px-3 py-2.5">Name</th>
+                  <th className="px-3 py-2.5">Email</th>
+                  <th className="px-3 py-2.5">Company</th>
+                  <th className="px-3 py-2.5">Campaign</th>
+                  <th className="px-3 py-2.5">Status</th>
+                  <th className="px-3 py-2.5">Opens</th>
+                  <th className="px-3 py-2.5">Clicks</th>
+                  <th className="px-3 py-2.5">Meeting</th>
+                  <th className="px-3 py-2.5">Sent</th>
+                  <th className="px-3 py-2.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProcessed.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={selectMode ? 11 : 10}
+                      className="px-3 py-8 text-center text-slate-500"
+                    >
+                      No processed mail yet. Start a campaign from the Campaigns tab.
+                    </td>
+                  </tr>
+                )}
+                {filteredProcessed.map((r) => {
+                  const displayName =
+                    r.name ||
+                    r.mergeData?.name ||
+                    (r.email ? r.email.split('@')[0] : '') ||
+                    '—'
+                  const campaignLabel = r.campaignName || '—'
+                  const subjectLabel = r.campaignSubject || r.renderedSubject || ''
+                  return (
+                    <tr
+                      key={r.id}
+                      className={
+                        selectMode && selectedMailIds.has(r.id) ? 'bg-indigo-500/[0.06]' : ''
+                      }
+                    >
+                      {selectMode && (
+                        <td className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedMailIds.has(r.id)}
+                            onChange={() => toggleMailSelect(r.id)}
+                            className="rounded border-white/20"
+                          />
+                        </td>
+                      )}
+                      <td className="px-3 py-2 font-medium text-slate-200">{displayName}</td>
+                      <td className="px-3 py-2 text-slate-400">{r.email}</td>
+                      <td className="px-3 py-2 text-slate-400">
+                        {r.company || r.mergeData?.company || '—'}
+                      </td>
+                      <td className="max-w-[200px] px-3 py-2">
+                        <p className="truncate font-medium text-slate-300" title={campaignLabel}>
+                          {campaignLabel}
+                        </p>
+                        {subjectLabel && subjectLabel !== campaignLabel && (
+                          <p className="truncate text-[10px] text-slate-600" title={subjectLabel}>
+                            {subjectLabel}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <StatusChip status={r.status} />
+                      </td>
+                      <td className="px-3 py-2 text-slate-300">{r.openCount || 0}</td>
+                      <td className="px-3 py-2 text-slate-300">{r.clickCount || 0}</td>
+                      <td className="px-3 py-2">
+                        <StatusChip status={r.meetingStatus || 'none'} />
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-slate-500">
+                        {fmtTime(r.sentAt)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-wrap justify-end gap-1">
+                          <button
+                            type="button"
+                            className="rounded-lg bg-white/[0.06] px-2 py-1 text-[10px] font-semibold text-slate-300 hover:bg-white/[0.1]"
+                            onClick={() => {
+                              setTab('mailbox')
+                              setFolder(r.mailboxFolder === 'junk' ? 'junk' : 'sent')
+                              setSelectedId(r.id)
+                            }}
+                          >
+                            View
+                          </button>
+                          {r.mailboxFolder === 'junk' ? (
+                            <>
+                              <button
+                                type="button"
+                                className="rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/25"
+                                onClick={async () => {
+                                  try {
+                                    await restoreMailboxFromJunk(r.id)
+                                    showToast('Restored to inbox', 'success')
+                                    await loadProcessed()
+                                    await loadMailbox()
+                                  } catch (err) {
+                                    showToast(err.message, 'error')
+                                  }
+                                }}
+                              >
+                                Restore
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-lg bg-rose-500/15 px-2 py-1 text-[10px] font-semibold text-rose-300 hover:bg-rose-500/25"
+                                onClick={async () => {
+                                  if (
+                                    !window.confirm(
+                                      'Delete this message forever? This cannot be undone.',
+                                    )
+                                  ) {
+                                    return
+                                  }
+                                  try {
+                                    await deleteMailboxForever(r.id)
+                                    showToast('Deleted forever', 'success')
+                                    await loadProcessed()
+                                    await loadMailbox()
+                                  } catch (err) {
+                                    showToast(err.message, 'error')
+                                  }
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              className="rounded-lg bg-amber-500/15 px-2 py-1 text-[10px] font-semibold text-amber-200 hover:bg-amber-500/25"
+                              onClick={async () => {
+                                try {
+                                  await moveMailboxToJunk(r.id)
+                                  showToast('Moved to Junk', 'success')
+                                  await loadProcessed()
+                                  await loadMailbox()
+                                } catch (err) {
+                                  showToast(err.message, 'error')
+                                }
+                              }}
+                            >
+                              Junk
+                            </button>
+                          )}
+                          {r.meetingLink && (
+                            <a
+                              href={r.meetingLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-lg bg-indigo-500/15 px-2 py-1 text-[10px] font-semibold text-indigo-200 hover:bg-indigo-500/25"
+                            >
+                              Meet
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Meetings tab ─── */}
+      {tab === 'meetings' && (
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+          <section className="saas-panel space-y-4 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-white">Google Calendar</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Connect once, save your booking page once, then sync Meet invites automatically.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {calendarConnected || apiConfig?.gmail?.calendarReady || apiConfig?.gmail?.hasRefreshToken ? (
+                  <span className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
+                    Calendar connected
+                  </span>
+                ) : (
+                  <Link
+                    to="/api-config"
+                    className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/15"
+                  >
+                    Connect in Integrations →
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-1.5 text-xs"
+                  disabled={syncingCalendar || !(calendarConnected || apiConfig?.gmail?.hasRefreshToken)}
+                  onClick={handleSyncCalendar}
+                >
+                  {syncingCalendar ? 'Syncing…' : 'Sync now'}
+                </button>
+              </div>
+            </div>
+
+            {calendarAuthBroken && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                <span>Google Calendar auth expired. Reconnect Gmail and accept Calendar permissions.</span>
+                <Link to="/api-config" className="font-semibold text-amber-50 underline">
+                  Reconnect Gmail →
+                </Link>
+              </div>
+            )}
+
+            <div>
+              <label className="mb-1 block text-[11px] font-medium text-slate-400">
+                Workspace booking URL (saved once for all campaigns)
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  className={`${inputClass()} min-w-0 flex-1`}
+                  value={bookingUrlDraft}
+                  onChange={(e) => setBookingUrlDraft(e.target.value)}
+                  placeholder="https://calendar.google.com/calendar/appointments/..."
+                />
+                <button
+                  type="button"
+                  className="btn-primary px-3 py-2 text-xs"
+                  disabled={savingBooking}
+                  onClick={saveWorkspaceBooking}
+                >
+                  {savingBooking ? 'Saving…' : 'Save'}
+                </button>
+                {workspaceBooking && (
+                  <a
+                    href={workspaceBooking}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-secondary px-3 py-2 text-xs"
+                  >
+                    Open
+                  </a>
+                )}
+              </div>
+              <p className="mt-1.5 text-[10px] text-slate-600">
+                Google cannot create Appointment Schedule pages via API. Create one in{' '}
+                <a
+                  href="https://calendar.google.com/calendar/u/0/r/appointment"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-indigo-400 hover:underline"
+                >
+                  Google Calendar → Appointment schedules
+                </a>
+                , paste the public link here once, then every VorksPro campaign reuses it.
+              </p>
+            </div>
+          </section>
+
+          <div className="saas-table-wrap min-h-0 flex-1 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
+              <h3 className="text-sm font-semibold text-white">Scheduled & meeting pipeline</h3>
+              <button
+                type="button"
+                className="btn-secondary px-3 py-1.5 text-xs"
+                onClick={loadMeetings}
+              >
+                Refresh
+              </button>
+            </div>
+            <div className="saas-scroll min-h-0 flex-1 overflow-auto">
+              <table className="saas-table w-full min-w-[1100px] text-left text-xs">
+                <thead>
+                  <tr>
+                    <th className="px-3 py-2.5">Lead</th>
+                    <th className="px-3 py-2.5">Company</th>
+                    <th className="px-3 py-2.5">Campaign</th>
+                    <th className="px-3 py-2.5">Meeting status</th>
+                    <th className="px-3 py-2.5">Schedule / Meet</th>
+                    <th className="px-3 py-2.5">Meeting link</th>
+                    <th className="px-3 py-2.5">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {meetings.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
+                        No meeting activity yet. Product campaigns mark leads as invited; Sync pulls
+                        booked Calendar events; Invite with Meet creates a 1:1.
+                      </td>
+                    </tr>
+                  )}
+                  {meetings.map((m) => (
+                    <tr key={m.id} className="align-top">
+                      <td className="px-3 py-2">
+                        <p className="font-medium text-slate-200">{m.name || '—'}</p>
+                        <p className="text-slate-500">{m.email}</p>
+                      </td>
+                      <td className="px-3 py-2 text-slate-400">{m.company || '—'}</td>
+                      <td className="max-w-[120px] truncate px-3 py-2 text-slate-500">
+                        {m.campaignName || '—'}
+                      </td>
+                      <td className="px-3 py-2">
+                        <select
+                          className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white"
+                          value={m.meetingStatus || 'none'}
+                          onChange={(e) => {
+                            const meetingStatus = e.target.value
+                            updateEmailMeeting(m.id, { meetingStatus })
+                              .then(() => loadMeetings())
+                              .catch((err) => showToast(err.message, 'error'))
+                          }}
+                        >
+                          {MEETING_STATUSES.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-col gap-1.5">
+                          <input
+                            type="datetime-local"
+                            className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white"
+                            defaultValue={
+                              m.meetingScheduledAt
+                                ? new Date(m.meetingScheduledAt).toISOString().slice(0, 16)
+                                : ''
+                            }
+                            id={`meet-dt-${m.id}`}
+                            onBlur={(e) => {
+                              if (!e.target.value) return
+                              updateEmailMeeting(m.id, {
+                                meetingStatus: 'scheduled',
+                                meetingScheduledAt: new Date(e.target.value).toISOString(),
+                              })
+                                .then(() => loadMeetings())
+                                .catch((err) => showToast(err.message, 'error'))
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="rounded-lg bg-indigo-500/20 px-2 py-1 text-[10px] font-semibold text-indigo-200 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30 disabled:opacity-50"
+                            disabled={
+                              invitingId === m.id ||
+                              !(calendarConnected || apiConfig?.gmail?.hasRefreshToken)
+                            }
+                            onClick={() => {
+                              const el = document.getElementById(`meet-dt-${m.id}`)
+                              handleInviteMeet(m, el?.value)
+                            }}
+                          >
+                            {invitingId === m.id ? 'Inviting…' : 'Invite with Meet'}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="max-w-[200px] px-3 py-2">
+                        {m.meetingLink ? (
+                          <a
+                            href={m.meetingLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block truncate text-indigo-300 hover:underline"
+                          >
+                            {m.meetingLink}
+                          </a>
+                        ) : (
+                          <span className="text-slate-600">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          className="w-40 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white"
+                          defaultValue={m.meetingNotes || ''}
+                          placeholder="Notes…"
+                          onBlur={(e) => {
+                            if (e.target.value === (m.meetingNotes || '')) return
+                            updateEmailMeeting(m.id, { meetingNotes: e.target.value })
+                              .then(() => loadMeetings())
+                              .catch((err) => showToast(err.message, 'error'))
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+    </PageShell>
   )
 }

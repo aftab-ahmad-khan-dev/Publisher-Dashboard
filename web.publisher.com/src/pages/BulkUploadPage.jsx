@@ -128,7 +128,7 @@ export default function BulkUploadPage() {
             action={
               <button
                 type="button"
-                className="text-[11px] font-medium text-violet-400 hover:text-violet-300"
+                className="text-[11px] font-medium text-indigo-400 hover:text-indigo-300"
                 onClick={() => setRaw(SAMPLE)}
               >
                 Load sample
@@ -173,7 +173,7 @@ export default function BulkUploadPage() {
                   onClick={() => togglePlatform(key)}
                   className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium ring-1 transition ${
                     platforms[key]
-                      ? 'bg-violet-500/15 text-white ring-violet-500/40'
+                      ? 'bg-indigo-500/15 text-white ring-indigo-500/40'
                       : 'bg-white/[0.02] text-slate-500 ring-white/[0.06]'
                   }`}
                 >
@@ -217,7 +217,7 @@ export default function BulkUploadPage() {
                       <div className="flex gap-3">
                         <PostThumb file={post.imageFile} />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold text-violet-300">{post.title}</p>
+                          <p className="text-xs font-semibold text-indigo-300">{post.title}</p>
                           <p className="text-[10px] text-slate-500">
                             {when.toLocaleString(undefined, {
                               weekday: 'short',

@@ -27,13 +27,15 @@ function mapHeaders(headerLine, delim) {
 }
 
 export function buildMergeData({ email, name = '', company = '', niche = '' }) {
-  const firstName = name.split(/\s+/).filter(Boolean)[0] || ''
+  const nameTrim = String(name || '').trim()
+  const firstName = nameTrim.split(/\s+/).filter(Boolean)[0] || ''
   const companyTrim = company.trim()
   const nicheTrim = niche.trim()
   const business = companyTrim || nicheTrim
   const nicheLabel = nicheTrim || companyTrim || 'your industry'
   const companyLabel = companyTrim || 'your company'
-  const greeting = firstName ? `Hi ${firstName}` : 'Hi there'
+  // Prefer real name; never leave "Hi there" when a name is available
+  const greeting = firstName ? `Hi ${firstName}` : nameTrim ? `Hi ${nameTrim}` : 'Hi there'
 
   let painOpener = 'Many teams in your space'
   if (companyTrim && nicheTrim) {
@@ -46,7 +48,7 @@ export function buildMergeData({ email, name = '', company = '', niche = '' }) {
 
   return {
     email,
-    name: name.trim(),
+    name: nameTrim,
     firstName,
     company: companyTrim,
     niche: nicheTrim,

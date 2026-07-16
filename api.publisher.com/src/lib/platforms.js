@@ -34,8 +34,27 @@ export function isGmailConfigured(gmail) {
   )
 }
 
+/** True when we can send mail: Gmail OAuth OR SMTP from env. */
 export function canSendGmail(gmail) {
-  return isGmailConfigured(gmail) || Boolean(gmail?.refreshToken?.trim())
+  if (isGmailConfigured(gmail) || Boolean(gmail?.refreshToken?.trim())) return true
+  try {
+    // Lazy import avoided — check env directly so platforms.js stays sync
+    return Boolean(
+      process.env.SMTP_HOST?.trim() &&
+        process.env.SMTP_EMAIL?.trim() &&
+        process.env.SMTP_PASSWORD?.trim(),
+    )
+  } catch {
+    return false
+  }
+}
+
+export function isSmtpConfigured() {
+  return Boolean(
+    process.env.SMTP_HOST?.trim() &&
+      process.env.SMTP_EMAIL?.trim() &&
+      process.env.SMTP_PASSWORD?.trim(),
+  )
 }
 
 export function buildPostText(postState, platform) {

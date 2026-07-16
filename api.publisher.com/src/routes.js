@@ -8,11 +8,13 @@ import bulkRoutes from './routes/bulk.js'
 import emailRoutes from './routes/email.js'
 import mediaRoutes from './routes/media.js'
 import adminRoutes from './routes/admin.js'
+import billingRoutes from './routes/billing.js'
 
 const router = Router()
 
 router.use(dataRoutes)
 router.use(adminRoutes)
+router.use(billingRoutes)
 router.use(publishRoutes)
 router.use(eventsRoutes)
 router.use(authRoutes)

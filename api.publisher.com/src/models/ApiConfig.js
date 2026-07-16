@@ -42,6 +42,9 @@ const apiConfigSchema = new mongoose.Schema(
       refreshToken: String,
       tokenExpiresAt: Date,
       fromEmail: String,
+      /** Workspace-level Google Appointment Schedule / booking URL */
+      calendarBookingUrl: String,
+      calendarConnectedAt: Date,
     },
     webhookUrl: String,
     notificationsEnabled: { type: Boolean, default: true },

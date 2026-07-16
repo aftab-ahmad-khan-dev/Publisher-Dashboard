@@ -119,7 +119,7 @@ function DraftGridCard({ draft, onEdit, onDelete, delay }) {
         <PlatformIconGroup platforms={platforms} size="sm" />
       </div>
       <button type="button" onClick={onEdit} className="mt-2 flex-1 text-left">
-        <h3 className="line-clamp-2 text-sm font-semibold text-white group-hover:text-fuchsia-200">
+        <h3 className="line-clamp-2 text-sm font-semibold text-white group-hover:text-sky-200">
           {draft.title}
         </h3>
         <p className="mt-1 line-clamp-2 text-xs text-slate-500">{draft.body || 'Empty draft'}</p>

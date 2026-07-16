@@ -6,7 +6,8 @@ export function PageStatsRow({ children, className = '' }) {
 
 const STAT_TONES = {
   default: 'saas-stat-card',
-  violet: 'saas-stat-card saas-stat-card--violet',
+  indigo: 'saas-stat-card saas-stat-card--indigo',
+  violet: 'saas-stat-card saas-stat-card--indigo',
   amber: 'saas-stat-card saas-stat-card--amber',
   emerald: 'saas-stat-card saas-stat-card--emerald',
   rose: 'saas-stat-card saas-stat-card--rose',
@@ -52,6 +53,6 @@ export function PageGrid({ children, cols = 2, className = '' }) {
   return <div className={`saas-page-grid ${colClass} ${className}`}>{children}</div>
 }
 
-export function InfoBanner({ children, tone = 'violet', className = '' }) {
+export function InfoBanner({ children, tone = 'indigo', className = '' }) {
   return <div className={`saas-info-banner saas-info-banner--${tone} ${className}`}>{children}</div>
 }

@@ -340,7 +340,7 @@ const COMPETITORS = {
     ["Email campaigns built in", [true, false, false, false]],
     ["Auto-publish scheduler", [true, true, true, true]],
     ["Isolated team workspaces", [true, false, true, false]],
-    ["Free to start", [true, true, false, true]],
+    ["From $5/mo", [true, true, false, true]],
   ],
 };
 
@@ -433,7 +433,7 @@ function GoogleMark() {
 
 function ReviewCard({ t }) {
   return (
-    <div className='flex flex-col rounded-3xl border border-white/[0.08] bg-[#0b0d16] p-7 transition hover:-translate-y-1 hover:border-violet-500/30'>
+    <div className='flex flex-col rounded-3xl border border-white/[0.08] bg-[#0b0d16] p-7 transition hover:-translate-y-1 hover:border-indigo-500/30'>
       <div className='flex items-center justify-between'>
         <Stars />
         <span className='text-[11px] font-semibold text-slate-500'>
@@ -499,15 +499,15 @@ export default function LandingPage() {
     <div ref={rootRef} className='text-slate-200'>
       {/* Hero */}
       <header className='relative mx-auto max-w-4xl px-6 pb-16 pt-24 text-center'>
-        <div className='pointer-events-none absolute -left-32 top-10 h-96 w-96 rounded-full bg-fuchsia-600/15 blur-[120px]' />
-        <div className='pointer-events-none absolute -right-24 top-32 h-80 w-80 rounded-full bg-violet-600/15 blur-[100px]' />
+        <div className='pointer-events-none absolute -left-32 top-10 h-96 w-96 rounded-full bg-sky-600/15 blur-[120px]' />
+        <div className='pointer-events-none absolute -right-24 top-32 h-80 w-80 rounded-full bg-indigo-600/15 blur-[100px]' />
         <div data-hero className='relative'>
           <span className='inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-xs font-semibold text-slate-300'>
             One composer for every channel
           </span>
           <h1 className='font-display mt-7 text-[2.6rem] font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl'>
             Publish once.
-            <span className='mt-1 block bg-gradient-to-r from-fuchsia-400 via-violet-400 to-rose-400 bg-clip-text text-transparent'>
+            <span className='mt-1 block bg-gradient-to-r from-sky-400 via-indigo-400 to-indigo-300 bg-clip-text text-transparent'>
               Reach everywhere.
             </span>
           </h1>
@@ -519,9 +519,9 @@ export default function LandingPage() {
           <div className='mt-9 flex flex-col items-center gap-5'>
             <Link
               to='/sign-up'
-              className='inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-500 to-violet-600 px-8 py-4 font-display text-base font-bold text-white shadow-xl shadow-fuchsia-500/20 transition hover:-translate-y-0.5'
+              className='inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-8 py-4 font-display text-base font-bold text-white shadow-xl shadow-sky-500/20 transition hover:-translate-y-0.5'
             >
-              Start publishing free
+              Start with a plan
             </Link>
             {/* Social proof strip */}
             <div className='flex flex-col items-center gap-2'>
@@ -551,9 +551,9 @@ export default function LandingPage() {
                 </div>
               </div>
               <p className='flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-500'>
-                <span className='text-emerald-400'>No credit card</span>
+                <span className='text-emerald-400'>Bank transfer</span>
                 <span className='h-1 w-1 rounded-full bg-slate-600' />
-                Free to start
+                From $5/mo
                 <span className='h-1 w-1 rounded-full bg-slate-600' />
                 Set up in 5 minutes
               </p>
@@ -605,7 +605,7 @@ export default function LandingPage() {
         <div className='grid grid-cols-2 gap-6 sm:grid-cols-4'>
           {STATS.map(([n, l]) => (
             <div key={l} className='text-center'>
-              <p className='font-display bg-gradient-to-r from-fuchsia-400 to-violet-400 bg-clip-text text-3xl font-extrabold text-transparent sm:text-4xl'>
+              <p className='font-display bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-3xl font-extrabold text-transparent sm:text-4xl'>
                 {n}
               </p>
               <p className='mt-1 text-xs text-slate-500'>{l}</p>
@@ -616,7 +616,7 @@ export default function LandingPage() {
 
       {/* Pain */}
       <section className='mx-auto max-w-5xl px-6 py-24'>
-        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-violet-400'>
+        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>
           The old way is exhausting
         </p>
         <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
@@ -646,7 +646,7 @@ export default function LandingPage() {
         className='border-t border-white/[0.06] bg-white/[0.015] py-24'
       >
         <div className='mx-auto max-w-5xl px-6'>
-          <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-violet-400'>
+          <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>
             Everything included
           </p>
           <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
@@ -656,9 +656,9 @@ export default function LandingPage() {
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className='group rounded-3xl border border-white/[0.07] bg-[#0b0d16] p-7 transition hover:-translate-y-1 hover:border-violet-500/30'
+                className='group rounded-3xl border border-white/[0.07] bg-[#0b0d16] p-7 transition hover:-translate-y-1 hover:border-indigo-500/30'
               >
-                <div className='flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500/15 to-violet-600/15 text-violet-300'>
+                <div className='flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500/15 to-indigo-600/15 text-indigo-300'>
                   <Icon name={f.icon} className='h-6 w-6' />
                 </div>
                 <h3 className='font-display mt-5 text-lg font-bold text-white'>
@@ -667,7 +667,7 @@ export default function LandingPage() {
                 <p className='mt-2 text-sm leading-relaxed text-slate-400'>
                   {f.body}
                 </p>
-                <span className='mt-4 inline-block rounded-full bg-violet-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-300'>
+                <span className='mt-4 inline-block rounded-full bg-indigo-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-indigo-300'>
                   {f.tag}
                 </span>
               </div>
@@ -678,7 +678,7 @@ export default function LandingPage() {
 
       {/* Per-platform SEO content */}
       <section className='mx-auto max-w-5xl px-6 py-24'>
-        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-violet-400'>
+        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>
           One tool, every network
         </p>
         <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
@@ -709,7 +709,7 @@ export default function LandingPage() {
 
       {/* Social proof, ratings + reviews */}
       <section id='reviews' className='mx-auto max-w-6xl px-6 py-24'>
-        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-violet-400'>
+        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>
           Don't take our word for it
         </p>
         <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
@@ -760,7 +760,7 @@ export default function LandingPage() {
         className='border-t border-white/[0.06] bg-white/[0.015] py-24'
       >
         <div className='mx-auto max-w-3xl px-6'>
-          <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-violet-400'>
+          <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>
             How we compare
           </p>
           <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
@@ -774,7 +774,7 @@ export default function LandingPage() {
                   {COMPETITORS.cols.map((c, i) => (
                     <th key={c} className='p-2.5 text-center sm:p-4'>
                       {i === 0 ? (
-                        <span className='rounded-full bg-gradient-to-r from-fuchsia-500 to-violet-600 px-3 py-1 font-display text-xs font-bold text-white'>
+                        <span className='rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-3 py-1 font-display text-xs font-bold text-white'>
                           {c}
                         </span>
                       ) : (
@@ -793,7 +793,7 @@ export default function LandingPage() {
                     {vals.map((v, ci) => (
                       <td
                         key={ci}
-                        className={`p-2.5 text-center sm:p-4 ${ci === 0 ? "bg-violet-500/[0.06]" : ""}`}
+                        className={`p-2.5 text-center sm:p-4 ${ci === 0 ? "bg-indigo-500/[0.06]" : ""}`}
                       >
                         {v ? (
                           <span className='inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400'>
@@ -819,7 +819,7 @@ export default function LandingPage() {
 
       {/* How it works */}
       <section className='mx-auto max-w-4xl px-6 py-24'>
-        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-violet-400'>
+        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>
           How it works
         </p>
         <h2 className='font-display mt-3 text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
@@ -844,7 +844,7 @@ export default function LandingPage() {
             ],
           ].map(([n, title, body]) => (
             <div key={n} className='text-center'>
-              <div className='mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-violet-600 font-display text-lg font-bold text-white'>
+              <div className='mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 font-display text-lg font-bold text-white'>
                 {n}
               </div>
               <h3 className='font-display mt-4 text-lg font-bold text-white'>
@@ -857,6 +857,49 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ */}
+      {/* Pricing preview */}
+      <section id='pricing' className='mx-auto max-w-5xl px-6 py-24'>
+        <div className='text-center'>
+          <p className='text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>Pricing</p>
+          <h2 className='font-display mt-3 text-3xl font-extrabold text-white sm:text-4xl'>
+            $5 · $10 · $20
+          </h2>
+          <p className='mx-auto mt-3 max-w-lg text-sm text-slate-400'>
+            Starter (Compose + Bulk), Growth (+ Mail Box), or Pro (full platform). Pay by bank
+            transfer and upload your receipt.
+          </p>
+        </div>
+        <div className='mt-10 grid gap-4 sm:grid-cols-3'>
+          {[
+            { name: 'Starter', price: '$5', detail: 'Compose + Bulk' },
+            { name: 'Growth', price: '$10', detail: '+ Mail Box', hot: true },
+            { name: 'Pro', price: '$20', detail: 'Full platform' },
+          ].map((t) => (
+            <div
+              key={t.name}
+              className={`rounded-2xl border p-6 text-center ${
+                t.hot ? 'border-indigo-500/40 bg-indigo-500/10' : 'border-white/10 bg-white/[0.02]'
+              }`}
+            >
+              <p className='text-sm font-semibold text-slate-300'>{t.name}</p>
+              <p className='font-display mt-2 text-3xl font-extrabold text-white'>
+                {t.price}
+                <span className='text-sm font-medium text-slate-500'>/mo</span>
+              </p>
+              <p className='mt-2 text-xs text-slate-400'>{t.detail}</p>
+            </div>
+          ))}
+        </div>
+        <div className='mt-8 text-center'>
+          <Link
+            to='/pricing'
+            className='inline-flex rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/5'
+          >
+            See full pricing
+          </Link>
+        </div>
+      </section>
+
       <section
         id='faq'
         className='border-t border-white/[0.06] bg-white/[0.015] py-24'
@@ -875,22 +918,22 @@ export default function LandingPage() {
 
       {/* Final CTA */}
       <section className='relative overflow-hidden px-6 py-28 text-center'>
-        <div className='pointer-events-none absolute inset-0 bg-gradient-to-b from-violet-600/10 to-transparent' />
+        <div className='pointer-events-none absolute inset-0 bg-gradient-to-b from-indigo-600/10 to-transparent' />
         <div className='relative'>
           <h2 className='font-display mx-auto max-w-2xl text-3xl font-extrabold tracking-tight text-white sm:text-5xl'>
             Stop posting five times.
-            <span className='block bg-gradient-to-r from-fuchsia-400 to-violet-400 bg-clip-text text-transparent'>
+            <span className='block bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent'>
               Start publishing once.
             </span>
           </h2>
           <Link
             to='/sign-up'
-            className='mt-10 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-500 to-violet-600 px-9 py-4 font-display text-base font-bold text-white shadow-xl shadow-fuchsia-500/25 transition hover:-translate-y-0.5'
+            className='mt-10 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-9 py-4 font-display text-base font-bold text-white shadow-xl shadow-sky-500/25 transition hover:-translate-y-0.5'
           >
-            Create your free workspace
+            Create your workspace
           </Link>
           <p className='mt-4 text-xs text-slate-600'>
-            No credit card · Free to start · Cancel anytime
+            Bank transfer · From $5/mo · Activate after receipt review
           </p>
         </div>
       </section>

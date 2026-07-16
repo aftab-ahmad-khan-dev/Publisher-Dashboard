@@ -130,7 +130,7 @@ export default function EditScheduledModal({ open, item, onClose, onSave }) {
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={5}
-            className="w-full resize-y rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-violet-400/50"
+            className="w-full resize-y rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-indigo-400/50"
             placeholder="What do you want to share?"
           />
         </div>
@@ -187,7 +187,7 @@ export default function EditScheduledModal({ open, item, onClose, onSave }) {
                   onClick={() => togglePlatform(key)}
                   className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all ${
                     active
-                      ? 'border-violet-400/50 bg-violet-500/15 text-white'
+                      ? 'border-indigo-400/50 bg-indigo-500/15 text-white'
                       : 'border-white/10 bg-white/[0.03] text-slate-400 hover:border-white/20'
                   }`}
                 >

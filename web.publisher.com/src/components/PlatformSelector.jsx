@@ -29,7 +29,7 @@ export default function PlatformSelector({ platforms, togglePlatform }) {
                 <p className="truncate text-[11px] text-slate-500">
                   {meta.suite}
                   {meta.supportsPoll ? (
-                    <span className="text-violet-400/80"> · Polls</span>
+                    <span className="text-indigo-400/80"> · Polls</span>
                   ) : (
                     ''
                   )}

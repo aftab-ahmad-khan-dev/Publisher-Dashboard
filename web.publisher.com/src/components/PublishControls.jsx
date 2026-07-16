@@ -228,7 +228,7 @@ export default function PublishControls({
               <div className="poll-timeline__line" />
               <div className="poll-timeline__dot poll-timeline__dot--end" />
               <div className="poll-timeline__content">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-300/90">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-indigo-300/90">
                   Poll window
                 </p>
                 <p className="mt-1 text-sm font-medium text-white">
@@ -317,13 +317,13 @@ export default function PublishControls({
                     {isMulti ? (
                       <>
                         <div>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-300/90">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-indigo-300/90">
                             Starts · Day 1
                           </p>
                           <p className="mt-0.5 text-sm font-medium text-white">{dayNStartPreview}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-300/90">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-indigo-300/90">
                             Ends · Day {multiCount}
                           </p>
                           <p className="mt-0.5 text-sm font-medium text-white">{dayNEndPreview}</p>
@@ -331,7 +331,7 @@ export default function PublishControls({
                       </>
                     ) : (
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-300/90">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-indigo-300/90">
                           Goes live · Day {state.scheduleDayNum || 1}
                         </p>
                         <p className="mt-0.5 text-sm font-medium text-white">{dayNEndPreview}</p>
@@ -371,7 +371,7 @@ export default function PublishControls({
             <div className="poll-timeline">
               <div className="poll-timeline__dot poll-timeline__dot--start" />
               <div className="poll-timeline__content">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-300/90">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-indigo-300/90">
                   Goes live
                 </p>
                 <p className="mt-1 text-sm font-medium text-white">
@@ -387,7 +387,7 @@ export default function PublishControls({
               <div className="poll-timeline__line" />
               <div className="poll-timeline__dot poll-timeline__dot--end" />
               <div className="poll-timeline__content">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-300/90">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-indigo-300/90">
                   Poll window
                 </p>
                 <p className="mt-1 text-sm font-medium text-white">

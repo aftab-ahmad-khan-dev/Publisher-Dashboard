@@ -14,18 +14,19 @@ const ICONS = {
   api: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />,
   guide: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />,
   users: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />,
+  billing: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />,
 }
 
 const PRIMARY = ['/compose', '/calendar', '/scheduled', '/drafts']
 
 function NavIcon({ icon, count, active }) {
   return (
-    <span className={`relative flex h-9 w-9 items-center justify-center rounded-xl transition ${active ? 'bg-violet-500/20 text-violet-300' : ''}`}>
+    <span className={`relative flex h-9 w-9 items-center justify-center rounded-xl transition ${active ? 'bg-indigo-500/20 text-indigo-300' : ''}`}>
       <svg className="h-[20px] w-[20px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         {ICONS[icon]}
       </svg>
       {count > 0 && (icon === 'drafts' || icon === 'scheduled') && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-r from-fuchsia-600 to-violet-600 px-1 text-[9px] font-bold text-white ring-2 ring-[#07080f]">
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-500 px-1 text-[9px] font-bold text-white ring-2 ring-[#07080f]">
           {count > 9 ? '9+' : count}
         </span>
       )}
@@ -38,7 +39,7 @@ export default function BottomNav() {
   const { user } = useAuth()
   const app = useAppData()
   const { pathname } = useLocation()
-  const navItems = getNavItems(user?.email)
+  const navItems = getNavItems(user?.email, app.subscription)
   const counts = { drafts: app.drafts?.length || 0, scheduled: app.queue?.length || 0 }
 
   const primary = PRIMARY.map((p) => navItems.find((n) => n.path === p)).filter(Boolean)
@@ -68,7 +69,7 @@ export default function BottomNav() {
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
                     isActive
-                      ? 'bg-violet-500/15 text-white ring-1 ring-violet-500/25'
+                      ? 'bg-indigo-500/15 text-white ring-1 ring-indigo-500/25'
                       : 'text-slate-300 hover:bg-white/[0.04]'
                   }`
                 }
@@ -76,7 +77,14 @@ export default function BottomNav() {
                 <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   {ICONS[item.icon]}
                 </svg>
-                {item.label}
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate">{item.label}</span>
+                  {item.locked && (
+                    <svg className="h-3 w-3 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  )}
+                </span>
               </NavLink>
             ))}
           </div>
@@ -91,7 +99,7 @@ export default function BottomNav() {
             onClick={() => setMoreOpen(false)}
             className={({ isActive }) =>
               `flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition ${
-                isActive ? 'text-violet-300' : 'text-slate-500'
+                isActive ? 'text-indigo-300' : 'text-slate-500'
               }`
             }
           >
@@ -107,12 +115,12 @@ export default function BottomNav() {
           type="button"
           onClick={() => setMoreOpen((o) => !o)}
           className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition ${
-            moreOpen || moreActive ? 'text-violet-300' : 'text-slate-500'
+            moreOpen || moreActive ? 'text-indigo-300' : 'text-slate-500'
           }`}
         >
           <span
             className={`flex h-9 w-9 items-center justify-center rounded-xl ${
-              moreOpen || moreActive ? 'bg-violet-500/20' : ''
+              moreOpen || moreActive ? 'bg-indigo-500/20' : ''
             }`}
           >
             <svg className="h-[20px] w-[20px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>

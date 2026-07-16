@@ -7,6 +7,9 @@ const SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/calendar.readonly',
 ]
 
 const GMAIL_CALLBACK_PATH = '/api/auth/gmail/callback'
@@ -200,6 +203,7 @@ export async function handleGmailCallback(code, state) {
     tokenExpiresAt: expiresAt,
     fromEmail,
     connected: true,
+    calendarConnectedAt: new Date(),
   })
 
   return { workspaceId: pending.workspaceId, fromEmail }
@@ -216,7 +220,11 @@ export async function refreshGmailTokenIfNeeded(workspaceId) {
   }
 
   const { clientId, clientSecret } = getClientCredentials(config)
-  if (!clientId || !clientSecret) return config
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      'Gmail OAuth client is missing. Paste Client ID + Secret in Integrations, then Connect Gmail.',
+    )
+  }
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -230,7 +238,17 @@ export async function refreshGmailTokenIfNeeded(workspaceId) {
   })
 
   const tokenData = await tokenRes.json().catch(() => ({}))
-  if (!tokenRes.ok) return config
+  if (!tokenRes.ok) {
+    await saveGmailTokens(workspaceId, {
+      accessToken: '',
+      tokenExpiresAt: null,
+    })
+    const detail = tokenData.error_description || tokenData.error || `HTTP ${tokenRes.status}`
+    logger.warn('Gmail token refresh failed', { detail })
+    throw new Error(
+      'Gmail session expired or invalid. Reconnect Gmail in Integrations (accept Calendar permissions).',
+    )
+  }
 
   const expiresAt = tokenData.expires_in
     ? new Date(Date.now() + tokenData.expires_in * 1000)
@@ -248,6 +266,21 @@ export async function refreshGmailTokenIfNeeded(workspaceId) {
 export async function getGmailAccessToken(workspaceId) {
   const config = await refreshGmailTokenIfNeeded(workspaceId)
   const token = config.gmail?.accessToken?.trim()
-  if (!token) throw new Error('Gmail is not connected. Connect Gmail in API Config.')
+  if (!token) {
+    throw new Error('Gmail is not connected. Connect Gmail in Integrations.')
+  }
   return { accessToken: token, fromEmail: config.gmail?.fromEmail || '' }
+}
+
+/** Map Google Calendar API auth failures to a reconnect message. */
+export function calendarAuthErrorMessage(err) {
+  const msg = String(err?.message || err || '')
+  if (
+    /invalid authentication credentials|invalid_grant|401|Login Required|UNAUTHENTICATED/i.test(
+      msg,
+    )
+  ) {
+    return 'Google Calendar auth failed. Reconnect Gmail in Integrations and accept Calendar access.'
+  }
+  return msg
 }

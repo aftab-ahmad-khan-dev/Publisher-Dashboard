@@ -108,6 +108,7 @@ export default function ComposePage() {
               clearMedia={post.clearMedia}
               setCropHint={post.setCropHint}
               toggleImageVisibility={post.toggleImageVisibility}
+              replaceActiveMedia={post.replaceActiveMedia}
               togglePlatform={post.togglePlatform}
               addHashtag={post.addHashtag}
               removeHashtag={post.removeHashtag}

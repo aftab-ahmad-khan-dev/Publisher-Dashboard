@@ -35,6 +35,9 @@ const ICONS = {
   users: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
   ),
+  billing: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+  ),
 }
 
 const BADGE_COUNTS = {
@@ -60,7 +63,7 @@ function ConnectionRow({ ready, label, children }) {
 export default function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }) {
   const { user } = useAuth()
   const app = useAppData()
-  const navGroups = getNavGroups(user?.email)
+  const navGroups = getNavGroups(user?.email, app.subscription)
   const {
     metaReady,
     linkedInReady,
@@ -71,7 +74,11 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
     connectedCount,
   } = getConnectionSummary(app.apiConfig)
   const linkedInLabel = linkedInPublish ? 'Live' : linkedInReady ? 'Setup' : 'Off'
-  const gmailSendReady = app.apiConfig?.gmail?.sendReady || app.apiConfig?.gmail?.hasRefreshToken
+  const gmailSendReady =
+    app.apiConfig?.gmail?.sendReady ||
+    app.apiConfig?.gmail?.hasRefreshToken ||
+    app.apiConfig?.gmail?.smtpConfigured ||
+    app.apiConfig?.gmail?.transport === 'smtp'
   const gmailLabel = gmailSendReady ? 'Live' : gmailReady ? 'Setup' : 'Off'
   const healthPct = Math.round((connectedCount / 5) * 100)
 
@@ -84,8 +91,8 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
       <div className={`saas-sidebar__brand ${collapsed ? 'lg:justify-center lg:px-3' : ''}`}>
         <div className="flex min-w-0 items-center gap-3">
           <div className="relative shrink-0">
-            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-violet-500/30 to-fuchsia-500/20 blur-md" />
-            <BrandLogo className="relative h-10 w-10 rounded-xl shadow-lg shadow-violet-500/25" />
+            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-indigo-500/25 to-sky-500/15 blur-md" />
+            <BrandLogo className="relative h-10 w-10 rounded-xl shadow-lg shadow-indigo-500/20" />
           </div>
           {!collapsed && (
             <div className="min-w-0 lg:block">
@@ -130,7 +137,7 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
               <p className="saas-nav-section-label mb-2 px-2">{group.label}</p>
             )}
             <ul className="space-y-0.5">
-              {group.items.map(({ path, label, icon, description }) => {
+              {group.items.map(({ path, label, icon, description, locked }) => {
                 const countFn = BADGE_COUNTS[icon]
                 const count = countFn ? countFn(app) : 0
 
@@ -143,7 +150,7 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
                       className={({ isActive }) =>
                         `saas-nav-link group ${collapsed ? 'lg:justify-center lg:px-0' : ''} ${
                           isActive ? 'saas-nav-link--active' : ''
-                        }`
+                        } ${locked ? 'opacity-70' : ''}`
                       }
                     >
                       {({ isActive }) => (
@@ -153,14 +160,23 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
                               {ICONS[icon]}
                             </svg>
                             {count > 0 && (icon === 'drafts' || icon === 'scheduled') && (
-                              <span className="saas-nav-badge">{count > 9 ? '9+' : count}</span>
+                              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-500 px-1 text-[9px] font-bold text-white">
+                                {count > 9 ? '9+' : count}
+                              </span>
                             )}
                           </span>
                           {!collapsed && (
-                            <span className="min-w-0 flex-1 lg:block">
-                              <span className="block truncate text-[13px] font-medium">{label}</span>
+                            <span className="min-w-0 flex-1">
+                              <span className="flex items-center gap-1.5">
+                                <span className="truncate">{label}</span>
+                                {locked && (
+                                  <svg className="h-3 w-3 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                  </svg>
+                                )}
+                              </span>
                               {description && (
-                                <span className="block truncate text-[10px] text-slate-600 group-hover:text-slate-500">
+                                <span className="block truncate text-[10px] font-normal text-slate-600 group-[.saas-nav-link--active]:text-indigo-300/70">
                                   {description}
                                 </span>
                               )}
@@ -184,13 +200,13 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
                 Integrations
               </p>
-              <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
+              <span className="rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
                 {healthPct}%
               </span>
             </div>
             <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
+                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-sky-400 transition-all duration-500"
                 style={{ width: `${healthPct}%` }}
               />
             </div>

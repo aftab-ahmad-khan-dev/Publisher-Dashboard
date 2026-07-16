@@ -17,7 +17,7 @@ export function ScheduledPostListCard({ item, onPreview, onEdit, onDelete, style
             </span>
             <PlatformIconGroup platforms={item.platforms} size="md" />
             {item.poll?.enabled && (
-              <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
+              <span className="rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
                 Poll
               </span>
             )}
@@ -41,7 +41,7 @@ export function ScheduledPostListCard({ item, onPreview, onEdit, onDelete, style
           <button
             type="button"
             onClick={() => onEdit(item)}
-            className="rounded-xl px-2.5 py-1 text-xs font-semibold text-violet-300 ring-1 ring-violet-500/25 transition-colors hover:bg-violet-500/10 sm:px-3 sm:py-1.5"
+            className="rounded-xl px-2.5 py-1 text-xs font-semibold text-indigo-300 ring-1 ring-indigo-500/25 transition-colors hover:bg-indigo-500/10 sm:px-3 sm:py-1.5"
           >
             Edit
           </button>
@@ -82,7 +82,7 @@ export function ScheduledPostGridCard({ item, onPreview, onEdit, onDelete, style
         </span>
         <PlatformIconGroup platforms={item.platforms} size="sm" />
         {item.poll?.enabled && (
-          <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
+          <span className="rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
             Poll
           </span>
         )}
@@ -108,7 +108,7 @@ export function ScheduledPostGridCard({ item, onPreview, onEdit, onDelete, style
         <button
           type="button"
           onClick={() => onEdit(item)}
-          className="flex-1 rounded-xl py-2 text-xs font-semibold text-violet-300 ring-1 ring-violet-500/25 transition-colors hover:bg-violet-500/10"
+          className="flex-1 rounded-xl py-2 text-xs font-semibold text-indigo-300 ring-1 ring-indigo-500/25 transition-colors hover:bg-indigo-500/10"
         >
           Edit
         </button>

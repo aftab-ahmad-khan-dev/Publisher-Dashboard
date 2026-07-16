@@ -44,14 +44,14 @@ export default function TopBar() {
         <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
           {processing && (
             <span className="hidden items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-slate-400 lg:inline-flex">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-400" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400" />
               {processingLabel || 'Processing'}
             </span>
           )}
 
           <div className="hidden items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.02] p-1 lg:flex">
             <span className="rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-400">
-              <span className="text-violet-300">{scheduled}</span> queued
+              <span className="text-indigo-300">{scheduled}</span> queued
             </span>
             <span className="h-3 w-px bg-white/10" />
             <span className="rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-400">

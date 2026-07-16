@@ -4,8 +4,32 @@ import { Draft } from '../models/Draft.js'
 import { ScheduledPost } from '../models/ScheduledPost.js'
 import { PublishedPost } from '../models/PublishedPost.js'
 import { ApiConfig } from '../models/ApiConfig.js'
+import { PaymentSubmission } from '../models/PaymentSubmission.js'
+import { Subscription } from '../models/Subscription.js'
+import { getOrCreateSubscription } from '../lib/subscription.js'
+import { PLAN_PRICES } from '../lib/plans.js'
+import { sendMail, isMailerConfigured } from '../lib/mailer.js'
+import { logger } from '../lib/logger.js'
 
 const router = Router()
+
+function planLabel(plan) {
+  const price = PLAN_PRICES[plan]
+  const names = { starter: 'Starter', growth: 'Growth', pro: 'Pro' }
+  return `${names[plan] || plan}${price != null ? ` ($${price}/mo)` : ''}`
+}
+
+async function sendSafeMail(payload) {
+  if (!isMailerConfigured()) {
+    logger.warn('SMTP not configured — skipped admin billing email', { to: payload.to })
+    return
+  }
+  try {
+    await sendMail(payload)
+  } catch (err) {
+    logger.error('Admin billing email failed', { error: err.message })
+  }
+}
 
 function mapCounts(rows) {
   const out = {}
@@ -164,14 +188,40 @@ router.get('/admin/users', requirePlatformAdmin, async (_req, res, next) => {
     if (clerkUsers) {
       const workspaceIds = clerkUsers.map((u) => `user_${u.id}`.toLowerCase())
       const stats = await loadWorkspaceStats(workspaceIds)
-      const users = clerkUsers.map((u) => mapClerkUser(u, stats))
+      const subs = await Subscription.find({ workspaceId: { $in: workspaceIds } }).lean()
+      const subByWs = Object.fromEntries(subs.map((s) => [s.workspaceId, s]))
+      const users = clerkUsers.map((u) => {
+        const mapped = mapClerkUser(u, stats)
+        const sub = subByWs[mapped.workspaceId]
+        return {
+          ...mapped,
+          subscription: {
+            plan: sub?.plan || 'none',
+            status: sub?.status || 'unpaid',
+            activatedAt: sub?.activatedAt || null,
+          },
+        }
+      })
       return res.json({ ok: true, users, total: users.length, source: 'clerk' })
     }
 
     const workspaceIds = await listWorkspaceIds()
     const stats = await loadWorkspaceStats(workspaceIds)
+    const subs = await Subscription.find({ workspaceId: { $in: workspaceIds } }).lean()
+    const subByWs = Object.fromEntries(subs.map((s) => [s.workspaceId, s]))
     const users = workspaceIds
-      .map((workspaceId) => mapWorkspaceUser(workspaceId, stats))
+      .map((workspaceId) => {
+        const mapped = mapWorkspaceUser(workspaceId, stats)
+        const sub = subByWs[workspaceId]
+        return {
+          ...mapped,
+          subscription: {
+            plan: sub?.plan || 'none',
+            status: sub?.status || 'unpaid',
+            activatedAt: sub?.activatedAt || null,
+          },
+        }
+      })
       .sort((a, b) => {
         const aTime = a.configUpdatedAt || a.createdAt || ''
         const bTime = b.configUpdatedAt || b.createdAt || ''
@@ -184,6 +234,188 @@ router.get('/admin/users', requirePlatformAdmin, async (_req, res, next) => {
       total: users.length,
       source: 'database',
       note: 'Set CLERK_SECRET_KEY in api.publisher.com/.env to list all Clerk sign-ups.',
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/admin/signups', requirePlatformAdmin, async (_req, res, next) => {
+  try {
+    const clerkUsers = await listClerkUsers()
+    const subs = await Subscription.find({}).sort({ createdAt: -1 }).limit(200).lean()
+    const subByWs = Object.fromEntries(subs.map((s) => [s.workspaceId, s]))
+
+    if (clerkUsers) {
+      const signups = clerkUsers.map((u) => {
+        const workspaceId = `user_${u.id}`.toLowerCase()
+        const email =
+          u.email_addresses?.find((e) => e.id === u.primary_email_address_id)?.email_address ||
+          u.email_addresses?.[0]?.email_address ||
+          ''
+        const sub = subByWs[workspaceId]
+        return {
+          id: u.id,
+          workspaceId,
+          name: [u.first_name, u.last_name].filter(Boolean).join(' ') || email || 'User',
+          email,
+          imageUrl: u.image_url || null,
+          createdAt: u.created_at ? new Date(u.created_at).toISOString() : null,
+          lastSignInAt: u.last_sign_in_at ? new Date(u.last_sign_in_at).toISOString() : null,
+          plan: sub?.plan || 'none',
+          status: sub?.status || 'unpaid',
+          activatedAt: sub?.activatedAt || null,
+        }
+      })
+      return res.json({ ok: true, signups, total: signups.length, source: 'clerk' })
+    }
+
+    const signups = subs.map((s) => ({
+      id: s.workspaceId,
+      workspaceId: s.workspaceId,
+      name: s.userEmail || s.workspaceId,
+      email: s.userEmail || '',
+      imageUrl: null,
+      createdAt: s.createdAt,
+      lastSignInAt: null,
+      plan: s.plan,
+      status: s.status,
+      activatedAt: s.activatedAt,
+    }))
+    res.json({ ok: true, signups, total: signups.length, source: 'database' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/admin/payments', requirePlatformAdmin, async (req, res, next) => {
+  try {
+    const status = String(req.query.status || '').trim()
+    const filter = status && ['pending', 'approved', 'rejected'].includes(status) ? { status } : {}
+    const rows = await PaymentSubmission.find(filter).sort({ createdAt: -1 }).limit(100).lean()
+    res.json({
+      ok: true,
+      payments: rows.map((p) => ({
+        id: p._id.toString(),
+        workspaceId: p.workspaceId,
+        userEmail: p.userEmail,
+        planRequested: p.planRequested,
+        bankMethod: p.bankMethod,
+        receiptMediaId: p.receiptMediaId,
+        receiptUrl: p.receiptUrl,
+        note: p.note,
+        status: p.status,
+        rejectReason: p.rejectReason,
+        createdAt: p.createdAt,
+        reviewedAt: p.reviewedAt,
+        reviewedBy: p.reviewedBy,
+      })),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/admin/payments/:id/activate', requirePlatformAdmin, async (req, res, next) => {
+  try {
+    const payment = await PaymentSubmission.findById(req.params.id)
+    if (!payment) {
+      return res.status(404).json({ ok: false, error: 'Payment not found' })
+    }
+
+    payment.status = 'approved'
+    payment.reviewedAt = new Date()
+    payment.reviewedBy = req.adminUser?.email || ''
+    payment.rejectReason = ''
+    await payment.save()
+
+    const sub = await getOrCreateSubscription(payment.workspaceId, payment.userEmail)
+    sub.plan = payment.planRequested
+    sub.status = 'active'
+    sub.activatedAt = new Date()
+    sub.activatedBy = req.adminUser?.email || ''
+    if (payment.userEmail) sub.userEmail = payment.userEmail
+    await sub.save()
+
+    if (payment.userEmail) {
+      await sendSafeMail({
+        to: payment.userEmail,
+        subject: 'Welcome onboard — your plan is active',
+        text: [
+          `Welcome onboard!`,
+          '',
+          `Your ${planLabel(payment.planRequested)} plan is now active.`,
+          'You can open Publisher Suite and start using your unlocked features.',
+          '',
+          '— Publisher Suite',
+        ].join('\n'),
+        html: `
+          <p><strong>Welcome onboard!</strong></p>
+          <p>Your <strong>${planLabel(payment.planRequested)}</strong> plan is now active.</p>
+          <p>You can open Publisher Suite and start using your unlocked features.</p>
+          <p>— Publisher Suite</p>
+        `,
+      })
+    }
+
+    res.json({
+      ok: true,
+      payment: {
+        id: payment._id.toString(),
+        status: payment.status,
+        planRequested: payment.planRequested,
+      },
+      subscription: {
+        plan: sub.plan,
+        status: sub.status,
+        activatedAt: sub.activatedAt,
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/admin/payments/:id/reject', requirePlatformAdmin, async (req, res, next) => {
+  try {
+    const payment = await PaymentSubmission.findById(req.params.id)
+    if (!payment) {
+      return res.status(404).json({ ok: false, error: 'Payment not found' })
+    }
+
+    const reason = String(req.body?.reason || '').slice(0, 500)
+    payment.status = 'rejected'
+    payment.reviewedAt = new Date()
+    payment.reviewedBy = req.adminUser?.email || ''
+    payment.rejectReason = reason
+    await payment.save()
+
+    const sub = await getOrCreateSubscription(payment.workspaceId, payment.userEmail)
+    if (sub.status === 'pending') {
+      sub.status = 'rejected'
+      await sub.save()
+    }
+
+    if (payment.userEmail) {
+      await sendSafeMail({
+        to: payment.userEmail,
+        subject: 'Payment receipt needs attention',
+        text: [
+          'We could not activate your plan from the submitted receipt.',
+          reason ? `Reason: ${reason}` : 'Please re-upload a clearer receipt from Billing.',
+          '',
+          '— Publisher Suite',
+        ].join('\n'),
+      })
+    }
+
+    res.json({
+      ok: true,
+      payment: {
+        id: payment._id.toString(),
+        status: payment.status,
+        rejectReason: payment.rejectReason,
+      },
     })
   } catch (err) {
     next(err)

@@ -55,6 +55,8 @@ const DEFAULT_CONFIG = {
     refreshToken: '',
     tokenExpiresAt: null,
     fromEmail: '',
+    calendarBookingUrl: '',
+    calendarConnectedAt: null,
     connected: false,
     sendReady: false,
   },
@@ -108,6 +110,7 @@ export function withDerivedFlags(config) {
       ...config.gmail,
       connected: canSendGmail(config.gmail),
       sendReady: canSendGmail(config.gmail),
+      calendarReady: Boolean(config.gmail?.refreshToken?.trim()),
     },
   }
 }
@@ -177,6 +180,8 @@ export function envDefaults() {
       refreshToken: process.env.GMAIL_REFRESH_TOKEN?.trim() || '',
       tokenExpiresAt: null,
       fromEmail: process.env.GMAIL_FROM_EMAIL?.trim() || '',
+      calendarBookingUrl: process.env.GOOGLE_CALENDAR_BOOKING_URL?.trim() || '',
+      calendarConnectedAt: null,
     },
   }
 }
@@ -238,6 +243,9 @@ function fillFromEnv(config) {
       refreshToken: config.gmail?.refreshToken || env.gmail.refreshToken,
       tokenExpiresAt: config.gmail?.tokenExpiresAt || null,
       fromEmail: config.gmail?.fromEmail || env.gmail.fromEmail,
+      calendarBookingUrl:
+        config.gmail?.calendarBookingUrl || env.gmail.calendarBookingUrl || '',
+      calendarConnectedAt: config.gmail?.calendarConnectedAt || null,
     },
     webhookUrl: config.webhookUrl || env.webhookUrl,
     notificationsEnabled: config.notificationsEnabled,
@@ -457,12 +465,35 @@ export function toClientConfig(config) {
     gmail: {
       clientId: config.gmail?.clientId || '',
       clientSecret: '',
-      fromEmail: config.gmail?.fromEmail || '',
+      fromEmail:
+        config.gmail?.fromEmail ||
+        process.env.FROM_EMAIL?.trim() ||
+        process.env.SMTP_EMAIL?.trim() ||
+        '',
       connected: config.gmail?.connected,
       sendReady: config.gmail?.sendReady,
       hasClientSecret: Boolean(config.gmail?.clientSecret?.trim()),
       hasRefreshToken: Boolean(config.gmail?.refreshToken?.trim()),
       tokenExpiresAt: config.gmail?.tokenExpiresAt || null,
+      calendarBookingUrl: config.gmail?.calendarBookingUrl || '',
+      calendarConnectedAt: config.gmail?.calendarConnectedAt || null,
+      calendarReady: Boolean(config.gmail?.refreshToken?.trim()),
+      smtpConfigured: Boolean(
+        process.env.SMTP_HOST?.trim() &&
+          process.env.SMTP_EMAIL?.trim() &&
+          process.env.SMTP_PASSWORD?.trim(),
+      ),
+      transport: (() => {
+        const smtp = Boolean(
+          process.env.SMTP_HOST?.trim() &&
+            process.env.SMTP_EMAIL?.trim() &&
+            process.env.SMTP_PASSWORD?.trim(),
+        )
+        const oauth = Boolean(config.gmail?.refreshToken?.trim() || config.gmail?.accessToken?.trim())
+        if (oauth) return 'gmail'
+        if (smtp) return 'smtp'
+        return null
+      })(),
     },
   }
 }

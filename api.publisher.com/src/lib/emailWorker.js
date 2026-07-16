@@ -3,11 +3,15 @@ import { EmailCampaign } from '../models/EmailCampaign.js'
 import { EmailRecipient } from '../models/EmailRecipient.js'
 import { getGmailAccessToken } from './gmailOAuth.js'
 import { sendGmailMessage, injectTrackingPixel } from './gmailSend.js'
+import { sendMail, isMailerConfigured } from './mailer.js'
 import { mergeTemplate } from './emailMerge.js'
 import { sanitizePublishedText } from './contentSanitize.js'
 import { broadcastEvent } from './events.js'
 import { logger } from './logger.js'
 import { apiPublicBase } from './publicUrl.js'
+import { enqueueLeadStatusUpdate } from './leadWriteback.js'
+import { getWorkspaceConfig } from './configStore.js'
+import { getCalendarBookingUrl } from './googleCalendar.js'
 
 const TRANSPARENT_GIF = Buffer.from(
   'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
@@ -16,17 +20,14 @@ const TRANSPARENT_GIF = Buffer.from(
 
 export { TRANSPARENT_GIF }
 
+const activeSends = new Set()
+
 function trackingApiBase() {
   const api =
     apiPublicBase() || process.env.WEB_URL?.replace('5173', '3001')?.trim()?.replace(/\/+$/, '')
   return `${api || 'http://localhost:3001'}/api/email`
 }
 
-/**
- * Rewrite every absolute http(s) link in the HTML to pass through our click
- * redirect, so a click is recorded by us regardless of the recipient's mail
- * client or extensions. The original URL is preserved as the `u` param.
- */
 export function rewriteLinksForTracking(html, clickBase, trackingId) {
   if (!html || !trackingId) return html
   return html.replace(
@@ -36,34 +37,81 @@ export function rewriteLinksForTracking(html, clickBase, trackingId) {
   )
 }
 
-export async function recordEmailClick(trackingId) {
+function pushLeadWriteback(recipient, campaign, patch) {
+  const sourceId = recipient.leadSourceId || campaign.leadSourceId
+  if (!sourceId) return
+  enqueueLeadStatusUpdate(sourceId, {
+    sheetName: recipient.sheetName || recipient.mergeData?.sheetName || '',
+    email: recipient.email,
+    rowNumber: recipient.rowNumber || recipient.mergeData?.rowNumber,
+    campaign: campaign.name || campaign.subject,
+    ...patch,
+  })
+}
+
+export async function recordEmailClick(trackingId, clickedUrl = '') {
   const recipient = await EmailRecipient.findOne({ trackingId })
   if (!recipient) return null
 
   const wasFirstClick = !recipient.clickedAt
   recipient.clickCount = (recipient.clickCount || 0) + 1
   if (wasFirstClick) recipient.clickedAt = new Date()
-  // A click implies an open, even if the open pixel never loaded.
   if (!recipient.openedAt) {
     recipient.openedAt = new Date()
+    recipient.lastOpenedAt = recipient.openedAt
     recipient.openCount = (recipient.openCount || 0) + 1
+  } else {
+    recipient.lastOpenedAt = new Date()
   }
   recipient.status = 'clicked'
+  if (clickedUrl) recipient.lastClickedUrl = String(clickedUrl).slice(0, 2000)
+
+  const url = String(clickedUrl || '')
+  const isMeetingClick =
+    /calendar\.google\.com/i.test(url) ||
+    /calendar\.app\.google/i.test(url) ||
+    /appointments/i.test(url) ||
+    /calendly\.com/i.test(url) ||
+    (recipient.meetingLink && url.includes(recipient.meetingLink.slice(0, 40)))
+
+  if (isMeetingClick) {
+    if (recipient.meetingStatus === 'none' || recipient.meetingStatus === 'invited') {
+      recipient.meetingStatus = 'link_clicked'
+    }
+    if (!recipient.meetingClickedAt) recipient.meetingClickedAt = new Date()
+    if (!recipient.meetingLink && url) recipient.meetingLink = url
+  }
+
   await recipient.save()
 
-  if (wasFirstClick) {
+  const campaign = await EmailCampaign.findById(recipient.campaignId)
+  if (wasFirstClick && campaign) {
     await EmailCampaign.updateOne(
       { _id: recipient.campaignId },
       { $inc: { 'stats.clicked': 1 } },
     )
-    const campaign = await EmailCampaign.findById(recipient.campaignId).lean()
-    if (campaign) {
-      broadcastEvent('EMAIL_CLICKED', {
-        workspaceId: campaign.workspaceId,
-        campaignId: campaign._id.toString(),
-        email: recipient.email,
-      })
-    }
+    broadcastEvent('EMAIL_CLICKED', {
+      workspaceId: campaign.workspaceId,
+      campaignId: campaign._id.toString(),
+      email: recipient.email,
+    })
+  }
+
+  if (campaign) {
+    pushLeadWriteback(recipient, campaign, {
+      status: isMeetingClick ? 'meeting_clicked' : 'clicked',
+      opens: recipient.openCount,
+      lastOpened: (recipient.lastOpenedAt || recipient.openedAt)?.toISOString?.() || '',
+      clicks: recipient.clickCount,
+    })
+  }
+
+  if (isMeetingClick) {
+    broadcastEvent('EMAIL_MEETING_CLICK', {
+      workspaceId: recipient.workspaceId,
+      campaignId: recipient.campaignId?.toString?.(),
+      email: recipient.email,
+    })
   }
 
   return recipient
@@ -75,152 +123,291 @@ export async function recordEmailOpen(trackingId) {
 
   const wasFirst = !recipient.openedAt
   recipient.openCount = (recipient.openCount || 0) + 1
+  recipient.lastOpenedAt = new Date()
   if (wasFirst) {
-    recipient.openedAt = new Date()
-    recipient.status = 'opened'
+    recipient.openedAt = recipient.lastOpenedAt
+    if (recipient.status === 'sent') recipient.status = 'opened'
   }
   await recipient.save()
 
-  if (wasFirst) {
+  const campaign = await EmailCampaign.findById(recipient.campaignId)
+  if (wasFirst && campaign) {
     await EmailCampaign.updateOne(
       { _id: recipient.campaignId },
       { $inc: { 'stats.opened': 1 } },
     )
-    const campaign = await EmailCampaign.findById(recipient.campaignId).lean()
-    if (campaign) {
-      broadcastEvent('EMAIL_OPENED', {
-        workspaceId: campaign.workspaceId,
-        campaignId: campaign._id.toString(),
-        email: recipient.email,
-      })
-    }
+    broadcastEvent('EMAIL_OPENED', {
+      workspaceId: campaign.workspaceId,
+      campaignId: campaign._id.toString(),
+      email: recipient.email,
+    })
+  }
+
+  if (campaign) {
+    pushLeadWriteback(recipient, campaign, {
+      status: recipient.status === 'clicked' ? 'clicked' : 'opened',
+      opens: recipient.openCount,
+      lastOpened: recipient.lastOpenedAt?.toISOString?.() || '',
+      clicks: recipient.clickCount || 0,
+    })
   }
 
   return recipient
 }
 
+async function countSentLast24h(workspaceId) {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  return EmailRecipient.countDocuments({
+    workspaceId,
+    status: { $in: ['sent', 'opened', 'clicked'] },
+    sentAt: { $gte: since },
+  })
+}
+
+function effectiveCooldownMs(campaign) {
+  const dailyCap = Math.max(1, campaign.dailyCap || 200)
+  const minFromCap = Math.ceil((24 * 60 * 60 * 1000) / dailyCap)
+  const userCooldown = Math.max(campaign.cooldownMs || 8 * 60 * 1000, 60_000)
+  // Prefer explicit cooldown, but never go faster than dailyCap allows on average
+  return Math.max(userCooldown, minFromCap)
+}
+
 export async function runCampaignSend(campaignId, workspaceId) {
-  const campaign = await EmailCampaign.findOne({ _id: campaignId, workspaceId })
-  if (!campaign) return
+  const key = String(campaignId)
+  if (activeSends.has(key)) return
+  activeSends.add(key)
 
   try {
-    const { accessToken, fromEmail } = await getGmailAccessToken(workspaceId)
-    const from = campaign.fromEmail || fromEmail
+    const campaign = await EmailCampaign.findOne({ _id: campaignId, workspaceId })
+    if (!campaign) return
+    if (campaign.status === 'paused' || campaign.status === 'cancelled') return
+
+    campaign.status = 'sending'
+    if (!campaign.startedAt) campaign.startedAt = new Date()
+    await campaign.save()
+
+    let accessToken = null
+    let from =
+      campaign.fromEmail ||
+      process.env.FROM_EMAIL?.trim() ||
+      process.env.SMTP_EMAIL?.trim() ||
+      ''
+
+    try {
+      const gmailAuth = await getGmailAccessToken(workspaceId)
+      accessToken = gmailAuth.accessToken
+      from = campaign.fromEmail || gmailAuth.fromEmail || from
+    } catch {
+      if (!isMailerConfigured()) {
+        throw new Error(
+          'No mail transport ready. Connect Gmail OAuth or set SMTP_HOST / SMTP_EMAIL / SMTP_PASSWORD in api .env.',
+        )
+      }
+    }
     if (!from) throw new Error('No sender email configured.')
 
-    const recipients = await EmailRecipient.find({ campaignId, status: 'queued' }).sort({ _id: 1 })
-    const batchSize = Math.min(Math.max(campaign.batchSize || 25, 1), 50)
-    const delayMs = Math.max(campaign.batchDelayMs || 3000, 1000)
+    const useSmtp = !accessToken && isMailerConfigured()
+    const workspaceConfig = await getWorkspaceConfig(workspaceId)
+    const workspaceBooking = getCalendarBookingUrl(workspaceConfig)
+    const cooldown = effectiveCooldownMs(campaign)
+    const dailyCap = Math.max(1, campaign.dailyCap || 200)
     const apiBase = trackingApiBase()
 
     logger.info('Email campaign sending', {
-      campaignId: campaignId.toString(),
-      recipients: recipients.length,
-      batchSize,
+      campaignId: key,
+      cooldownMs: cooldown,
+      dailyCap,
+      transport: useSmtp ? 'smtp' : 'gmail',
     })
 
-    for (let i = 0; i < recipients.length; i += batchSize) {
-      const batch = recipients.slice(i, i + batchSize)
-      for (const recipient of batch) {
-        try {
-          recipient.status = 'sending'
-          await recipient.save()
-
-          const data = { ...recipient.mergeData, email: recipient.email, name: recipient.name }
-          // When a template pool exists, each recipient gets a random template.
-          const pool = campaign.templates?.length
-            ? campaign.templates
-            : [{ subject: campaign.subject, textBody: campaign.textBody, htmlBody: campaign.htmlBody }]
-          const tpl = pool[Math.floor(Math.random() * pool.length)]
-          const subject = sanitizePublishedText(mergeTemplate(tpl.subject, data))
-          const text = sanitizePublishedText(mergeTemplate(tpl.textBody, data))
-          let html =
-            sanitizePublishedText(mergeTemplate(tpl.htmlBody, data)) ||
-            text.replace(/\n/g, '<br>\n')
-
-          // Persist the personalized content as actually composed (with original
-          // links, pre tracking) so the detail view shows what each recipient got.
-          recipient.renderedSubject = subject
-          recipient.renderedText = text
-          recipient.renderedHtml = html
-
-          // Outgoing copy: rewrite links through our click redirect and add the
-          // open pixel. Click tracking works without image-loading or extensions.
-          let outHtml = html
-          if (campaign.trackOpens && recipient.trackingId) {
-            outHtml = rewriteLinksForTracking(outHtml, `${apiBase}/click`, recipient.trackingId)
-            outHtml = injectTrackingPixel(outHtml, `${apiBase}/open/${recipient.trackingId}.gif`)
-          }
-
-          const result = await sendGmailMessage({
-            accessToken,
-            from,
-            to: recipient.name ? `"${recipient.name}" <${recipient.email}>` : recipient.email,
-            subject,
-            text,
-            html: outHtml,
-          })
-
-          recipient.status = 'sent'
-          recipient.gmailMessageId = result.messageId
-          recipient.sentAt = new Date()
-          recipient.error = undefined
-          await recipient.save()
-
-          await EmailCampaign.updateOne({ _id: campaignId }, { $inc: { 'stats.sent': 1 } })
-          logger.success('Email sent', {
-            to: recipient.email,
-            subject: subject.slice(0, 48),
-          })
-        } catch (err) {
-          recipient.status = 'failed'
-          recipient.error = err.message
-          await recipient.save()
-          await EmailCampaign.updateOne({ _id: campaignId }, { $inc: { 'stats.failed': 1 } })
-          logger.error('Email failed', { to: recipient.email, error: err.message })
-        }
+    // Send one-at-a-time with cooldown (bulk paced outreach)
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const fresh = await EmailCampaign.findById(campaignId)
+      if (!fresh || fresh.status === 'paused' || fresh.status === 'cancelled') {
+        logger.info('Email campaign stopped', { campaignId: key, status: fresh?.status })
+        return
       }
 
-      if (i + batchSize < recipients.length) {
-        logger.debug('Email batch pause', { delayMs })
-        await new Promise((r) => setTimeout(r, delayMs))
+      const sent24h = await countSentLast24h(workspaceId)
+      if (sent24h >= dailyCap) {
+        fresh.status = 'paused'
+        fresh.pausedAt = new Date()
+        fresh.error = `Daily cap of ${dailyCap} emails reached. Resume tomorrow or raise the cap.`
+        await fresh.save()
+        broadcastEvent('EMAIL_CAMPAIGN_PAUSED', {
+          workspaceId,
+          campaignId: key,
+          reason: 'daily_cap',
+        })
+        return
+      }
+
+      const recipient = await EmailRecipient.findOne({
+        campaignId,
+        status: 'queued',
+      }).sort({ _id: 1 })
+
+      if (!recipient) break
+
+      try {
+        recipient.status = 'sending'
+        await recipient.save()
+
+        const meetingLink =
+          recipient.mergeData?.meetingLink ||
+          recipient.meetingLink ||
+          campaign.meetingLink ||
+          workspaceBooking
+
+        const name =
+          String(recipient.name || recipient.mergeData?.name || '').trim()
+        const firstName =
+          String(recipient.mergeData?.firstName || '').trim() ||
+          name.split(/\s+/).filter(Boolean)[0] ||
+          ''
+        const greeting = firstName
+          ? `Hi ${firstName}`
+          : name
+            ? `Hi ${name}`
+            : 'Hi there'
+
+        const data = {
+          ...recipient.mergeData,
+          email: recipient.email,
+          name: name || recipient.mergeData?.name || '',
+          firstName,
+          greeting,
+          meetingLink,
+        }
+
+        const pool = campaign.templates?.length
+          ? campaign.templates
+          : [
+              {
+                subject: campaign.subject,
+                textBody: campaign.textBody,
+                htmlBody: campaign.htmlBody,
+              },
+            ]
+        const tpl = pool[Math.floor(Math.random() * pool.length)]
+        const subject = sanitizePublishedText(mergeTemplate(tpl.subject, data))
+        const text = sanitizePublishedText(mergeTemplate(tpl.textBody, data))
+        let html =
+          sanitizePublishedText(mergeTemplate(tpl.htmlBody || '', data)) ||
+          text.replace(/\n/g, '<br>\n')
+
+        recipient.renderedSubject = subject
+        recipient.renderedText = text
+        recipient.renderedHtml = html
+
+        let outHtml = html
+        if (campaign.trackOpens && recipient.trackingId) {
+          outHtml = rewriteLinksForTracking(outHtml, `${apiBase}/click`, recipient.trackingId)
+          outHtml = injectTrackingPixel(outHtml, `${apiBase}/open/${recipient.trackingId}.gif`)
+        }
+
+        const result = useSmtp
+          ? await sendMail({
+              to: recipient.name
+                ? `"${recipient.name}" <${recipient.email}>`
+                : recipient.email,
+              subject,
+              text,
+              html: outHtml,
+            })
+          : await sendGmailMessage({
+              accessToken,
+              from,
+              to: recipient.name
+                ? `"${recipient.name}" <${recipient.email}>`
+                : recipient.email,
+              subject,
+              text,
+              html: outHtml,
+            })
+
+        recipient.status = 'sent'
+        recipient.gmailMessageId = result.messageId
+        recipient.sentAt = new Date()
+        recipient.error = undefined
+        await recipient.save()
+
+        await EmailCampaign.updateOne({ _id: campaignId }, { $inc: { 'stats.sent': 1 } })
+
+        pushLeadWriteback(recipient, campaign, {
+          status: 'sent',
+          sentAt: recipient.sentAt.toISOString(),
+          opens: 0,
+          clicks: 0,
+          appendUpdate: true,
+        })
+
+        logger.success('Email sent', {
+          to: recipient.email,
+          subject: subject.slice(0, 48),
+        })
+      } catch (err) {
+        recipient.status = 'failed'
+        recipient.error = err.message
+        await recipient.save()
+        await EmailCampaign.updateOne({ _id: campaignId }, { $inc: { 'stats.failed': 1 } })
+        logger.error('Email failed', { to: recipient.email, error: err.message })
+      }
+
+      const stillQueued = await EmailRecipient.countDocuments({ campaignId, status: 'queued' })
+      if (stillQueued > 0) {
+        await new Promise((r) => setTimeout(r, cooldown))
       }
     }
 
     const updated = await EmailCampaign.findById(campaignId)
-    const failed = updated.stats.failed
-    updated.status = failed > 0 && updated.stats.sent === 0 ? 'failed' : 'completed'
-    updated.completedAt = new Date()
-    await updated.save()
+    if (updated && updated.status === 'sending') {
+      const failed = updated.stats.failed
+      updated.status = failed > 0 && updated.stats.sent === 0 ? 'failed' : 'completed'
+      updated.completedAt = new Date()
+      updated.error = undefined
+      await updated.save()
 
-    logger.success('Email campaign finished', {
-      campaignId: campaignId.toString(),
-      sent: updated.stats.sent,
-      failed: updated.stats.failed,
-    })
+      logger.success('Email campaign finished', {
+        campaignId: key,
+        sent: updated.stats.sent,
+        failed: updated.stats.failed,
+      })
 
-    broadcastEvent('EMAIL_CAMPAIGN_DONE', {
-      workspaceId,
-      campaignId: campaignId.toString(),
-      stats: updated.stats,
-    })
+      broadcastEvent('EMAIL_CAMPAIGN_DONE', {
+        workspaceId,
+        campaignId: key,
+        stats: updated.stats,
+      })
+    }
   } catch (err) {
     logger.error('Email campaign aborted', {
-      campaignId: campaignId.toString(),
+      campaignId: key,
       error: err.message,
     })
-    campaign.status = 'failed'
-    campaign.error = err.message
-    campaign.completedAt = new Date()
-    await campaign.save()
+    await EmailCampaign.updateOne(
+      { _id: campaignId },
+      {
+        $set: {
+          status: 'failed',
+          error: err.message,
+          completedAt: new Date(),
+        },
+      },
+    )
     broadcastEvent('EMAIL_CAMPAIGN_FAILED', {
       workspaceId,
-      campaignId: campaignId.toString(),
+      campaignId: key,
       error: err.message,
     })
+  } finally {
+    activeSends.delete(key)
   }
 }
 
 export function newTrackingId() {
   return crypto.randomBytes(16).toString('hex')
 }
+
+export { countSentLast24h, effectiveCooldownMs }

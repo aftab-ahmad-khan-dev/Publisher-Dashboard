@@ -80,7 +80,7 @@ export default function DateTimePicker({
             onChange={handleDateChange}
             className="datetime-input peer w-full"
           />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 peer-focus:text-violet-400">
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 peer-focus:text-indigo-400">
             <CalendarIcon />
           </span>
         </div>
@@ -102,8 +102,8 @@ export default function DateTimePicker({
         </div>
       </div>
       {(hint || displayLabel) && (
-        <p className="flex items-center gap-1.5 text-xs text-violet-300/80">
-          <span className="inline-block h-1 w-1 rounded-full bg-violet-400" />
+        <p className="flex items-center gap-1.5 text-xs text-indigo-300/80">
+          <span className="inline-block h-1 w-1 rounded-full bg-indigo-400" />
           {hint || displayLabel}
         </p>
       )}

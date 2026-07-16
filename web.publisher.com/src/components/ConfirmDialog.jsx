@@ -44,7 +44,7 @@ export default function ConfirmDialog({
             disabled={busy}
             className={
               destructive
-                ? 'inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-rose-600 to-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-600/20 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-60'
+                ? 'btn-danger px-5 py-2.5 disabled:pointer-events-none disabled:opacity-60'
                 : 'btn-primary px-5 py-2.5'
             }
           >

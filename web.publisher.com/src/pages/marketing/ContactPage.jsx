@@ -15,7 +15,7 @@ export default function ContactPage() {
 
   return (
     <section className="mx-auto max-w-2xl px-6 py-24">
-      <p className="text-xs font-bold uppercase tracking-[0.12em] text-violet-400">Contact</p>
+      <p className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">Contact</p>
       <h1 className="font-display mt-3 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">Get in touch</h1>
       <p className="mt-4 text-base text-slate-400">
         Questions, feedback, or partnership ideas? Send us a message and we’ll get back to you.
@@ -29,7 +29,7 @@ export default function ContactPage() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-violet-500/50 focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none"
               placeholder="Your name"
             />
           </div>
@@ -40,7 +40,7 @@ export default function ContactPage() {
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               required
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-violet-500/50 focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none"
               placeholder="you@example.com"
             />
           </div>
@@ -52,13 +52,13 @@ export default function ContactPage() {
             onChange={(e) => setForm({ ...form, message: e.target.value })}
             required
             rows={5}
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-violet-500/50 focus:outline-none"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none"
             placeholder="How can we help?"
           />
         </div>
         <button
           type="submit"
-          className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-fuchsia-500 to-violet-600 px-7 py-3 font-display text-sm font-bold text-white transition hover:opacity-90"
+          className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-7 py-3 font-display text-sm font-bold text-white transition hover:opacity-90"
         >
           Send message
         </button>
