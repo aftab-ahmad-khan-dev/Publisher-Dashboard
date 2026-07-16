@@ -144,6 +144,11 @@ export function mergeTemplate(template, data) {
     const v = data[key]
     return v != null ? String(v) : ''
   })
+  // Never shuffle HTML — keeps Schedule meeting hrefs on the calendar URL.
+  const looksLikeHtml = /<\/?(?:html|table|a|p|div|td)\b/i.test(merged)
+  if (looksLikeHtml) {
+    return sanitizePublishedText(merged)
+  }
   const seed = hashSeed(data.email || data._previewKey || 'preview')
   const varied = applyEmailContentShuffle(merged, seed)
   return sanitizePublishedText(varied)

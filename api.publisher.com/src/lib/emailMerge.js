@@ -152,6 +152,12 @@ export function mergeTemplate(template, data) {
     const v = data[key]
     return v != null ? String(v) : ''
   })
+  // Never shuffle HTML — paragraph reordering can break CTA tables and swap
+  // "Schedule a meeting" labels onto product/platform hrefs.
+  const looksLikeHtml = /<\/?(?:html|table|a|p|div|td)\b/i.test(merged)
+  if (looksLikeHtml) {
+    return sanitizePublishedText(merged)
+  }
   const seed = hashSeed(data.email || data._previewKey || 'preview')
   const varied = applyEmailContentShuffle(merged, seed)
   return sanitizePublishedText(varied)

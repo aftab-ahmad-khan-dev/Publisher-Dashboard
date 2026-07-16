@@ -10,6 +10,12 @@ import {
 import { sendMail, isMailerConfigured } from '../lib/mailer.js'
 import { logger } from '../lib/logger.js'
 import { apiPublicBase } from '../lib/publicUrl.js'
+import {
+  isCloudinaryConfigured,
+  parseImageBody,
+  uploadReceiptToCloudinary,
+} from '../lib/cloudinary.js'
+import { requirePlatformAdmin } from '../middleware/admin.js'
 
 const router = Router()
 
@@ -49,14 +55,82 @@ router.get('/billing/banks', async (_req, res) => {
   res.json({ ok: true, banks: BANK_DETAILS, prices: PLAN_PRICES })
 })
 
+/** Upload payment receipt to Cloudinary (falls back to API media if Cloudinary unset). */
+router.post('/billing/receipt', async (req, res, next) => {
+  try {
+    if (!req.workspaceId) {
+      return res.status(401).json({ ok: false, error: 'Unauthorized' })
+    }
+    const email = await resolveRequestEmail(req)
+    if (isAdminEmail(email)) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Admin accounts have full access — no payment receipt needed.',
+      })
+    }
+
+    const { buffer, contentType } = parseImageBody(req.body)
+    if (!buffer?.length) {
+      return res.status(400).json({ ok: false, error: 'Provide imageDataUrl or dataBase64.' })
+    }
+    if (buffer.length > 8 * 1024 * 1024) {
+      return res.status(413).json({ ok: false, error: 'Receipt image is too large (max 8MB).' })
+    }
+
+    if (isCloudinaryConfigured()) {
+      const uploaded = await uploadReceiptToCloudinary({ buffer, contentType })
+      return res.json({ ok: true, id: uploaded.id, url: uploaded.url, provider: 'cloudinary' })
+    }
+
+    // Fallback: store in Media collection
+    const { Media } = await import('../models/Media.js')
+    const doc = await Media.create({
+      workspaceId: req.workspaceId,
+      contentType,
+      data: buffer,
+    })
+    const id = doc._id.toString()
+    const url = apiPublicBase() ? `${apiPublicBase()}/api/media/${id}` : null
+    res.json({ ok: true, id, url, provider: 'media' })
+  } catch (err) {
+    next(err)
+  }
+})
+
 router.get('/billing/payments', async (req, res, next) => {
   try {
+    const email = await resolveRequestEmail(req)
+    if (isAdminEmail(email)) {
+      // Admin sees every user's receipts here (activate from Billing or Admin → Users).
+      const rows = await PaymentSubmission.find({})
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .lean()
+      return res.json({
+        ok: true,
+        isAdmin: true,
+        payments: rows.map((p) => ({
+          id: p._id.toString(),
+          workspaceId: p.workspaceId,
+          userEmail: p.userEmail,
+          planRequested: p.planRequested,
+          bankMethod: p.bankMethod,
+          receiptUrl: p.receiptUrl,
+          status: p.status,
+          note: p.note,
+          createdAt: p.createdAt,
+          reviewedAt: p.reviewedAt,
+        })),
+      })
+    }
+
     const rows = await PaymentSubmission.find({ workspaceId: req.workspaceId })
       .sort({ createdAt: -1 })
       .limit(20)
       .lean()
     res.json({
       ok: true,
+      isAdmin: false,
       payments: rows.map((p) => ({
         id: p._id.toString(),
         planRequested: p.planRequested,
@@ -67,6 +141,97 @@ router.get('/billing/payments', async (req, res, next) => {
         createdAt: p.createdAt,
         reviewedAt: p.reviewedAt,
       })),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** Admin can activate/reject from Billing without going to Admin Users. */
+router.post('/billing/payments/:id/activate', requirePlatformAdmin, async (req, res, next) => {
+  try {
+    const payment = await PaymentSubmission.findById(req.params.id)
+    if (!payment) {
+      return res.status(404).json({ ok: false, error: 'Payment not found' })
+    }
+
+    payment.status = 'approved'
+    payment.reviewedAt = new Date()
+    payment.reviewedBy = req.adminUser?.email || ''
+    payment.rejectReason = ''
+    await payment.save()
+
+    const sub = await getOrCreateSubscription(payment.workspaceId, payment.userEmail)
+    sub.plan = payment.planRequested
+    sub.status = 'active'
+    sub.activatedAt = new Date()
+    sub.activatedBy = req.adminUser?.email || ''
+    if (payment.userEmail) sub.userEmail = payment.userEmail
+    await sub.save()
+
+    if (payment.userEmail) {
+      await sendSafeMail({
+        to: payment.userEmail,
+        subject: 'Welcome onboard — your plan is active',
+        text: [
+          `Welcome onboard!`,
+          '',
+          `Your ${planLabel(payment.planRequested)} plan is now active.`,
+          'You can open Publisher Suite and start using your unlocked features.',
+          '',
+          '— Publisher Suite',
+        ].join('\n'),
+        html: `
+          <p><strong>Welcome onboard!</strong></p>
+          <p>Your <strong>${planLabel(payment.planRequested)}</strong> plan is now active.</p>
+          <p>You can open Publisher Suite and start using your unlocked features.</p>
+          <p>— Publisher Suite</p>
+        `,
+      })
+    }
+
+    res.json({
+      ok: true,
+      payment: {
+        id: payment._id.toString(),
+        status: payment.status,
+        planRequested: payment.planRequested,
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/billing/payments/:id/reject', requirePlatformAdmin, async (req, res, next) => {
+  try {
+    const payment = await PaymentSubmission.findById(req.params.id)
+    if (!payment) {
+      return res.status(404).json({ ok: false, error: 'Payment not found' })
+    }
+    const reason = String(req.body?.reason || '').slice(0, 500)
+    payment.status = 'rejected'
+    payment.reviewedAt = new Date()
+    payment.reviewedBy = req.adminUser?.email || ''
+    payment.rejectReason = reason
+    await payment.save()
+
+    if (payment.userEmail) {
+      await sendSafeMail({
+        to: payment.userEmail,
+        subject: 'Payment receipt needs attention',
+        text: [
+          'We could not activate your plan from the submitted receipt.',
+          reason ? `Reason: ${reason}` : 'Please re-upload a clearer receipt from Billing.',
+          '',
+          '— Publisher Suite',
+        ].join('\n'),
+      })
+    }
+
+    res.json({
+      ok: true,
+      payment: { id: payment._id.toString(), status: payment.status },
     })
   } catch (err) {
     next(err)

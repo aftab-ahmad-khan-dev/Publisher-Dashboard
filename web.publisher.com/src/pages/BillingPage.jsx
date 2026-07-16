@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import PageShell, { PageScroll } from '../components/PageShell'
 import { useAppData } from '../contexts/AppDataContext'
 import { useAuth } from '../contexts/AuthContext'
 import {
+  activateBillingPayment,
   fetchBillingBanks,
   fetchBillingPayments,
+  rejectBillingPayment,
   submitBillingPayment,
-  uploadMediaRemote,
+  uploadBillingReceipt,
 } from '../lib/backendApi'
 import { compressImageFileForUpload } from '../lib/bulkParse'
 import { PLAN_META } from '../lib/plans'
@@ -16,6 +18,21 @@ import { showToast } from '../lib/toast'
 import { isPlatformAdmin } from '../lib/admin'
 
 const PLAN_ORDER = ['starter', 'growth', 'pro']
+
+function formatWhen(iso) {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  } catch {
+    return '—'
+  }
+}
 
 export default function BillingPage() {
   const { user } = useAuth()
@@ -36,6 +53,8 @@ export default function BillingPage() {
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [thankYou, setThankYou] = useState(false)
+  const [busyId, setBusyId] = useState('')
+  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState(null)
 
   const isAdmin = isPlatformAdmin(user?.email) || subscription?.isAdmin
   const selectedBank = useMemo(
@@ -43,10 +62,19 @@ export default function BillingPage() {
     [banks, bankMethod],
   )
 
+  const loadPayments = async () => {
+    const paymentsRes = await fetchBillingPayments().catch(() => ({ payments: [] }))
+    setPayments(paymentsRes.payments || [])
+  }
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
+        if (isAdmin) {
+          await loadPayments()
+          return
+        }
         const [banksRes, paymentsRes] = await Promise.all([
           fetchBillingBanks(),
           fetchBillingPayments().catch(() => ({ payments: [] })),
@@ -65,7 +93,7 @@ export default function BillingPage() {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [isAdmin])
 
   const copyText = async (text) => {
     if (!text) return
@@ -83,10 +111,10 @@ export default function BillingPage() {
     try {
       const dataUrl = await compressImageFileForUpload(file)
       setReceiptPreview(dataUrl)
-      const res = await uploadMediaRemote(dataUrl)
+      const res = await uploadBillingReceipt(dataUrl)
       setReceiptMediaId(res.id || '')
       setReceiptUrl(res.url || '')
-      showToast('Receipt uploaded')
+      showToast(res.provider === 'cloudinary' ? 'Receipt uploaded' : 'Receipt uploaded')
     } catch (err) {
       showToast(err.message || 'Upload failed', 'error')
     } finally {
@@ -114,13 +142,167 @@ export default function BillingPage() {
       })
       setThankYou(true)
       await refreshSubscription?.()
-      const paymentsRes = await fetchBillingPayments().catch(() => ({ payments: [] }))
-      setPayments(paymentsRes.payments || [])
+      await loadPayments()
     } catch (err) {
       showToast(err.message || 'Submit failed', 'error')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const onActivate = async (id) => {
+    setBusyId(id)
+    try {
+      await activateBillingPayment(id)
+      showToast('Plan activated', 'success')
+      await loadPayments()
+    } catch (err) {
+      showToast(err.message || 'Activate failed', 'error')
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  const onReject = async (id) => {
+    const reason = window.prompt('Optional reject reason:') || ''
+    setBusyId(id)
+    try {
+      await rejectBillingPayment(id, reason)
+      showToast('Payment rejected')
+      await loadPayments()
+    } catch (err) {
+      showToast(err.message || 'Reject failed', 'error')
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  if (isAdmin) {
+    const pending = payments.filter((p) => p.status === 'pending')
+    return (
+      <PageShell>
+        <PageHeader
+          title="Billing & Payments"
+          subtitle="Platform admin — review receipts and activate plans. No payment required for your account."
+        />
+        <PageScroll className="space-y-6 pb-8">
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            Signed in as <strong>{user?.email || 'admin'}</strong> — full Pro access unlocked. You are never
+            asked to pay. Manage user receipts below (also available under{' '}
+            <Link to="/admin/users" className="underline hover:text-white">
+              Admin → Users → Payments
+            </Link>
+            ).
+          </div>
+
+          <div className="flex flex-wrap gap-3 text-sm text-slate-400">
+            <span>
+              Pending:{' '}
+              <strong className="text-amber-300">{pending.length}</strong>
+            </span>
+            <span>
+              Total:{' '}
+              <strong className="text-white">{payments.length}</strong>
+            </span>
+          </div>
+
+          {payments.length === 0 ? (
+            <p className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-8 text-center text-sm text-slate-500">
+              No payment receipts yet. When users upload receipts, they appear here for activation.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {payments.map((p) => (
+                <li
+                  key={p.id}
+                  className="rounded-2xl border border-white/10 bg-white/[0.02] p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-white">
+                        {p.userEmail || p.workspaceId} ·{' '}
+                        {PLAN_META[p.planRequested]?.name || p.planRequested}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {p.bankMethod} · {formatWhen(p.createdAt)}
+                      </p>
+                      {p.note ? <p className="mt-2 text-xs text-slate-400">{p.note}</p> : null}
+                    </div>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${
+                        p.status === 'approved'
+                          ? 'bg-emerald-500/15 text-emerald-300'
+                          : p.status === 'rejected'
+                            ? 'bg-rose-500/15 text-rose-300'
+                            : 'bg-amber-500/15 text-amber-300'
+                      }`}
+                    >
+                      {p.status}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {p.receiptUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => setReceiptPreviewUrl(p.receiptUrl)}
+                        className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/5"
+                      >
+                        View receipt
+                      </button>
+                    ) : null}
+                    {p.status === 'pending' && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={busyId === p.id}
+                          onClick={() => onActivate(p.id)}
+                          className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                        >
+                          Activate plan
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busyId === p.id}
+                          onClick={() => onReject(p.id)}
+                          className="rounded-full border border-rose-500/30 px-3 py-1.5 text-xs text-rose-300 disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </PageScroll>
+
+        {receiptPreviewUrl && (
+          <div
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4"
+            onClick={() => setReceiptPreviewUrl(null)}
+            role="dialog"
+          >
+            <div className="max-h-[90vh] max-w-3xl overflow-auto rounded-2xl border border-white/10 bg-[#0c1220] p-4">
+              <img
+                src={receiptPreviewUrl}
+                alt="Payment receipt"
+                className="max-h-[80vh] w-full object-contain"
+              />
+              <a
+                href={receiptPreviewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-block text-sm text-indigo-300"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Open original
+              </a>
+            </div>
+          </div>
+        )}
+      </PageShell>
+    )
   }
 
   return (
@@ -130,12 +312,6 @@ export default function BillingPage() {
         subtitle="Transfer to a bank account, upload your receipt, and we activate your plan after review."
       />
       <PageScroll className="space-y-6 pb-8">
-        {isAdmin && (
-          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-            You are signed in as platform admin — all features are unlocked. No payment required.
-          </div>
-        )}
-
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-slate-300">
           Current plan:{' '}
           <span className="font-semibold text-white">
@@ -255,7 +431,7 @@ export default function BillingPage() {
           />
           <button
             type="button"
-            disabled={submitting || uploading || isAdmin}
+            disabled={submitting || uploading}
             onClick={handleSubmit}
             className="mt-4 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-6 py-2.5 text-sm font-bold text-white disabled:opacity-50"
           >

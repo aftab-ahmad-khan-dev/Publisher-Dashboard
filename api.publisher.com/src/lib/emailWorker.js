@@ -11,7 +11,7 @@ import { logger } from './logger.js'
 import { apiPublicBase } from './publicUrl.js'
 import { enqueueLeadStatusUpdate } from './leadWriteback.js'
 import { getWorkspaceConfig } from './configStore.js'
-import { getCalendarBookingUrl } from './googleCalendar.js'
+import { getCalendarBookingUrl, isBookingUrl } from './googleCalendar.js'
 
 const TRANSPARENT_GIF = Buffer.from(
   'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
@@ -74,14 +74,42 @@ export async function recordEmailClick(trackingId, clickedUrl = '') {
     (recipient.meetingLink && url.includes(recipient.meetingLink.slice(0, 40)))
 
   if (isMeetingClick) {
+    const firstMeetingClick = !recipient.meetingClickedAt
     if (recipient.meetingStatus === 'none' || recipient.meetingStatus === 'invited') {
       recipient.meetingStatus = 'link_clicked'
     }
     if (!recipient.meetingClickedAt) recipient.meetingClickedAt = new Date()
     if (!recipient.meetingLink && url) recipient.meetingLink = url
-  }
 
-  await recipient.save()
+    await recipient.save()
+
+    if (firstMeetingClick) {
+      try {
+        const { sendMail, isMailerConfigured } = await import('./mailer.js')
+        if (isMailerConfigured()) {
+          const admin = process.env.ADMIN_EMAIL?.trim() || 'aftabahmadkhan.dev@gmail.com'
+          await sendMail({
+            to: admin,
+            subject: `Calendar link clicked — ${recipient.email}`,
+            text: [
+              `${recipient.email} opened your Schedule a meeting / calendar booking link.`,
+              url ? `URL: ${url}` : '',
+              '',
+              'They will pick a free slot on your Google Calendar. You will get a calendar invite when they book.',
+              '',
+              '— Publisher Suite',
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          }).catch(() => {})
+        }
+      } catch {
+        /* non-fatal */
+      }
+    }
+  } else {
+    await recipient.save()
+  }
 
   const campaign = await EmailCampaign.findById(recipient.campaignId)
   if (wasFirstClick && campaign) {
@@ -253,11 +281,14 @@ export async function runCampaignSend(campaignId, workspaceId) {
         recipient.status = 'sending'
         await recipient.save()
 
-        const meetingLink =
+        const rawMeeting =
           recipient.mergeData?.meetingLink ||
           recipient.meetingLink ||
           campaign.meetingLink ||
           workspaceBooking
+        const meetingLink = isBookingUrl(rawMeeting)
+          ? String(rawMeeting).trim()
+          : getCalendarBookingUrl(workspaceBooking)
 
         const name =
           String(recipient.name || recipient.mergeData?.name || '').trim()

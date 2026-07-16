@@ -372,6 +372,18 @@ export async function fetchBillingPayments() {
   return apiFetch("/billing/payments");
 }
 
+export async function uploadBillingReceipt(imageDataUrl) {
+  return apiFetch("/billing/receipt", { method: "POST", body: { imageDataUrl } });
+}
+
+export async function activateBillingPayment(id) {
+  return apiFetch(`/billing/payments/${id}/activate`, { method: "POST", body: {} });
+}
+
+export async function rejectBillingPayment(id, reason = "") {
+  return apiFetch(`/billing/payments/${id}/reject`, { method: "POST", body: { reason } });
+}
+
 export async function submitBillingPayment(payload) {
   return apiFetch("/billing/submit", { method: "POST", body: payload });
 }

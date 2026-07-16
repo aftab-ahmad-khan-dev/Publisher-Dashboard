@@ -2,7 +2,7 @@
  * HTML email templates (inline CSS — email-safe, Tailwind-inspired).
  * Served to the Mail Box UI and used when sending.
  */
-import { getCalendarBookingUrl } from './googleCalendar.js'
+import { getCalendarBookingUrl, isBookingUrl } from './googleCalendar.js'
 
 export const SIGNATURE = {
   name: 'Aftab Ahmad Khan',
@@ -246,16 +246,23 @@ Book a walkthrough when it suits you — the link shows my live availability.`,
 }
 
 function resolveCtaUrl(url, meetingLink) {
-  if (url === '{{meetingLink}}') return meetingLink || '{{meetingLink}}'
+  if (url === '{{meetingLink}}') {
+    const link = meetingLink && isBookingUrl(meetingLink) ? meetingLink : getCalendarBookingUrl()
+    return link
+  }
+  // Never let a "Schedule" slot resolve to the product site.
+  if (url === SIGNATURE.product || url === SIGNATURE.site) return url
   return url
 }
 
 function buildTemplate(id, type, def, meetingLink) {
-  const ctaUrl = resolveCtaUrl(def.ctaUrl, meetingLink)
+  const booking =
+    meetingLink && isBookingUrl(meetingLink) ? meetingLink : getCalendarBookingUrl(meetingLink)
+  const ctaUrl = resolveCtaUrl(def.ctaUrl, booking)
   const secondaryCta = def.secondaryCta
     ? {
         label: def.secondaryCta.label,
-        url: resolveCtaUrl(def.secondaryCta.url, meetingLink),
+        url: resolveCtaUrl(def.secondaryCta.url, booking),
       }
     : undefined
   const htmlBody = layout({
@@ -277,11 +284,13 @@ function buildTemplate(id, type, def, meetingLink) {
     previewText: def.text.slice(0, 140),
     ctaLabel: def.ctaLabel,
     secondaryCtaLabel: def.secondaryCta?.label || '',
+    meetingLink: booking,
   }
 }
 
 export function listEmailHtmlTemplates(meetingLink) {
-  const link = meetingLink || getCalendarBookingUrl()
+  const link =
+    meetingLink && isBookingUrl(meetingLink) ? meetingLink : getCalendarBookingUrl(meetingLink)
   return [
     ...Object.entries(OUTREACH_BODIES).map(([id, def]) =>
       buildTemplate(id, 'outreach', def, link),

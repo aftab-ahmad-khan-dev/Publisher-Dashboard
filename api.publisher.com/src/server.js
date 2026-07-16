@@ -11,7 +11,8 @@ import { collectHealthStatus } from "./lib/healthStatus.js";
 import { recordEmailOpen, recordEmailClick, TRANSPARENT_GIF } from "./lib/emailWorker.js";
 import { Media } from "./models/Media.js";
 import { logger, requestLogger } from "./lib/logger.js";
-import { apiPublicBase, webPublicBase } from "./lib/publicUrl.js";
+import { apiPublicBase } from "./lib/publicUrl.js";
+import { DEFAULT_CALENDAR_BOOKING_URL } from "./lib/googleCalendar.js";
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
@@ -63,7 +64,8 @@ app.get("/api/email/click/:trackingId", async (req, res) => {
     /* still redirect even if recording fails */
   }
   if (/^https?:\/\//i.test(target)) return res.redirect(302, target);
-  return res.redirect(302, webPublicBase());
+  // Never dump recipients onto the product dashboard when the tracked URL is missing.
+  return res.redirect(302, DEFAULT_CALENDAR_BOOKING_URL);
 });
 
 /** Public image host for Instagram — IG's servers fetch image_url, so no auth. */

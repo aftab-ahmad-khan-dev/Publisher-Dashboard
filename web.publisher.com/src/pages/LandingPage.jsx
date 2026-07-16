@@ -470,24 +470,21 @@ export default function LandingPage() {
     // Keep timelines progressing smoothly (avoids frames stalling under rAF jumps)
     gsap.ticker.lagSmoothing(0);
     const ctx = gsap.context((self) => {
-      // Hero entrance, staggered reveal of the headline, copy and CTA.
-      // clearProps removes inline styles on finish so nothing can stay hidden.
+      // Hero: motion only — never hide with opacity (that reads as a loading blank).
       gsap.from("[data-hero] > *", {
-        y: 26,
-        opacity: 0,
-        duration: 0.7,
+        y: 18,
+        duration: 0.55,
         ease: "power3.out",
-        stagger: 0.1,
-        clearProps: "opacity,transform",
+        stagger: 0.08,
+        clearProps: "transform",
       });
-      // Smooth scroll-reveal for each section as it enters the viewport
+      // Scroll-reveal: slight rise only so content stays readable if GSAP stalls.
       self.selector("section").forEach((el) => {
         gsap.from(el, {
-          y: 40,
-          opacity: 0,
-          duration: 0.7,
+          y: 28,
+          duration: 0.55,
           ease: "power2.out",
-          clearProps: "opacity,transform",
+          clearProps: "transform",
           scrollTrigger: { trigger: el, start: "top 88%", once: true },
         });
       });

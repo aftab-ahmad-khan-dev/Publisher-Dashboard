@@ -16,7 +16,7 @@ import {
 } from '../lib/leadWorkbook.js'
 import { importGoogleSheet } from '../lib/googleSheets.js'
 import { flushLeadStatusUpdates } from '../lib/leadWriteback.js'
-import { createCalendarInvite, getCalendarBookingUrl, syncMeetingsFromCalendar } from '../lib/googleCalendar.js'
+import { createCalendarInvite, getCalendarBookingUrl, isBookingUrl, syncMeetingsFromCalendar } from '../lib/googleCalendar.js'
 import {
   listEmailHtmlTemplates,
   templatesByType,
@@ -1243,6 +1243,13 @@ router.get('/email/settings', async (req, res) => {
 router.put('/email/settings/calendar', async (req, res, next) => {
   try {
     const calendarBookingUrl = String(req.body?.calendarBookingUrl ?? '').trim().slice(0, 2000)
+    if (calendarBookingUrl && !isBookingUrl(calendarBookingUrl)) {
+      return res.status(400).json({
+        ok: false,
+        error:
+          'Booking link must be a Google Calendar / Calendly / Cal.com URL — not your product or portfolio site.',
+      })
+    }
     const next = await saveGmailConfig(req.workspaceId, { calendarBookingUrl })
     res.json({
       ok: true,

@@ -1,5 +1,6 @@
 import SplashScreen from './SplashScreen'
 import { useAppData } from '../contexts/AppDataContext'
+import { useLocation } from 'react-router-dom'
 
 const PHASE_TITLES = {
   compress: 'Preparing files…',
@@ -7,6 +8,8 @@ const PHASE_TITLES = {
   schedule: 'Scheduling posts…',
   publish: 'Publishing…',
 }
+
+const MARKETING_PATHS = ['/', '/pricing', '/about', '/privacy', '/terms', '/contact']
 
 /** Compact corner chip — not a full-screen blocker */
 function SoftProcessChip({ message }) {
@@ -24,7 +27,13 @@ function SoftProcessChip({ message }) {
 }
 
 export default function UploadProgressOverlay() {
+  const { pathname } = useLocation()
+  const isMarketing = MARKETING_PATHS.includes(pathname)
+  const isAuth = pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')
   const { uploadProgress, processingLabel, blockingLoading } = useAppData()
+
+  // Never cover marketing or auth pages with process overlays
+  if (isMarketing || isAuth) return null
 
   if (uploadProgress) {
     const {

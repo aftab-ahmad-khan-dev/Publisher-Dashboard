@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ClerkProvider } from '@clerk/clerk-react'
@@ -8,7 +7,6 @@ import ProtectedRoute from './routes/ProtectedRoute'
 import DashboardLayout from './layouts/DashboardLayout'
 import MarketingLayout from './layouts/MarketingLayout'
 import AuthLayout from './layouts/AuthLayout'
-import SplashScreen from './components/SplashScreen'
 import LandingPage from './pages/LandingPage'
 import PricingPage from './pages/marketing/PricingPage'
 import AboutPage from './pages/marketing/AboutPage'
@@ -47,6 +45,31 @@ function sectionKey(pathname) {
 
 function AppRoutes() {
   const location = useLocation()
+  const isMarketing = MARKETING_PATHS.includes(location.pathname)
+  const isAuth =
+    location.pathname.startsWith('/sign-in') || location.pathname.startsWith('/sign-up')
+
+  // Marketing + auth: paint immediately — no boot splash, no route fade.
+  if (isMarketing || isAuth) {
+    return (
+      <Routes location={location}>
+        <Route element={<MarketingLayout />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+        </Route>
+        <Route element={<AuthLayout />}>
+          <Route path="/sign-in/*" element={<LoginPage />} />
+          <Route path="/sign-up/*" element={<SignUpPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    )
+  }
+
   return (
     <AnimatePresence mode="wait">
       <motion.div
@@ -57,18 +80,6 @@ function AppRoutes() {
         transition={{ duration: 0.35, ease: 'easeInOut' }}
       >
         <Routes location={location}>
-          <Route element={<MarketingLayout />}>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/pricing" element={<PricingPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-          </Route>
-          <Route element={<AuthLayout />}>
-            <Route path="/sign-in/*" element={<LoginPage />} />
-            <Route path="/sign-up/*" element={<SignUpPage />} />
-          </Route>
           <Route element={<ProtectedRoute />}>
             <Route element={<DashboardLayout />}>
               <Route path="compose" element={<ComposePage />} />
@@ -139,11 +150,8 @@ export default function App() {
       <ClerkWithRouter>
         <AuthProvider>
           <AppErrorBoundary>
-            <AppDataProvider>
-              <UploadProgressOverlay />
-              <AppToaster />
-              <BootShell />
-            </AppDataProvider>
+            {/* Marketing pages: no AppDataProvider, no upload splash, instant paint */}
+            <MarketingOrApp />
           </AppErrorBoundary>
         </AuthProvider>
       </ClerkWithRouter>
@@ -151,40 +159,25 @@ export default function App() {
   )
 }
 
-/** Boot splash only for signed-in app shells — never block marketing (landing / pricing). */
-function BootShell() {
+function MarketingOrApp() {
   const { pathname } = useLocation()
   const isMarketing = MARKETING_PATHS.includes(pathname)
   const isAuth = pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')
-  const [splash, setSplash] = useState(() => !isMarketing && !isAuth)
 
-  useEffect(() => {
-    if (isMarketing || isAuth) {
-      setSplash(false)
-      return undefined
-    }
-    setSplash(true)
-    const t = setTimeout(() => setSplash(false), 1600)
-    return () => clearTimeout(t)
-  }, [isMarketing, isAuth])
+  if (isMarketing || isAuth) {
+    return (
+      <>
+        <AppToaster />
+        <AppRoutes />
+      </>
+    )
+  }
 
   return (
-    <>
-      {!isMarketing && !isAuth && (
-        <SplashScreen
-          visible={splash}
-          subtitle="Compose · schedule · publish across every channel"
-        />
-      )}
-      <div
-        className={
-          splash && !isMarketing && !isAuth
-            ? 'opacity-0'
-            : 'opacity-100 transition-opacity duration-500'
-        }
-      >
-        <AppRoutes />
-      </div>
-    </>
+    <AppDataProvider>
+      <UploadProgressOverlay />
+      <AppToaster />
+      <AppRoutes />
+    </AppDataProvider>
   )
 }

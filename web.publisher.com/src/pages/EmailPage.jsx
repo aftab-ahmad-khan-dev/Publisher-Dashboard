@@ -262,9 +262,29 @@ export default function EmailPage() {
       .catch(() => {})
   }, [live, meetingLink, globalMeetingLink])
 
-  const workspaceBooking = (globalMeetingLink || meetingLink || bookingUrlDraft || '').trim()
+  const DEFAULT_CALENDAR_BOOKING = 'https://calendar.app.google/eKcZV6Cy9SuCgA878'
+  const isCalendarBookingUrl = (u) =>
+    /calendar\.app\.google|calendar\.google\.com|appointments|calendly\.com|cal\.com\//i.test(
+      String(u || ''),
+    )
+
+  const rawBooking = (globalMeetingLink || meetingLink || bookingUrlDraft || '').trim()
+  const workspaceBooking = isCalendarBookingUrl(rawBooking)
+    ? rawBooking
+    : DEFAULT_CALENDAR_BOOKING
 
   const saveWorkspaceBooking = async () => {
+    const url = bookingUrlDraft.trim()
+    if (
+      url &&
+      !/calendar\.app\.google|calendar\.google\.com|appointments|calendly\.com|cal\.com\//i.test(url)
+    ) {
+      showToast(
+        'Use a Google Calendar booking / Calendly / Cal.com link — not your product site.',
+        'error',
+      )
+      return
+    }
     setSavingBooking(true)
     try {
       const data = await saveCalendarSettings({

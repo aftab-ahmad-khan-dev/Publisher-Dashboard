@@ -4,22 +4,59 @@
 import { EmailRecipient } from '../models/EmailRecipient.js'
 import { getWorkspaceConfig } from './configStore.js'
 
+/** Default Appointment Schedule — never fall back to product/platform URLs. */
+export const DEFAULT_CALENDAR_BOOKING_URL =
+  process.env.GOOGLE_CALENDAR_BOOKING_URL?.trim() ||
+  'https://calendar.app.google/eKcZV6Cy9SuCgA878'
+
+const PRODUCT_OR_PLATFORM_HOSTS = [
+  'vorkspro.com',
+  'publisher-dashboard.vercel.app',
+  'aftabahmadkhan.online',
+]
+
 /**
- * Resolve booking URL: explicit override → workspace config → env.
+ * True when URL is a real booking page (Calendar / Calendly), not a product site.
  */
-export function getCalendarBookingUrl(configOrLink) {
-  if (typeof configOrLink === 'string' || configOrLink == null) {
-    return (
-      String(configOrLink || '').trim() ||
-      process.env.GOOGLE_CALENDAR_BOOKING_URL?.trim() ||
-      ''
-    )
+export function isBookingUrl(url) {
+  const u = String(url || '').trim()
+  if (!/^https?:\/\//i.test(u)) return false
+  try {
+    const host = new URL(u).hostname.toLowerCase()
+    if (PRODUCT_OR_PLATFORM_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))) {
+      return false
+    }
+  } catch {
+    return false
   }
   return (
-    String(configOrLink?.gmail?.calendarBookingUrl || '').trim() ||
-    process.env.GOOGLE_CALENDAR_BOOKING_URL?.trim() ||
-    ''
+    /calendar\.app\.google/i.test(u) ||
+    /calendar\.google\.com/i.test(u) ||
+    /appointments\.google/i.test(u) ||
+    /calendly\.com/i.test(u) ||
+    /cal\.com\//i.test(u)
   )
+}
+
+/**
+ * Resolve booking URL: explicit override → workspace config → env default.
+ * Rejects product/platform URLs so "Schedule a meeting" never opens the product site.
+ */
+export function getCalendarBookingUrl(configOrLink) {
+  const candidates = []
+  if (typeof configOrLink === 'string' || configOrLink == null) {
+    if (configOrLink) candidates.push(String(configOrLink).trim())
+  } else {
+    const fromWs = String(configOrLink?.gmail?.calendarBookingUrl || '').trim()
+    if (fromWs) candidates.push(fromWs)
+  }
+  candidates.push(process.env.GOOGLE_CALENDAR_BOOKING_URL?.trim() || '')
+  candidates.push(DEFAULT_CALENDAR_BOOKING_URL)
+
+  for (const c of candidates) {
+    if (c && isBookingUrl(c)) return c
+  }
+  return DEFAULT_CALENDAR_BOOKING_URL
 }
 
 function extractMeetLink(event) {
@@ -116,6 +153,7 @@ export async function syncMeetingsFromCalendar(workspaceId, accessToken) {
   const events = await listUpcomingEvents({ accessToken })
   let updated = 0
   const matched = []
+  const newlyScheduled = []
 
   for (const event of events) {
     const attendees = (event.attendees || []).filter((a) => a.email && !a.self)
@@ -140,6 +178,7 @@ export async function syncMeetingsFromCalendar(workspaceId, accessToken) {
 
       for (const recipient of recipients) {
         let changed = false
+        let justScheduled = false
         if (event.id && recipient.calendarEventId !== event.id) {
           recipient.calendarEventId = event.id
           changed = true
@@ -161,23 +200,56 @@ export async function syncMeetingsFromCalendar(workspaceId, accessToken) {
         if (advanceable.includes(recipient.meetingStatus || 'none')) {
           recipient.meetingStatus = 'scheduled'
           changed = true
+          justScheduled = true
         }
         if (changed) {
           await recipient.save()
           updated += 1
-          matched.push({
+          const row = {
             recipientId: recipient._id.toString(),
             email: recipient.email,
             eventId: event.id,
             meetingLink: meetLink,
             meetingScheduledAt: startDate?.toISOString?.() || null,
-          })
+            summary: event.summary || 'Meeting',
+          }
+          matched.push(row)
+          if (justScheduled) newlyScheduled.push(row)
         }
       }
     }
   }
 
-  return { ok: true, updated, matched, eventsScanned: events.length }
+  if (newlyScheduled.length) {
+    try {
+      const { sendMail, isMailerConfigured } = await import('./mailer.js')
+      if (isMailerConfigured()) {
+        const admin = process.env.ADMIN_EMAIL?.trim() || 'aftabahmadkhan.dev@gmail.com'
+        for (const m of newlyScheduled) {
+          await sendMail({
+            to: admin,
+            subject: `Meeting booked — ${m.email}`,
+            text: [
+              `A lead booked a meeting on your calendar.`,
+              '',
+              `Lead: ${m.email}`,
+              `When: ${m.meetingScheduledAt || 'see calendar'}`,
+              `Event: ${m.summary}`,
+              m.meetingLink ? `Link: ${m.meetingLink}` : '',
+              '',
+              '— Publisher Suite',
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          }).catch(() => {})
+        }
+      }
+    } catch {
+      /* non-fatal */
+    }
+  }
+
+  return { ok: true, updated, matched, newlyScheduled: newlyScheduled.length, eventsScanned: events.length }
 }
 
 /**
