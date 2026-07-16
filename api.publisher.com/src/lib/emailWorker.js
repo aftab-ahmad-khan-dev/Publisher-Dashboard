@@ -23,9 +23,8 @@ export { TRANSPARENT_GIF }
 const activeSends = new Set()
 
 function trackingApiBase() {
-  const api =
-    apiPublicBase() || process.env.WEB_URL?.replace('5173', '3001')?.trim()?.replace(/\/+$/, '')
-  return `${api || 'http://localhost:3001'}/api/email`
+  // Always use the resolved public API origin (production defaults to Vercel).
+  return `${apiPublicBase()}/api/email`
 }
 
 export function rewriteLinksForTracking(html, clickBase, trackingId) {

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import { isDbReady, getLastDbError } from '../db.js'
 import { ensureDbConnected } from './dbInit.js'
+import { webPublicBase } from './publicUrl.js'
 
 const startedAt = Date.now()
 
@@ -70,7 +71,7 @@ export async function collectHealthStatus() {
     region,
     scheduler: !isVercel() ? 'Active (15s)' : 'Vercel Cron (1m)',
     checkedAt: new Date().toLocaleTimeString('en-US', { hour12: true }),
-    webUrl: process.env.WEB_URL?.trim() || 'http://localhost:5173',
+    webUrl: webPublicBase(),
   }
 }
 

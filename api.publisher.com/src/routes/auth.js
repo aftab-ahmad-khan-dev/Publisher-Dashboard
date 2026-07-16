@@ -4,9 +4,9 @@ import { startGmailAuth, handleGmailCallback, getGmailOAuthSetup } from '../lib/
 import { startRedditAuth, handleRedditCallback } from '../lib/redditOAuth.js'
 import { getRedditEnvSetup } from '../lib/redditSetup.js'
 import { getWorkspaceConfig } from '../lib/configStore.js'
+import { webPublicBase } from '../lib/publicUrl.js'
 
 const router = Router()
-const WEB_URL = process.env.WEB_URL?.trim() || 'http://localhost:5173'
 
 router.get('/auth/linkedin', async (req, res, next) => {
   try {
@@ -21,7 +21,7 @@ router.get('/auth/linkedin/callback', async (req, res) => {
   const { code, state, error, error_description: desc } = req.query
   const redirect = (params) => {
     const q = new URLSearchParams(params).toString()
-    res.redirect(`${WEB_URL}/api-config?${q}`)
+    res.redirect(`${webPublicBase()}/api-config?${q}`)
   }
 
   if (error) {
@@ -58,7 +58,7 @@ router.get('/auth/gmail/callback', async (req, res) => {
   const { code, state, error, error_description: errorDesc } = req.query
   const redirect = (params) => {
     const q = new URLSearchParams(params).toString()
-    res.redirect(`${WEB_URL}/api-config?${q}`)
+    res.redirect(`${webPublicBase()}/api-config?${q}`)
   }
 
   if (error) {
@@ -100,7 +100,7 @@ router.get('/auth/reddit/callback', async (req, res) => {
   const { code, state, error } = req.query
   const redirect = (params) => {
     const q = new URLSearchParams(params).toString()
-    res.redirect(`${WEB_URL}/api-config?${q}`)
+    res.redirect(`${webPublicBase()}/api-config?${q}`)
   }
 
   if (error) {

@@ -84,9 +84,12 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          <div className="mb-2 grid shrink-0 grid-cols-7 gap-1 text-center text-[9px] font-bold uppercase tracking-wider text-slate-500">
+          <div className="mb-2 grid shrink-0 grid-cols-7 gap-1 text-center text-[8px] font-bold uppercase tracking-wider text-slate-500 sm:text-[9px]">
             {WEEKDAYS.map((d) => (
-              <div key={d}>{d}</div>
+              <div key={d} className="truncate px-0.5">
+                <span className="sm:hidden">{d.slice(0, 1)}</span>
+                <span className="hidden sm:inline">{d}</span>
+              </div>
             ))}
           </div>
 
@@ -113,8 +116,19 @@ export default function CalendarPage() {
                     {day.getDate()}
                   </span>
                   {platforms.length > 0 && (
-                    <div className="mt-auto pt-0.5">
-                      <PlatformIconGroup platforms={platforms} size="xs" />
+                    <div className="saas-calendar-day__platforms mt-auto min-w-0 overflow-hidden pt-0.5">
+                      <PlatformIconGroup
+                        platforms={platforms}
+                        size="2xs"
+                        maxVisible={2}
+                        className="lg:hidden"
+                      />
+                      <PlatformIconGroup
+                        platforms={platforms}
+                        size="xs"
+                        maxVisible={4}
+                        className="hidden lg:flex"
+                      />
                     </div>
                   )}
                 </button>
@@ -138,7 +152,7 @@ export default function CalendarPage() {
               selectedPosts.map((item) => (
                 <li key={item.id}>
                   <button type="button" onClick={() => setPreviewing(item)} className="saas-list-item">
-                    <PlatformIconGroup platforms={item.platforms} size="xs" />
+                    <PlatformIconGroup platforms={item.platforms} size="xs" maxVisible={5} />
                     <p className="mt-1.5 line-clamp-2 text-xs text-slate-300">{item.body}</p>
                     <p className="mt-1 text-[10px] font-medium text-indigo-300">
                       {formatScheduledISO(item.scheduledAt, item.timezone)}

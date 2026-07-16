@@ -11,6 +11,7 @@ import { collectHealthStatus } from "./lib/healthStatus.js";
 import { recordEmailOpen, recordEmailClick, TRANSPARENT_GIF } from "./lib/emailWorker.js";
 import { Media } from "./models/Media.js";
 import { logger, requestLogger } from "./lib/logger.js";
+import { apiPublicBase, webPublicBase } from "./lib/publicUrl.js";
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
@@ -34,7 +35,7 @@ app.get("/api/health", async (req, res) => {
     environment: status.environment,
     runtime: status.runtime,
     scheduler: status.scheduler,
-    publicUrl: process.env.API_PUBLIC_URL || null,
+    publicUrl: apiPublicBase(),
     error: status.db.error || undefined,
   });
 });
@@ -62,7 +63,7 @@ app.get("/api/email/click/:trackingId", async (req, res) => {
     /* still redirect even if recording fails */
   }
   if (/^https?:\/\//i.test(target)) return res.redirect(302, target);
-  return res.redirect(302, process.env.WEB_URL || "/");
+  return res.redirect(302, webPublicBase());
 });
 
 /** Public image host for Instagram — IG's servers fetch image_url, so no auth. */

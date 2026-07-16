@@ -24,12 +24,13 @@ const ICONS = {
 }
 
 const SIZES = {
-  xs: { box: 'h-6 w-6', icon: 'h-3.5 w-3.5' },
-  sm: { box: 'h-7 w-7', icon: 'h-4 w-4' },
-  md: { box: 'h-8 w-8', icon: 'h-[18px] w-[18px]' },
-  lg: { box: 'h-10 w-10', icon: 'h-5 w-5' },
-  xl: { box: 'h-12 w-12', icon: 'h-6 w-6' },
-  '2xl': { box: 'h-14 w-14', icon: 'h-7 w-7' },
+  '2xs': { box: 'h-3.5 w-3.5', icon: 'h-2 w-2', ring: 'ring-1' },
+  xs: { box: 'h-5 w-5', icon: 'h-2.5 w-2.5', ring: 'ring-1' },
+  sm: { box: 'h-7 w-7', icon: 'h-4 w-4', ring: 'ring-2' },
+  md: { box: 'h-8 w-8', icon: 'h-[18px] w-[18px]', ring: 'ring-2' },
+  lg: { box: 'h-10 w-10', icon: 'h-5 w-5', ring: 'ring-2' },
+  xl: { box: 'h-12 w-12', icon: 'h-6 w-6', ring: 'ring-2' },
+  '2xl': { box: 'h-14 w-14', icon: 'h-7 w-7', ring: 'ring-2' },
 }
 
 export default function PlatformIcon({ platform, size = 'sm', shape = 'circle', className = '' }) {
@@ -49,14 +50,16 @@ export default function PlatformIcon({ platform, size = 'sm', shape = 'circle', 
     gmail: 'bg-white',
   }
   const bg = BG[platform] || 'bg-[#0A66C2]'
+  const quoraText =
+    size === '2xs' || size === 'xs' ? 'text-[7px] leading-none' : s.icon === 'h-3.5 w-3.5' ? 'text-sm' : 'text-base'
 
   return (
     <span
       title={meta.label}
-      className={`inline-flex shrink-0 items-center justify-center ${radius} text-white shadow-md ring-2 ring-[#05060a]/80 ${s.box} ${bg} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center ${radius} text-white shadow-sm ${s.ring} ring-[#05060a]/80 ${s.box} ${bg} ${className}`}
     >
       {platform === 'quora' ? (
-        <span className={`font-display font-bold ${s.icon === 'h-3.5 w-3.5' ? 'text-sm' : 'text-base'}`}>Q</span>
+        <span className={`font-display font-bold ${quoraText}`}>Q</span>
       ) : platform === 'gmail' ? (
         <svg className={s.icon} viewBox="0 0 24 24" aria-hidden>
           <path fill="#EA4335" d="M5 5h14a1 1 0 0 1 1 1v.4l-8 5.6-8-5.6V6a1 1 0 0 1 1-1Z" />
@@ -83,13 +86,34 @@ export function MetaSuiteIcons({ size = 'lg', className = '' }) {
   )
 }
 
-export function PlatformIconGroup({ platforms, size = 'sm', className = '' }) {
+/**
+ * Overlapping platform marks. Use `maxVisible` in tight layouts (calendar cells).
+ */
+export function PlatformIconGroup({ platforms, size = 'sm', maxVisible, className = '' }) {
   if (!platforms?.length) return null
+  const list = [...new Set(platforms.filter(Boolean))]
+  const limit = maxVisible != null ? maxVisible : list.length
+  const shown = list.slice(0, limit)
+  const extra = list.length - shown.length
+  const overlap = size === '2xs' || size === 'xs' ? '-space-x-1' : '-space-x-1.5'
+
   return (
-    <div className={`flex items-center -space-x-1.5 ${className}`}>
-      {platforms.map((p) => (
+    <div className={`flex max-w-full items-center ${overlap} ${className}`}>
+      {shown.map((p) => (
         <PlatformIcon key={p} platform={p} size={size} className="relative hover:z-10" />
       ))}
+      {extra > 0 && (
+        <span
+          className={`relative z-10 inline-flex shrink-0 items-center justify-center rounded-full bg-slate-700 font-bold text-slate-200 ring-1 ring-[#05060a]/80 ${
+            size === '2xs' || size === 'xs'
+              ? 'h-3.5 w-3.5 text-[7px]'
+              : 'h-5 w-5 text-[9px]'
+          }`}
+          title={`+${extra} more`}
+        >
+          +{extra}
+        </span>
+      )}
     </div>
   )
 }
