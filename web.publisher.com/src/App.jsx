@@ -130,13 +130,6 @@ function MissingKeyScreen() {
 }
 
 export default function App() {
-  const [splash, setSplash] = useState(true)
-
-  useEffect(() => {
-    const t = setTimeout(() => setSplash(false), 2800)
-    return () => clearTimeout(t)
-  }, [])
-
   if (!PUBLISHABLE_KEY) {
     return <MissingKeyScreen />
   }
@@ -149,19 +142,49 @@ export default function App() {
             <AppDataProvider>
               <UploadProgressOverlay />
               <AppToaster />
-              <SplashScreen
-                visible={splash}
-                subtitle="Compose · schedule · publish across every channel"
-              />
-              <div
-                className={splash ? 'opacity-0' : 'opacity-100 transition-opacity duration-500'}
-              >
-                <AppRoutes />
-              </div>
+              <BootShell />
             </AppDataProvider>
           </AppErrorBoundary>
         </AuthProvider>
       </ClerkWithRouter>
     </BrowserRouter>
+  )
+}
+
+/** Boot splash only for signed-in app shells — never block marketing (landing / pricing). */
+function BootShell() {
+  const { pathname } = useLocation()
+  const isMarketing = MARKETING_PATHS.includes(pathname)
+  const isAuth = pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')
+  const [splash, setSplash] = useState(() => !isMarketing && !isAuth)
+
+  useEffect(() => {
+    if (isMarketing || isAuth) {
+      setSplash(false)
+      return undefined
+    }
+    setSplash(true)
+    const t = setTimeout(() => setSplash(false), 1600)
+    return () => clearTimeout(t)
+  }, [isMarketing, isAuth])
+
+  return (
+    <>
+      {!isMarketing && !isAuth && (
+        <SplashScreen
+          visible={splash}
+          subtitle="Compose · schedule · publish across every channel"
+        />
+      )}
+      <div
+        className={
+          splash && !isMarketing && !isAuth
+            ? 'opacity-0'
+            : 'opacity-100 transition-opacity duration-500'
+        }
+      >
+        <AppRoutes />
+      </div>
+    </>
   )
 }
