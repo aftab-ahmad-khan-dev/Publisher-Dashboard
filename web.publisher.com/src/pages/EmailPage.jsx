@@ -28,6 +28,7 @@ import {
   saveCalendarSettings,
 } from '../lib/backendApi'
 import { mergeTemplate } from '../lib/emailParse'
+import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from '../lib/meetingCta'
 import {
   OUTREACH_TEMPLATES,
   PRODUCT_TEMPLATES,
@@ -391,10 +392,15 @@ export default function EmailPage() {
       meetingLink: workspaceBooking || 'https://calendar.google.com/...',
       _previewKey: 'preview',
     }
+    const subjectOut = mergeTemplate(subject, data)
+    const bodyOut = forceScheduleMeetingText(mergeTemplate(body, data), workspaceBooking)
+    const htmlOut = htmlBody
+      ? forceScheduleMeetingHrefs(mergeTemplate(htmlBody, data), workspaceBooking)
+      : ''
     return {
-      subject: mergeTemplate(subject, data),
-      body: mergeTemplate(body, data),
-      html: htmlBody ? mergeTemplate(htmlBody, data) : '',
+      subject: subjectOut,
+      body: bodyOut,
+      html: htmlOut,
     }
   }, [subject, body, htmlBody, leadPayload, singleName, workspaceBooking])
 
@@ -573,10 +579,13 @@ export default function EmailPage() {
         .replace(/>/g, '&gt;')
         .replace(/\n/g, '<br>\n')}</div>${dualCtaHtml}`
     }
+    // Never let Schedule CTAs keep portfolio / product / dashboard hrefs.
+    sendHtml = forceScheduleMeetingHrefs(sendHtml, booking)
+    const sendText = forceScheduleMeetingText(body, booking)
     const primary = {
       name: 'Selected',
       subject,
-      textBody: body,
+      textBody: sendText,
       htmlBody: sendHtml,
     }
 

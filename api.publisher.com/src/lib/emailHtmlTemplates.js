@@ -3,6 +3,7 @@
  * Served to the Mail Box UI and used when sending.
  */
 import { getCalendarBookingUrl, isBookingUrl } from './googleCalendar.js'
+import { forceScheduleMeetingHrefs } from './meetingCta.js'
 
 export const SIGNATURE = {
   name: 'Aftab Ahmad Khan',
@@ -245,27 +246,27 @@ Book a walkthrough when it suits you — the link shows my live availability.`,
   },
 }
 
-function resolveCtaUrl(url, meetingLink) {
-  if (url === '{{meetingLink}}') {
-    const link = meetingLink && isBookingUrl(meetingLink) ? meetingLink : getCalendarBookingUrl()
-    return link
-  }
-  // Never let a "Schedule" slot resolve to the product site.
-  if (url === SIGNATURE.product || url === SIGNATURE.site) return url
+function resolveCtaUrl(url, _meetingLink) {
+  // Keep the merge tag in source defs; buildTemplate substitutes a validated booking URL.
+  if (url === '{{meetingLink}}') return '{{meetingLink}}'
   return url
 }
 
 function buildTemplate(id, type, def, meetingLink) {
   const booking =
     meetingLink && isBookingUrl(meetingLink) ? meetingLink : getCalendarBookingUrl(meetingLink)
-  const ctaUrl = resolveCtaUrl(def.ctaUrl, booking)
+  const rawCta = resolveCtaUrl(def.ctaUrl, booking)
+  const ctaUrl = rawCta === '{{meetingLink}}' ? booking : rawCta
   const secondaryCta = def.secondaryCta
     ? {
         label: def.secondaryCta.label,
-        url: resolveCtaUrl(def.secondaryCta.url, booking),
+        url: (() => {
+          const raw = resolveCtaUrl(def.secondaryCta.url, booking)
+          return raw === '{{meetingLink}}' ? booking : raw
+        })(),
       }
     : undefined
-  const htmlBody = layout({
+  let htmlBody = layout({
     preheader: def.subject,
     title: def.name,
     bodyHtml: textToHtmlParagraphs(def.text),
@@ -274,14 +275,17 @@ function buildTemplate(id, type, def, meetingLink) {
     secondaryCta,
     footerNote: def.footerNote,
   })
+  // Hard guarantee: any Schedule-labeled button uses the calendar booking URL.
+  htmlBody = forceScheduleMeetingHrefs(htmlBody, booking)
+  const textBody = String(def.text || '').replaceAll('{{meetingLink}}', booking)
   return {
     id,
     name: def.name,
     type,
     subject: def.subject,
-    textBody: def.text,
+    textBody,
     htmlBody,
-    previewText: def.text.slice(0, 140),
+    previewText: textBody.slice(0, 140),
     ctaLabel: def.ctaLabel,
     secondaryCtaLabel: def.secondaryCta?.label || '',
     meetingLink: booking,

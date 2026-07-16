@@ -17,6 +17,7 @@ import {
 import { importGoogleSheet } from '../lib/googleSheets.js'
 import { flushLeadStatusUpdates } from '../lib/leadWriteback.js'
 import { createCalendarInvite, getCalendarBookingUrl, isBookingUrl, syncMeetingsFromCalendar } from '../lib/googleCalendar.js'
+import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from '../lib/meetingCta.js'
 import {
   listEmailHtmlTemplates,
   templatesByType,
@@ -857,9 +858,17 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
     const safeCampaignName =
       humanizeLabel(name?.trim() || '', '') ||
       `${typeLabel} · ${new Date().toLocaleDateString()}`
-    const cleanTextBody = sanitizePublishedText(textBody || '')
-    const cleanHtmlBody = sanitizePublishedText(htmlBody || '')
     const booking = await resolveBookingUrl(req.workspaceId, meetingLink)
+    const safeBooking = isBookingUrl(booking) ? booking : getCalendarBookingUrl()
+
+    const cleanTextBody = forceScheduleMeetingText(
+      sanitizePublishedText(textBody || ''),
+      safeBooking,
+    )
+    const cleanHtmlBody = forceScheduleMeetingHrefs(
+      sanitizePublishedText(htmlBody || ''),
+      safeBooking,
+    )
 
     const cleanTemplates = Array.isArray(templateList)
       ? templateList
@@ -867,8 +876,14 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
           .map((t) => ({
             name: t.name || '',
             subject: sanitizePublishedText(t.subject.trim()),
-            textBody: sanitizePublishedText(t.textBody || ''),
-            htmlBody: sanitizePublishedText(t.htmlBody || ''),
+            textBody: forceScheduleMeetingText(
+              sanitizePublishedText(t.textBody || ''),
+              safeBooking,
+            ),
+            htmlBody: forceScheduleMeetingHrefs(
+              sanitizePublishedText(t.htmlBody || ''),
+              safeBooking,
+            ),
           }))
       : []
 
@@ -893,7 +908,7 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
       cooldownMs,
       dailyCap,
       leadSourceId: leadSourceId || undefined,
-      meetingLink: booking || '',
+      meetingLink: safeBooking || '',
       status: sendNow ? 'sending' : 'draft',
       stats: { total: parsed.length, sent: 0, failed: 0, opened: 0, clicked: 0 },
       startedAt: sendNow ? new Date() : undefined,
@@ -916,7 +931,7 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
           name: name || r.mergeData?.name || '',
           firstName,
           greeting,
-          meetingLink: r.mergeData?.meetingLink || booking,
+          meetingLink: safeBooking,
         }
         const isProduct = (templateType || 'custom') === 'product'
         return {

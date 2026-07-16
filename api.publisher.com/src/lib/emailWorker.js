@@ -12,6 +12,7 @@ import { apiPublicBase } from './publicUrl.js'
 import { enqueueLeadStatusUpdate } from './leadWriteback.js'
 import { getWorkspaceConfig } from './configStore.js'
 import { getCalendarBookingUrl, isBookingUrl } from './googleCalendar.js'
+import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from './meetingCta.js'
 
 const TRANSPARENT_GIF = Buffer.from(
   'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
@@ -322,10 +323,14 @@ export async function runCampaignSend(campaignId, workspaceId) {
             ]
         const tpl = pool[Math.floor(Math.random() * pool.length)]
         const subject = sanitizePublishedText(mergeTemplate(tpl.subject, data))
-        const text = sanitizePublishedText(mergeTemplate(tpl.textBody, data))
+        let text = sanitizePublishedText(mergeTemplate(tpl.textBody, data))
         let html =
           sanitizePublishedText(mergeTemplate(tpl.htmlBody || '', data)) ||
           text.replace(/\n/g, '<br>\n')
+
+        // Absolute last line of defense: Schedule CTAs always open the calendar booking URL.
+        text = forceScheduleMeetingText(text, meetingLink)
+        html = forceScheduleMeetingHrefs(html, meetingLink)
 
         recipient.renderedSubject = subject
         recipient.renderedText = text

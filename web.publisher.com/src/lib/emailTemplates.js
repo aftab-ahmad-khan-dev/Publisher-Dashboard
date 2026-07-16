@@ -174,13 +174,24 @@ export function toCampaignTemplates(list, meetingLink = '') {
 </table>
 <p style="font-size:12px;color:#64748b;margin:0 0 16px;">Schedule opens my Google Calendar — only available times are shown.</p>`
       : ''
-    const htmlBody = body.includes('<table role="presentation"')
+    let htmlBody = body.includes('<table role="presentation"')
       ? body
       : `<div style="font-family:system-ui,sans-serif;line-height:1.55;color:#111">${body
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;')
           .replace(/\n/g, '<br>\n')}</div>${scheduleBtn}`
+    if (meetingLink) {
+      // dynamic import avoided — inline minimal rewrite for schedule labels
+      htmlBody = htmlBody.replace(
+        /<a\b([^>]*?)href\s*=\s*(["'])([^"']*)\2([^>]*)>([\s\S]*?)<\/a>/gi,
+        (full, pre, quote, _href, post, inner) => {
+          const text = String(inner).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+          if (!/schedule\s+a\s+meeting|schedule\s+meeting|pick\s+a\s+time/i.test(text)) return full
+          return `<a${pre}href=${quote}${meetingLink}${quote}${post}>${inner}</a>`
+        },
+      )
+    }
     return {
       name: t.name,
       subject: t.subject,
