@@ -83,6 +83,7 @@ function AppRoutes() {
         <Routes location={location}>
           <Route element={<ProtectedRoute />}>
             <Route element={<DashboardLayout />}>
+              <Route index element={<Navigate to="/overview" replace />} />
               <Route path="overview" element={<OverviewPage />} />
               <Route path="compose" element={<ComposePage />} />
               <Route path="bulk" element={<BulkUploadPage />} />
@@ -114,6 +115,8 @@ function ClerkWithRouter({ children }) {
       routerReplace={(to) => navigate(to, { replace: true })}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
+      signInFallbackRedirectUrl="/overview"
+      signUpFallbackRedirectUrl="/overview"
       afterSignOutUrl="/sign-in"
     >
       {children}
