@@ -406,7 +406,7 @@ export default function EmailPage() {
   const [meetingsBookedCount, setMeetingsBookedCount] = useState(0)
   const [meetingsQuery, setMeetingsQuery] = useState('')
   const [meetingsSearch, setMeetingsSearch] = useState('')
-  const [meetingsStatusFilter, setMeetingsStatusFilter] = useState('all')
+  const [meetingsStatusFilter, setMeetingsStatusFilter] = useState('scheduled')
 
   const [folder, setFolder] = useState('sent')
   const [mailboxQuery, setMailboxQuery] = useState('')
@@ -2427,6 +2427,22 @@ export default function EmailPage() {
                               </option>
                             ))}
                           </select>
+                          {canShowReminder(r) && (
+                            <button
+                              type="button"
+                              className="has-tip mt-1.5 block w-full rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200 disabled:opacity-50"
+                              disabled={Boolean(nudgeBusyId)}
+                              aria-label={NUDGE_TOOLTIPS.reminder}
+                              data-tip={NUDGE_TOOLTIPS.reminder}
+                              onClick={() => handleReminder(r)}
+                            >
+                              {nudgeBusyId === `${r.id}:reminder`
+                                ? '…'
+                                : r.meetingReminderSentAt
+                                  ? 'Re-send reminder'
+                                  : 'Send reminder'}
+                            </button>
+                          )}
                         </span>
                       </div>
                       {(r.lastNudgeType || r.nudgeAutoStopped) && (
@@ -2481,22 +2497,6 @@ export default function EmailPage() {
                               {nudgeBusyId === `${r.id}:reason` ? '…' : 'Reason'}
                             </button>
                           </>
-                        )}
-                        {canShowReminder(r) && (
-                          <button
-                            type="button"
-                            className="has-tip rounded-lg bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold text-emerald-200 disabled:opacity-50"
-                            disabled={Boolean(nudgeBusyId)}
-                            aria-label={NUDGE_TOOLTIPS.reminder}
-                            data-tip={NUDGE_TOOLTIPS.reminder}
-                            onClick={() => handleReminder(r)}
-                          >
-                            {nudgeBusyId === `${r.id}:reminder`
-                              ? '…'
-                              : r.meetingReminderSentAt
-                                ? 'Re-send reminder'
-                                : 'Reminder'}
-                          </button>
                         )}
                       </div>
                     </div>
@@ -2594,6 +2594,22 @@ export default function EmailPage() {
                             </option>
                           ))}
                         </select>
+                        {canShowReminder(r) && (
+                          <button
+                            type="button"
+                            className="has-tip mt-1.5 block w-full rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50"
+                            disabled={Boolean(nudgeBusyId)}
+                            aria-label={NUDGE_TOOLTIPS.reminder}
+                            data-tip={NUDGE_TOOLTIPS.reminder}
+                            onClick={() => handleReminder(r)}
+                          >
+                            {nudgeBusyId === `${r.id}:reminder`
+                              ? '…'
+                              : r.meetingReminderSentAt
+                                ? 'Re-send reminder'
+                                : 'Send reminder'}
+                          </button>
+                        )}
                         {r.nudgeAutoStopped ? (
                           <p className="mt-0.5 text-[9px] text-slate-600">Auto stopped</p>
                         ) : r.lastNudgeType ? (
@@ -2651,22 +2667,6 @@ export default function EmailPage() {
                                 {nudgeBusyId === `${r.id}:reason` ? '…' : 'Reason'}
                               </button>
                             </>
-                          )}
-                          {canShowReminder(r) && (
-                            <button
-                              type="button"
-                              className="has-tip rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50"
-                              disabled={Boolean(nudgeBusyId)}
-                              aria-label={NUDGE_TOOLTIPS.reminder}
-                              data-tip={NUDGE_TOOLTIPS.reminder}
-                              onClick={() => handleReminder(r)}
-                            >
-                              {nudgeBusyId === `${r.id}:reminder`
-                                ? '…'
-                                : r.meetingReminderSentAt
-                                  ? 'Re-send reminder'
-                                  : 'Reminder'}
-                            </button>
                           )}
                           {r.mailboxFolder === 'junk' ? (
                             <>
@@ -3047,6 +3047,22 @@ export default function EmailPage() {
                               </option>
                             ))}
                           </select>
+                          {canShowReminder(m) && (
+                            <button
+                              type="button"
+                              className="has-tip mt-1.5 block w-full rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200 disabled:opacity-50"
+                              disabled={Boolean(nudgeBusyId)}
+                              aria-label={NUDGE_TOOLTIPS.reminder}
+                              data-tip={NUDGE_TOOLTIPS.reminder}
+                              onClick={() => handleReminder(m)}
+                            >
+                              {nudgeBusyId === `${m.id}:reminder`
+                                ? '…'
+                                : m.meetingReminderSentAt
+                                  ? 'Re-send reminder'
+                                  : 'Send reminder'}
+                            </button>
+                          )}
                         </span>
                       </div>
                       <div className="mt-3 border-t border-white/[0.06] pt-3">
@@ -3070,22 +3086,6 @@ export default function EmailPage() {
                           }}
                           compact
                         />
-                        {canShowReminder(m) && (
-                          <button
-                            type="button"
-                            className="has-tip mt-2 w-full rounded-lg bg-emerald-500/15 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-200 disabled:opacity-50"
-                            disabled={Boolean(nudgeBusyId)}
-                            aria-label={NUDGE_TOOLTIPS.reminder}
-                            data-tip={NUDGE_TOOLTIPS.reminder}
-                            onClick={() => handleReminder(m)}
-                          >
-                            {nudgeBusyId === `${m.id}:reminder`
-                              ? '…'
-                              : m.meetingReminderSentAt
-                                ? 'Re-send 10‑min reminder'
-                                : 'Send 10‑min reminder'}
-                          </button>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -3178,6 +3178,22 @@ export default function EmailPage() {
                             </option>
                           ))}
                         </select>
+                        {canShowReminder(m) && (
+                          <button
+                            type="button"
+                            className="has-tip mt-1.5 block w-full rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50"
+                            disabled={Boolean(nudgeBusyId)}
+                            aria-label={NUDGE_TOOLTIPS.reminder}
+                            data-tip={NUDGE_TOOLTIPS.reminder}
+                            onClick={() => handleReminder(m)}
+                          >
+                            {nudgeBusyId === `${m.id}:reminder`
+                              ? '…'
+                              : m.meetingReminderSentAt
+                                ? 'Re-send reminder'
+                                : 'Send reminder'}
+                          </button>
+                        )}
                       </td>
                       <td className="px-3 py-2">
                         <MeetingBookingBlock
@@ -3199,22 +3215,6 @@ export default function EmailPage() {
                             }
                           }}
                         />
-                        {canShowReminder(m) && (
-                          <button
-                            type="button"
-                            className="has-tip mt-1.5 rounded-lg bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50"
-                            disabled={Boolean(nudgeBusyId)}
-                            aria-label={NUDGE_TOOLTIPS.reminder}
-                            data-tip={NUDGE_TOOLTIPS.reminder}
-                            onClick={() => handleReminder(m)}
-                          >
-                            {nudgeBusyId === `${m.id}:reminder`
-                              ? '…'
-                              : m.meetingReminderSentAt
-                                ? 'Re-send reminder'
-                                : 'Reminder · 10 min'}
-                          </button>
-                        )}
                       </td>
                     </tr>
                   ))}
