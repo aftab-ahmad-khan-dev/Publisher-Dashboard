@@ -166,8 +166,14 @@ export async function saveEmailTemplateDraft(subject, body, extra = {}) {
   });
 }
 
-export async function listEmailCampaigns() {
-  return apiFetch("/email/campaigns");
+export async function listEmailCampaigns(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.q) qs.set("q", params.q);
+  if (params.status) qs.set("status", params.status);
+  if (params.page) qs.set("page", String(params.page));
+  if (params.limit) qs.set("limit", String(params.limit));
+  const q = qs.toString();
+  return apiFetch(`/email/campaigns${q ? `?${q}` : ""}`);
 }
 
 export async function getEmailCampaign(id) {
@@ -222,6 +228,8 @@ export async function fetchEmailMailbox(params = {}) {
   if (params.folder) qs.set("folder", params.folder);
   if (params.q) qs.set("q", params.q);
   if (params.campaignId) qs.set("campaignId", params.campaignId);
+  if (params.meetingStatus) qs.set("meetingStatus", params.meetingStatus);
+  if (params.page) qs.set("page", String(params.page));
   if (params.limit) qs.set("limit", String(params.limit));
   const q = qs.toString();
   return apiFetch(`/email/mailbox${q ? `?${q}` : ""}`);
@@ -308,13 +316,28 @@ export async function listProcessedEmails(params = {}) {
   const qs = new URLSearchParams();
   if (params.campaignId) qs.set("campaignId", params.campaignId);
   if (params.limit) qs.set("limit", String(params.limit));
+  if (params.page) qs.set("page", String(params.page));
+  if (params.q) qs.set("q", params.q);
+  if (params.status) qs.set("status", params.status);
+  if (params.meetingStatus) qs.set("meetingStatus", params.meetingStatus);
+  if (params.engagement) qs.set("engagement", params.engagement);
   const q = qs.toString();
   return apiFetch(`/email/processed${q ? `?${q}` : ""}`);
+}
+
+export async function sendEmailNudge(id, type) {
+  return apiFetch(`/email/recipients/${id}/nudge`, {
+    method: "POST",
+    body: { type },
+  });
 }
 
 export async function listEmailMeetings(params = {}) {
   const qs = new URLSearchParams();
   if (params.limit) qs.set("limit", String(params.limit));
+  if (params.page) qs.set("page", String(params.page));
+  if (params.q) qs.set("q", params.q);
+  if (params.meetingStatus) qs.set("meetingStatus", params.meetingStatus);
   if (params.sync) qs.set("sync", "1");
   const q = qs.toString();
   return apiFetch(`/email/meetings${q ? `?${q}` : ""}`);

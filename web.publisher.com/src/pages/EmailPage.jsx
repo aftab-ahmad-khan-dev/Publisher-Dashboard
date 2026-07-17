@@ -28,6 +28,7 @@ import {
   syncEmailCalendar,
   saveCalendarSettings,
   subscribeRealtime,
+  sendEmailNudge,
 } from '../lib/backendApi'
 import { mergeTemplate } from '../lib/emailParse'
 import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from '../lib/meetingCta'
@@ -185,75 +186,81 @@ function MeetingBookingBlock({
     meeting.meetingLink && !meetUrl ? String(meeting.meetingLink).trim() : ''
 
   return (
-    <div className={`space-y-2.5 ${compact ? 'min-w-0' : 'min-w-[260px] max-w-sm'}`}>
-      <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.07] px-2.5 py-2">
+    <div
+      className={`grid gap-2 ${
+        compact
+          ? 'min-w-0 grid-cols-1 sm:grid-cols-3'
+          : 'min-w-[34rem] max-w-3xl grid-cols-3'
+      }`}
+    >
+      <div className="min-w-0 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.07] px-2.5 py-2">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-400/90">
           When
         </p>
         {hasLeadBooking ? (
-          <div className="mt-1 space-y-2">
+          <div className="mt-1 space-y-1.5">
             <div>
-              <p className="text-[10px] font-medium text-emerald-400/80">
-                Lead selected{eventTz ? ` · ${eventTz.replace(/_/g, ' ')}` : ''}
+              <p className="text-[9px] font-medium text-emerald-400/80">
+                Lead{eventTz ? ` · ${eventTz.replace(/_/g, ' ')}` : ''}
               </p>
-              <p className="text-[12px] font-semibold leading-snug text-emerald-200">
+              <p className="text-[11px] font-semibold leading-snug text-emerald-200">
                 {leadDisplay}
               </p>
             </div>
             {myWhen ? (
-              <div className="border-t border-emerald-500/15 pt-2">
-                <p className="text-[10px] font-medium text-sky-400/80">
-                  In your region{myTz ? ` · ${myTz.replace(/_/g, ' ')}` : ''}
+              <div className="border-t border-emerald-500/15 pt-1.5">
+                <p className="text-[9px] font-medium text-sky-400/80">
+                  You{myTz ? ` · ${myTz.replace(/_/g, ' ')}` : ''}
                 </p>
-                <p className="text-[12px] font-semibold leading-snug text-sky-200">
+                <p className="text-[11px] font-semibold leading-snug text-sky-200">
                   {myWhen}
                 </p>
                 {sameZone ? (
-                  <p className="mt-0.5 text-[10px] text-slate-500">Same clock time as the lead</p>
+                  <p className="mt-0.5 text-[9px] text-slate-500">Same as lead</p>
                 ) : null}
               </div>
             ) : null}
           </div>
         ) : (
-          <p className="mt-0.5 text-[12px] text-slate-500">Not booked yet</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">Not booked yet</p>
         )}
       </div>
 
-      <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/[0.06] px-2.5 py-2">
+      <div className="flex min-w-0 flex-col rounded-lg border border-indigo-500/20 bg-indigo-500/[0.06] px-2.5 py-2">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-300/90">
           Meet link
         </p>
-        {meetUrl ? (
-          <a
-            href={meetUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-1 inline-flex max-w-full items-center gap-1 truncate text-[12px] font-semibold text-indigo-200 underline hover:text-white"
-          >
-            Open Google Meet
-          </a>
-        ) : otherLink ? (
-          <a
-            href={otherLink}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-1 block truncate text-[11px] text-indigo-300 underline"
-          >
-            {otherLink}
-          </a>
-        ) : (
-          <p className="mt-0.5 text-[12px] text-slate-500">No Meet link yet</p>
-        )}
+        <div className="mt-1 flex flex-1 items-center">
+          {meetUrl ? (
+            <a
+              href={meetUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] font-semibold leading-snug text-indigo-200 underline hover:text-white"
+            >
+              Open Google Meet
+            </a>
+          ) : otherLink ? (
+            <a
+              href={otherLink}
+              target="_blank"
+              rel="noreferrer"
+              className="truncate text-[11px] text-indigo-300 underline"
+            >
+              Open link
+            </a>
+          ) : (
+            <p className="text-[11px] text-slate-500">No Meet link yet</p>
+          )}
+        </div>
       </div>
 
-      <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2">
+      <div className="min-w-0 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-          {hasLeadBooking ? 'Admin · new / reschedule Meet' : 'Admin · create Meet invite'}
+          {hasLeadBooking ? 'Admin invite' : 'Create invite'}
         </p>
-        <p className="mt-0.5 mb-1.5 text-[10px] leading-snug text-slate-500">
-          {hasLeadBooking
-            ? 'Lead already picked a time. Use this only to send a new Meet invite.'
-            : 'Lead has not booked — pick a date/time and send a Meet invite.'}
+        <p className="mt-0.5 mb-1 text-[9px] leading-snug text-slate-500">
+          {hasLeadBooking ? 'Only if you need a new Meet' : 'Pick date/time for Meet'}
         </p>
         <DateTimePicker
           value={when}
@@ -265,14 +272,14 @@ function MeetingBookingBlock({
         />
         <button
           type="button"
-          className="mt-1.5 w-full rounded-lg bg-indigo-500/25 px-2 py-1.5 text-[11px] font-semibold text-indigo-100 ring-1 ring-indigo-400/35 hover:bg-indigo-500/35 disabled:opacity-50"
+          className="mt-1.5 w-full rounded-lg bg-indigo-500/25 px-2 py-1.5 text-[10px] font-semibold text-indigo-100 ring-1 ring-indigo-400/35 hover:bg-indigo-500/35 disabled:opacity-50"
           disabled={inviting || !canInvite || !when}
           onClick={() => {
             if (!when) return
             onInvite(when)
           }}
         >
-          {inviting ? 'Creating…' : hasLeadBooking ? 'Send new Meet invite' : 'Invite with Meet'}
+          {inviting ? 'Creating…' : hasLeadBooking ? 'Send Meet invite' : 'Invite with Meet'}
         </button>
       </div>
     </div>
@@ -307,9 +314,23 @@ export default function EmailPage() {
   const [confirmDialog, setConfirmDialog] = useState(null)
   const [selectedMeetingIds, setSelectedMeetingIds] = useState(() => new Set())
   const [meetingRemoveBusy, setMeetingRemoveBusy] = useState(false)
+  const [meetingsPage, setMeetingsPage] = useState(1)
+  const [meetingsPageSize] = useState(8)
+  const [meetingsTotalPages, setMeetingsTotalPages] = useState(1)
+  const [meetingsTotal, setMeetingsTotal] = useState(0)
+  const [meetingsBookedCount, setMeetingsBookedCount] = useState(0)
+  const [meetingsQuery, setMeetingsQuery] = useState('')
+  const [meetingsSearch, setMeetingsSearch] = useState('')
+  const [meetingsStatusFilter, setMeetingsStatusFilter] = useState('all')
 
   const [folder, setFolder] = useState('sent')
   const [mailboxQuery, setMailboxQuery] = useState('')
+  const [mailboxSearch, setMailboxSearch] = useState('')
+  const [mailboxMeetingFilter, setMailboxMeetingFilter] = useState('all')
+  const [mailboxPage, setMailboxPage] = useState(1)
+  const [mailboxPageSize] = useState(40)
+  const [mailboxTotalPages, setMailboxTotalPages] = useState(1)
+  const [mailboxTotal, setMailboxTotal] = useState(0)
   const [messages, setMessages] = useState([])
   const [folderCounts, setFolderCounts] = useState({})
   const [sent24h, setSent24h] = useState(0)
@@ -319,6 +340,9 @@ export default function EmailPage() {
   const [bulkBusy, setBulkBusy] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
 
+  const [campaignQuery, setCampaignQuery] = useState('')
+  const [campaignSearch, setCampaignSearch] = useState('')
+  const [campaignStatusFilter, setCampaignStatusFilter] = useState('all')
   const [mode, setMode] = useState('bulk')
   const [templateType, setTemplateType] = useState('outreach')
   const [apiTemplates, setApiTemplates] = useState([])
@@ -336,6 +360,20 @@ export default function EmailPage() {
   const [singleName, setSingleName] = useState('')
   const [sending, setSending] = useState(false)
   const [processedQuery, setProcessedQuery] = useState('')
+  const [processedSearch, setProcessedSearch] = useState('')
+  const [processedPage, setProcessedPage] = useState(1)
+  const [processedPageSize] = useState(25)
+  const [processedTotalPages, setProcessedTotalPages] = useState(1)
+  const [processedCounts, setProcessedCounts] = useState({
+    processed: 0,
+    meetingsBooked: 0,
+    filtered: 0,
+  })
+  const [processedStatus, setProcessedStatus] = useState('all')
+  const [processedMeetingFilter, setProcessedMeetingFilter] = useState('all')
+  const [processedEngagement, setProcessedEngagement] = useState('all')
+  const [processedCampaignId, setProcessedCampaignId] = useState('all')
+  const [nudgeBusyId, setNudgeBusyId] = useState(null)
 
   const templateList = useMemo(() => {
     const fromApi = apiTemplates.filter((t) => t.type === templateType)
@@ -347,31 +385,159 @@ export default function EmailPage() {
   const loadCampaigns = useCallback(async () => {
     if (!live) return
     try {
-      const data = await listEmailCampaigns()
+      const data = await listEmailCampaigns({
+        q: campaignSearch || undefined,
+        status: campaignStatusFilter !== 'all' ? campaignStatusFilter : undefined,
+        limit: 80,
+      })
       setCampaigns(data.campaigns || [])
     } catch {
       /* ignore */
     }
-  }, [live])
+  }, [live, campaignSearch, campaignStatusFilter])
+
+  useEffect(() => {
+    const t = setTimeout(() => setCampaignSearch(campaignQuery.trim()), 350)
+    return () => clearTimeout(t)
+  }, [campaignQuery])
+
+  useEffect(() => {
+    const t = setTimeout(() => setMailboxSearch(mailboxQuery.trim()), 350)
+    return () => clearTimeout(t)
+  }, [mailboxQuery])
+
+  useEffect(() => {
+    setMailboxPage(1)
+  }, [folder, mailboxSearch, mailboxMeetingFilter])
+
+  const loadMailbox = useCallback(async () => {
+    if (!live) return
+    try {
+      const data = await fetchEmailMailbox({
+        folder,
+        q: mailboxSearch || undefined,
+        meetingStatus:
+          mailboxMeetingFilter !== 'all' ? mailboxMeetingFilter : undefined,
+        page: mailboxPage,
+        limit: mailboxPageSize,
+      })
+      setMessages(data.recipients || [])
+      setFolderCounts(data.folderCounts || {})
+      setSent24h(data.sent24h || 0)
+      setMailboxTotal(data.total ?? (data.recipients || []).length)
+      setMailboxTotalPages(data.totalPages || 1)
+    } catch (err) {
+      showToast(err.message, 'error')
+    }
+  }, [
+    live,
+    folder,
+    mailboxSearch,
+    mailboxMeetingFilter,
+    mailboxPage,
+    mailboxPageSize,
+    showToast,
+  ])
 
   const loadProcessed = useCallback(async () => {
     if (!live) return
     try {
-      const data = await listProcessedEmails({ limit: 250 })
+      const data = await listProcessedEmails({
+        page: processedPage,
+        limit: processedPageSize,
+        q: processedSearch || undefined,
+        status: processedStatus !== 'all' ? processedStatus : undefined,
+        meetingStatus:
+          processedMeetingFilter !== 'all' ? processedMeetingFilter : undefined,
+        engagement: processedEngagement !== 'all' ? processedEngagement : undefined,
+        campaignId: processedCampaignId !== 'all' ? processedCampaignId : undefined,
+      })
       setProcessed(data.rows || [])
+      setProcessedTotalPages(data.totalPages || 1)
+      setProcessedCounts({
+        processed: data.counts?.processed ?? data.total ?? 0,
+        meetingsBooked: data.counts?.meetingsBooked ?? 0,
+        filtered: data.counts?.filtered ?? data.total ?? 0,
+      })
     } catch (err) {
       showToast(err.message, 'error')
     }
-  }, [live, showToast])
+  }, [
+    live,
+    processedPage,
+    processedPageSize,
+    processedSearch,
+    processedStatus,
+    processedMeetingFilter,
+    processedEngagement,
+    processedCampaignId,
+    showToast,
+  ])
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setProcessedSearch(processedQuery.trim())
+    }, 350)
+    return () => clearTimeout(t)
+  }, [processedQuery])
+
+  useEffect(() => {
+    setProcessedPage(1)
+  }, [
+    processedSearch,
+    processedStatus,
+    processedMeetingFilter,
+    processedEngagement,
+    processedCampaignId,
+  ])
+
+  useEffect(() => {
+    if (tab !== 'processed' || !live) return
+    loadProcessed()
+  }, [tab, live, loadProcessed])
+
+  const handleNudge = async (row, type) => {
+    const labels = { follow_up: 'Follow Up', final_call: 'Final Call', reason: 'Reason' }
+    setNudgeBusyId(`${row.id}:${type}`)
+    try {
+      await sendEmailNudge(row.id, type)
+      showToast(`${labels[type] || 'Nudge'} sent to ${row.email}`, 'success')
+      await loadProcessed()
+    } catch (err) {
+      showToast(err.message || 'Failed to send', 'error')
+    } finally {
+      setNudgeBusyId(null)
+    }
+  }
+
+  const canShowNudge = (r) => {
+    if (r.nudgeEligible === true) return true
+    if (r.meetingStatus === 'scheduled' || r.meetingStatus === 'completed') return false
+    return (
+      (r.openCount || 0) > 0 ||
+      r.status === 'opened' ||
+      r.status === 'clicked' ||
+      r.meetingStatus === 'link_clicked' ||
+      r.meetingStatus === 'invited' ||
+      Boolean(r.meetingClickedAt)
+    )
+  }
 
   const loadMeetings = useCallback(async (opts = {}) => {
     if (!live) return
     try {
       const data = await listEmailMeetings({
-        limit: 200,
-        sync: opts.sync !== false,
+        page: meetingsPage,
+        limit: meetingsPageSize,
+        q: meetingsSearch || undefined,
+        meetingStatus:
+          meetingsStatusFilter !== 'all' ? meetingsStatusFilter : undefined,
+        sync: opts.sync === true,
       })
       setMeetings(data.meetings || [])
+      setMeetingsTotalPages(data.totalPages || 1)
+      setMeetingsTotal(data.total ?? data.counts?.pipeline ?? 0)
+      setMeetingsBookedCount(data.counts?.meetingsBooked ?? 0)
       setSelectedMeetingIds((prev) => {
         if (!prev.size) return prev
         const nextIds = new Set((data.meetings || []).map((m) => m.id))
@@ -395,23 +561,28 @@ export default function EmailPage() {
     } catch (err) {
       showToast(err.message, 'error')
     }
-  }, [live, showToast])
+  }, [
+    live,
+    meetingsPage,
+    meetingsPageSize,
+    meetingsSearch,
+    meetingsStatusFilter,
+    showToast,
+  ])
 
-  const loadMailbox = useCallback(async () => {
-    if (!live) return
-    try {
-      const data = await fetchEmailMailbox({
-        folder,
-        q: mailboxQuery,
-        limit: 80,
-      })
-      setMessages(data.recipients || [])
-      setFolderCounts(data.folderCounts || {})
-      setSent24h(data.sent24h || 0)
-    } catch (err) {
-      showToast(err.message, 'error')
-    }
-  }, [live, folder, mailboxQuery, showToast])
+  useEffect(() => {
+    const t = setTimeout(() => setMeetingsSearch(meetingsQuery.trim()), 350)
+    return () => clearTimeout(t)
+  }, [meetingsQuery])
+
+  useEffect(() => {
+    setMeetingsPage(1)
+  }, [meetingsSearch, meetingsStatusFilter])
+
+  useEffect(() => {
+    if (tab !== 'meetings' || !live) return
+    loadMeetings({ sync: false })
+  }, [tab, live, loadMeetings])
 
   const REFRESH_MS = 90_000 // auto-refresh mail + meetings every ~1.5 min
 
@@ -419,8 +590,8 @@ export default function EmailPage() {
     await Promise.all([
       loadCampaigns(),
       loadProcessed(),
-      // Pull booked Calendar slots so Meetings stay current without manual Sync
-      loadMeetings({ sync: true }),
+      // Soft refresh meetings without full calendar sync on every tick
+      loadMeetings({ sync: false }),
       loadMailbox(),
     ])
   }, [loadCampaigns, loadProcessed, loadMeetings, loadMailbox])
@@ -431,12 +602,12 @@ export default function EmailPage() {
     return () => clearInterval(t)
   }, [refreshAll])
 
-  // When opening Meetings, sync Calendar immediately (don't wait for the 5 min tick).
+  // When opening Meetings, sync Calendar once (don't wait for the interval).
   useEffect(() => {
     if (tab === 'meetings' && live) {
       loadMeetings({ sync: true })
     }
-  }, [tab, live, loadMeetings])
+  }, [tab, live]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh meetings list when a booking is confirmed in realtime
   useEffect(() => {
@@ -645,18 +816,7 @@ export default function EmailPage() {
     return hours > 0 ? `~${hours}h ${rem}m` : `~${rem}m`
   }, [mode, leadPayload, cooldownMinutes, batchSize])
 
-  const filteredProcessed = useMemo(() => {
-    const q = processedQuery.trim().toLowerCase()
-    if (!q) return processed
-    return processed.filter(
-      (r) =>
-        r.email?.toLowerCase().includes(q) ||
-        r.name?.toLowerCase().includes(q) ||
-        r.company?.toLowerCase().includes(q) ||
-        r.campaignName?.toLowerCase().includes(q) ||
-        r.status?.toLowerCase().includes(q),
-    )
-  }, [processed, processedQuery])
+  const filteredProcessed = processed
 
   const selectableIds = useMemo(() => {
     if (tab === 'processed') return filteredProcessed.map((r) => r.id)
@@ -671,7 +831,15 @@ export default function EmailPage() {
   useEffect(() => {
     setSelectedMailIds(new Set())
     setSelectMode(false)
-  }, [folder, tab, processedQuery, mailboxQuery])
+  }, [
+    folder,
+    tab,
+    processedStatus,
+    processedMeetingFilter,
+    processedEngagement,
+    mailboxSearch,
+    mailboxMeetingFilter,
+  ])
 
   const exitSelectMode = () => {
     setSelectMode(false)
@@ -889,6 +1057,10 @@ export default function EmailPage() {
   const activeCampaigns = campaigns.filter((c) =>
     ['sending', 'paused', 'draft'].includes(c.status),
   )
+  const recentCampaigns = campaigns.filter(
+    (c) => !['sending', 'paused', 'draft'].includes(c.status),
+  )
+  const showCampaignBuckets = campaignStatusFilter === 'all'
 
   return (
     <PageShell>
@@ -964,13 +1136,25 @@ export default function EmailPage() {
           </aside>
 
           <section className="flex w-full min-w-0 flex-col border-r border-white/[0.06] sm:w-[340px] lg:w-[380px]">
-            <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-3 py-2">
               <input
                 value={mailboxQuery}
                 onChange={(e) => setMailboxQuery(e.target.value)}
                 placeholder="Search mail"
                 className="saas-input min-w-0 flex-1 py-1.5 text-xs"
               />
+              <select
+                className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[11px] text-slate-300"
+                value={mailboxMeetingFilter}
+                onChange={(e) => setMailboxMeetingFilter(e.target.value)}
+                title="Meeting status"
+              >
+                <option value="all">All meetings</option>
+                <option value="none">No meeting</option>
+                <option value="invited">Invited</option>
+                <option value="link_clicked">Link clicked</option>
+                <option value="scheduled">Scheduled</option>
+              </select>
               {!selectMode ? (
                 <button
                   type="button"
@@ -1109,6 +1293,31 @@ export default function EmailPage() {
                   </button>
                 </div>
               ))}
+            </div>
+            <div className="flex items-center justify-between gap-2 border-t border-white/[0.06] px-3 py-2">
+              <p className="text-[10px] text-slate-500">
+                {mailboxTotal} · p.{mailboxPage}/{mailboxTotalPages}
+              </p>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/10 px-2 py-1 text-[10px] font-semibold text-slate-300 disabled:opacity-40"
+                  disabled={mailboxPage <= 1}
+                  onClick={() => setMailboxPage((p) => Math.max(1, p - 1))}
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/10 px-2 py-1 text-[10px] font-semibold text-slate-300 disabled:opacity-40"
+                  disabled={mailboxPage >= mailboxTotalPages}
+                  onClick={() =>
+                    setMailboxPage((p) => Math.min(mailboxTotalPages, p + 1))
+                  }
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </section>
 
@@ -1488,12 +1697,42 @@ export default function EmailPage() {
 
           <div className="space-y-4">
             <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-              <h3 className="mb-3 text-sm font-semibold text-white">Active campaigns</h3>
-              {activeCampaigns.length === 0 && (
-                <p className="text-xs text-slate-500">No running campaigns. Start one from the left.</p>
-              )}
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <h3 className="mr-auto text-sm font-semibold text-white">Campaigns</h3>
+                <input
+                  className={`${inputClass()} max-w-[10rem] py-1.5 text-xs`}
+                  placeholder="Search…"
+                  value={campaignQuery}
+                  onChange={(e) => setCampaignQuery(e.target.value)}
+                />
+                <select
+                  className={`${inputClass()} w-auto py-1.5 text-xs`}
+                  value={campaignStatusFilter}
+                  onChange={(e) => setCampaignStatusFilter(e.target.value)}
+                >
+                  <option value="all">All statuses</option>
+                  <option value="sending">Sending</option>
+                  <option value="paused">Paused</option>
+                  <option value="draft">Draft</option>
+                  <option value="completed">Completed</option>
+                  <option value="failed">Failed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {showCampaignBuckets ? (
+                <>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Active
+                  </p>
+                  {activeCampaigns.length === 0 && (
+                    <p className="text-xs text-slate-500">No running campaigns. Start one from the left.</p>
+                  )}
+                </>
+              ) : null}
+
               <div className="space-y-2">
-                {activeCampaigns.map((c) => (
+                {(showCampaignBuckets ? activeCampaigns : campaigns).map((c) => (
                   <div
                     key={c.id}
                     className="rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5"
@@ -1564,27 +1803,26 @@ export default function EmailPage() {
                     )}
                   </div>
                 ))}
+                {!showCampaignBuckets && campaigns.length === 0 && (
+                  <p className="text-xs text-slate-500">No campaigns match this filter.</p>
+                )}
               </div>
 
-              {campaigns.filter((c) => !['sending', 'paused', 'draft'].includes(c.status)).length >
-                0 && (
+              {showCampaignBuckets && recentCampaigns.length > 0 && (
                 <div className="mt-4 border-t border-white/[0.06] pt-3">
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Recent
                   </p>
                   <div className="max-h-48 space-y-1.5 overflow-y-auto">
-                    {campaigns
-                      .filter((c) => !['sending', 'paused', 'draft'].includes(c.status))
-                      .slice(0, 8)
-                      .map((c) => (
-                        <div
-                          key={c.id}
-                          className="flex items-center justify-between gap-2 text-[11px]"
-                        >
-                          <span className="truncate text-slate-400">{c.name}</span>
-                          <StatusChip status={c.status} />
-                        </div>
-                      ))}
+                    {recentCampaigns.slice(0, 12).map((c) => (
+                      <div
+                        key={c.id}
+                        className="flex items-center justify-between gap-2 text-[11px]"
+                      >
+                        <span className="truncate text-slate-400">{c.name}</span>
+                        <StatusChip status={c.status} />
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -1621,6 +1859,35 @@ export default function EmailPage() {
       {/* ─── Processed mail table ─── */}
       {tab === 'processed' && (
         <PageScroll className="pb-8">
+        <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              Processed mail
+            </p>
+            <p className="mt-0.5 text-lg font-semibold text-white tabular-nums">
+              {processedCounts.processed}
+            </p>
+          </div>
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-400/80">
+              Meetings booked
+            </p>
+            <p className="mt-0.5 text-lg font-semibold text-emerald-200 tabular-nums">
+              {processedCounts.meetingsBooked}
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 sm:col-span-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              Showing (filtered)
+            </p>
+            <p className="mt-0.5 text-lg font-semibold text-slate-200 tabular-nums">
+              {processedCounts.filtered}
+              <span className="ml-1 text-xs font-normal text-slate-500">
+                · page {processedPage}/{processedTotalPages}
+              </span>
+            </p>
+          </div>
+        </div>
         <div className="saas-table-wrap">
           <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-4 py-3">
             <input
@@ -1629,6 +1896,54 @@ export default function EmailPage() {
               value={processedQuery}
               onChange={(e) => setProcessedQuery(e.target.value)}
             />
+            <select
+              className={`${inputClass()} w-auto min-w-[7.5rem] py-1.5 text-xs`}
+              value={processedStatus}
+              onChange={(e) => setProcessedStatus(e.target.value)}
+            >
+              <option value="all">All statuses</option>
+              <option value="sent">Sent</option>
+              <option value="opened">Opened</option>
+              <option value="clicked">Clicked</option>
+              <option value="failed">Failed</option>
+              <option value="queued">Queued</option>
+            </select>
+            <select
+              className={`${inputClass()} w-auto min-w-[8rem] py-1.5 text-xs`}
+              value={processedMeetingFilter}
+              onChange={(e) => setProcessedMeetingFilter(e.target.value)}
+            >
+              <option value="all">All meetings</option>
+              <option value="none">No meeting</option>
+              <option value="invited">Invited</option>
+              <option value="link_clicked">Link clicked</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="completed">Completed</option>
+              <option value="no_show">No show</option>
+            </select>
+            <select
+              className={`${inputClass()} w-auto min-w-[8.5rem] py-1.5 text-xs`}
+              value={processedEngagement}
+              onChange={(e) => setProcessedEngagement(e.target.value)}
+            >
+              <option value="all">All engagement</option>
+              <option value="engaged">Opened or meeting click</option>
+              <option value="opened">Opened</option>
+              <option value="clicked">Link clicked</option>
+              <option value="meeting_clicked">Meeting link clicked</option>
+            </select>
+            <select
+              className={`${inputClass()} w-auto min-w-[9rem] max-w-[12rem] py-1.5 text-xs`}
+              value={processedCampaignId}
+              onChange={(e) => setProcessedCampaignId(e.target.value)}
+            >
+              <option value="all">All campaigns</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name || c.subject || c.id}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               className="btn-secondary px-3 py-1.5 text-xs"
@@ -1636,7 +1951,6 @@ export default function EmailPage() {
             >
               Refresh
             </button>
-            <span className="text-[11px] text-slate-500">{filteredProcessed.length} rows</span>
             {!selectMode ? (
               <button
                 type="button"
@@ -1757,6 +2071,34 @@ export default function EmailPage() {
                         >
                           View
                         </button>
+                        {canShowNudge(r) && (
+                          <>
+                            <button
+                              type="button"
+                              className="rounded-lg bg-sky-500/15 px-2.5 py-1 text-[10px] font-semibold text-sky-200 disabled:opacity-50"
+                              disabled={Boolean(nudgeBusyId)}
+                              onClick={() => handleNudge(r, 'follow_up')}
+                            >
+                              {nudgeBusyId === `${r.id}:follow_up` ? '…' : 'Follow Up'}
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-lg bg-violet-500/15 px-2.5 py-1 text-[10px] font-semibold text-violet-200 disabled:opacity-50"
+                              disabled={Boolean(nudgeBusyId)}
+                              onClick={() => handleNudge(r, 'final_call')}
+                            >
+                              {nudgeBusyId === `${r.id}:final_call` ? '…' : 'Final Call'}
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-lg bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold text-amber-200 disabled:opacity-50"
+                              disabled={Boolean(nudgeBusyId)}
+                              onClick={() => handleNudge(r, 'reason')}
+                            >
+                              {nudgeBusyId === `${r.id}:reason` ? '…' : 'Reason'}
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   )
@@ -1858,6 +2200,35 @@ export default function EmailPage() {
                           >
                             View
                           </button>
+                          {canShowNudge(r) && (
+                            <>
+                              <button
+                                type="button"
+                                className="rounded-lg bg-sky-500/15 px-2 py-1 text-[10px] font-semibold text-sky-200 hover:bg-sky-500/25 disabled:opacity-50"
+                                disabled={Boolean(nudgeBusyId)}
+                                title="Slots limited — follow up"
+                                onClick={() => handleNudge(r, 'follow_up')}
+                              >
+                                {nudgeBusyId === `${r.id}:follow_up` ? '…' : 'Follow Up'}
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-lg bg-violet-500/15 px-2 py-1 text-[10px] font-semibold text-violet-200 hover:bg-violet-500/25 disabled:opacity-50"
+                                title="Last slot + 10% off"
+                                onClick={() => handleNudge(r, 'final_call')}
+                              >
+                                {nudgeBusyId === `${r.id}:final_call` ? '…' : 'Final Call'}
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-lg bg-amber-500/15 px-2 py-1 text-[10px] font-semibold text-amber-200 hover:bg-amber-500/25 disabled:opacity-50"
+                                title="Ask why they didn’t book"
+                                onClick={() => handleNudge(r, 'reason')}
+                              >
+                                {nudgeBusyId === `${r.id}:reason` ? '…' : 'Reason'}
+                              </button>
+                            </>
+                          )}
                           {r.mailboxFolder === 'junk' ? (
                             <>
                               <button
@@ -1931,6 +2302,31 @@ export default function EmailPage() {
                 })}
               </tbody>
             </table>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] px-4 py-3">
+            <p className="text-[11px] text-slate-500">
+              Page {processedPage} of {processedTotalPages} · {processedCounts.filtered} matching
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="btn-secondary px-3 py-1.5 text-xs disabled:opacity-40"
+                disabled={processedPage <= 1}
+                onClick={() => setProcessedPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="btn-secondary px-3 py-1.5 text-xs disabled:opacity-40"
+                disabled={processedPage >= processedTotalPages}
+                onClick={() =>
+                  setProcessedPage((p) => Math.min(processedTotalPages, p + 1))
+                }
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
         </PageScroll>
@@ -2060,8 +2456,32 @@ export default function EmailPage() {
 
           <div className="saas-table-wrap">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
-              <h3 className="text-sm font-semibold text-white">Scheduled & meeting pipeline</h3>
+              <div>
+                <h3 className="text-sm font-semibold text-white">Scheduled & meeting pipeline</h3>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  {meetingsBookedCount} booked · {meetingsTotal} in pipeline · page {meetingsPage}/
+                  {meetingsTotalPages}
+                </p>
+              </div>
               <div className="flex flex-wrap items-center gap-2">
+                <input
+                  className={`${inputClass()} w-40 py-1.5 text-xs`}
+                  placeholder="Search lead…"
+                  value={meetingsQuery}
+                  onChange={(e) => setMeetingsQuery(e.target.value)}
+                />
+                <select
+                  className={`${inputClass()} w-auto min-w-[8rem] py-1.5 text-xs`}
+                  value={meetingsStatusFilter}
+                  onChange={(e) => setMeetingsStatusFilter(e.target.value)}
+                >
+                  <option value="all">All statuses</option>
+                  <option value="invited">Invited</option>
+                  <option value="link_clicked">Link clicked</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="completed">Completed</option>
+                  <option value="no_show">No show</option>
+                </select>
                 {selectedMeetingIds.size > 0 && (
                   <button
                     type="button"
@@ -2224,7 +2644,7 @@ export default function EmailPage() {
                   ))}
                 </div>
               )}
-              <table className="saas-table saas-table--desktop-only w-full min-w-[980px] text-left text-xs">
+              <table className="saas-table saas-table--desktop-only w-full min-w-[1180px] text-left text-xs">
                 <thead>
                   <tr>
                     <th className="w-10 px-3 py-2.5">
@@ -2347,6 +2767,32 @@ export default function EmailPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] px-4 py-3">
+              <p className="text-[11px] text-slate-500">
+                Page {meetingsPage} of {meetingsTotalPages} · {meetingsTotal} matching ·{' '}
+                {meetingsPageSize} per page
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-1.5 text-xs disabled:opacity-40"
+                  disabled={meetingsPage <= 1}
+                  onClick={() => setMeetingsPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-1.5 text-xs disabled:opacity-40"
+                  disabled={meetingsPage >= meetingsTotalPages}
+                  onClick={() =>
+                    setMeetingsPage((p) => Math.min(meetingsTotalPages, p + 1))
+                  }
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
         </PageScroll>

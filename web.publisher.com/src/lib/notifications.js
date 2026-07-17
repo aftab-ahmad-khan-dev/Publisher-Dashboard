@@ -77,6 +77,11 @@ export function notificationFromEvent(event) {
       body: event.body || 'Email campaign completed.',
       tone: 'success',
     },
+    EMAIL_NUDGE_SENT: {
+      title: event.title || 'Follow-up sent',
+      body: event.body || 'Nudge email sent.',
+      tone: 'success',
+    },
     EMAIL_CAMPAIGN_PAUSED: {
       title: 'Campaign paused',
       body: event.body || 'Email campaign was paused.',
@@ -150,8 +155,9 @@ export async function notifyViaServiceWorker(payload) {
   if (Notification.permission !== 'granted') return false
 
   const origin = window.location.origin
-  // Absolute URLs — relative paths often fail in SW/Notification and show a blank/white dot
+  // Large tray icon = full-color logo; status-bar badge = white silhouette (Android)
   const appIcon = `${origin}/icons/icon-192.png`
+  const appBadge = `${origin}/icons/badge-96.png`
 
   const body = {
     title: payload.title,
@@ -159,7 +165,7 @@ export async function notifyViaServiceWorker(payload) {
     tag: payload.tag || `notif-${Date.now()}`,
     href: payload.href || '/compose',
     icon: payload.icon || appIcon,
-    badge: payload.badge || appIcon,
+    badge: payload.badge || appBadge,
   }
 
   const options = {
@@ -209,13 +215,14 @@ export function browserPayloadFromItem(item) {
   if (!item) return null
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const appIcon = origin ? `${origin}/icons/icon-192.png` : '/icons/icon-192.png'
+  const appBadge = origin ? `${origin}/icons/badge-96.png` : '/icons/badge-96.png'
   return {
     title: item.title,
     body: item.body,
     tag: item.id || item.tag || `notif-${item.at || Date.now()}`,
     href: item.href || '/compose',
     icon: appIcon,
-    badge: appIcon,
+    badge: appBadge,
   }
 }
 

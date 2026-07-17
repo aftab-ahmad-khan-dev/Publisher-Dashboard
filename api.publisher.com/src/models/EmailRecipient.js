@@ -55,6 +55,9 @@ const emailRecipientSchema = new mongoose.Schema(
     meetingReminderSentAt: Date,
     /** When guest was emailed Meet link + time confirmation */
     meetingConfirmSentAt: Date,
+    /** Last follow-up / final-call / reason nudge sent */
+    lastNudgeType: { type: String, default: '' },
+    lastNudgeAt: Date,
     /** inbox | junk — soft trash for mailbox UI */
     mailboxFolder: {
       type: String,

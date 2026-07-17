@@ -33,6 +33,7 @@ import { refreshGmailTokenIfNeeded, getGmailAccessToken, calendarAuthErrorMessag
 import { testGmailConnection } from '../lib/gmailSend.js'
 import { canSendGmail, isSmtpConfigured } from '../lib/platforms.js'
 import { requirePlanFeature } from '../middleware/planGate.js'
+import { broadcastEvent } from '../lib/events.js'
 
 const router = Router()
 
@@ -98,6 +99,8 @@ function mapRecipient(doc) {
     meetingScheduledAt: doc.meetingScheduledAt?.toISOString?.() || doc.meetingScheduledAt,
     meetingTimeZone: doc.meetingTimeZone || '',
     meetingNotes: doc.meetingNotes || '',
+    lastNudgeType: doc.lastNudgeType || '',
+    lastNudgeAt: doc.lastNudgeAt?.toISOString?.() || doc.lastNudgeAt || null,
     calendarEventId: doc.calendarEventId || '',
     mailboxFolder: doc.mailboxFolder === 'junk' ? 'junk' : 'inbox',
     gmailMessageId: doc.gmailMessageId,
@@ -455,7 +458,10 @@ router.get('/email/mailbox', async (req, res, next) => {
   try {
     const folder = String(req.query.folder || 'sent').toLowerCase()
     const q = String(req.query.q || '').trim()
-    const limit = Math.min(Number(req.query.limit) || 50, 200)
+    const meetingStatus = String(req.query.meetingStatus || '').trim()
+    const page = Math.max(1, Number(req.query.page) || 1)
+    const limit = Math.min(Math.max(Number(req.query.limit) || 40, 1), 100)
+    const skip = (page - 1) * limit
     const campaignId = req.query.campaignId
 
     const filter = { workspaceId: req.workspaceId }
@@ -484,21 +490,29 @@ router.get('/email/mailbox', async (req, res, next) => {
       }
     }
 
+    if (meetingStatus && meetingStatus !== 'all') {
+      filter.meetingStatus = meetingStatus
+    }
+
     if (q) {
+      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
       const textMatch = {
         $or: [
-          { email: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
-          { name: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
-          { company: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
-          { renderedSubject: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+          { email: rx },
+          { name: rx },
+          { company: rx },
+          { renderedSubject: rx },
+          { 'mergeData.name': rx },
+          { 'mergeData.company': rx },
         ],
       }
       if (filter.$and) filter.$and.push(textMatch)
       else Object.assign(filter, textMatch)
     }
 
-    const [recipients, counts, junkCount, sent24h] = await Promise.all([
-      EmailRecipient.find(filter).sort({ updatedAt: -1 }).limit(limit).lean(),
+    const [recipients, total, counts, junkCount, sent24h] = await Promise.all([
+      EmailRecipient.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
+      EmailRecipient.countDocuments(filter),
       EmailRecipient.aggregate([
         {
           $match: {
@@ -540,6 +554,10 @@ router.get('/email/mailbox', async (req, res, next) => {
     res.json({
       ok: true,
       folder,
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
       recipients: recipients.map(mapRecipient),
       folderCounts,
       sent24h,
@@ -674,18 +692,77 @@ router.get('/email/mailbox/:id', async (req, res, next) => {
 /** Processed / in-flight recipients as a flat table */
 router.get('/email/processed', async (req, res, next) => {
   try {
-    const limit = Math.min(Number(req.query.limit) || 200, 500)
+    const page = Math.max(1, Number(req.query.page) || 1)
+    const limit = Math.min(Math.max(Number(req.query.limit) || 25, 1), 100)
+    const skip = (page - 1) * limit
+    const q = String(req.query.q || '').trim()
+    const status = String(req.query.status || '').trim()
+    const meetingStatus = String(req.query.meetingStatus || '').trim()
+    const engagement = String(req.query.engagement || '').trim() // opened | clicked | meeting_clicked | engaged
     const campaignId = req.query.campaignId
-    const filter = {
+
+    const base = {
       workspaceId: req.workspaceId,
       status: { $in: ['sent', 'opened', 'clicked', 'failed', 'queued', 'sending'] },
     }
-    if (campaignId) filter.campaignId = campaignId
+    if (campaignId) base.campaignId = campaignId
 
-    const recipients = await EmailRecipient.find(filter)
-      .sort({ updatedAt: -1 })
-      .limit(limit)
-      .lean()
+    const filter = { ...base }
+    if (status && status !== 'all') {
+      filter.status = status
+    }
+    if (meetingStatus && meetingStatus !== 'all') {
+      filter.meetingStatus = meetingStatus
+    }
+    if (engagement === 'opened') {
+      filter.$or = [
+        { openCount: { $gt: 0 } },
+        { openedAt: { $exists: true, $ne: null } },
+        { status: { $in: ['opened', 'clicked'] } },
+      ]
+    } else if (engagement === 'clicked') {
+      filter.$or = [
+        { clickCount: { $gt: 0 } },
+        { clickedAt: { $exists: true, $ne: null } },
+        { status: 'clicked' },
+      ]
+    } else if (engagement === 'meeting_clicked') {
+      filter.$or = [
+        { meetingStatus: 'link_clicked' },
+        { meetingClickedAt: { $exists: true, $ne: null } },
+      ]
+    } else if (engagement === 'engaged') {
+      filter.$or = [
+        { openCount: { $gt: 0 } },
+        { openedAt: { $exists: true, $ne: null } },
+        { status: { $in: ['opened', 'clicked'] } },
+        { meetingStatus: { $in: ['link_clicked', 'invited'] } },
+        { meetingClickedAt: { $exists: true, $ne: null } },
+      ]
+    }
+
+    if (q) {
+      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+      const textMatch = {
+        $or: [{ email: rx }, { name: rx }, { company: rx }, { 'mergeData.name': rx }, { 'mergeData.company': rx }],
+      }
+      filter.$and = [...(filter.$and || []), textMatch]
+    }
+
+    const [total, meetingsBooked, recipients] = await Promise.all([
+      EmailRecipient.countDocuments(base),
+      EmailRecipient.countDocuments({
+        workspaceId: req.workspaceId,
+        meetingStatus: 'scheduled',
+      }),
+      EmailRecipient.find(filter)
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ])
+
+    const filteredTotal = await EmailRecipient.countDocuments(filter)
 
     const campaignIds = [...new Set(recipients.map((r) => String(r.campaignId)))]
     const campaigns = await EmailCampaign.find({ _id: { $in: campaignIds } })
@@ -694,8 +771,19 @@ router.get('/email/processed', async (req, res, next) => {
     const byId = Object.fromEntries(campaigns.map((c) => [String(c._id), c]))
     const defaultLink = await resolveBookingUrl(req.workspaceId)
 
+    const { isNudgeEligible } = await import('../lib/nudgeEmails.js')
+
     res.json({
       ok: true,
+      page,
+      limit,
+      total: filteredTotal,
+      totalPages: Math.max(1, Math.ceil(filteredTotal / limit)),
+      counts: {
+        processed: total,
+        meetingsBooked,
+        filtered: filteredTotal,
+      },
       rows: recipients.map((r) => {
         const c = byId[String(r.campaignId)]
         const displayName =
@@ -711,10 +799,119 @@ router.get('/email/processed', async (req, res, next) => {
             c?.subject || '',
           ),
           campaignStatus: c?.status || '',
-          campaignMeetingLink:
-            r.meetingLink || c?.meetingLink || defaultLink,
+          campaignMeetingLink: r.meetingLink || c?.meetingLink || defaultLink,
+          nudgeEligible: isNudgeEligible(r),
         }
       }),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/email/recipients/:id/nudge', requirePlanFeature('email'), async (req, res, next) => {
+  try {
+    const type = String(req.body?.type || '').trim()
+    const { buildNudgeEmail, isNudgeEligible, nudgeTypeMeta } = await import('../lib/nudgeEmails.js')
+    if (!nudgeTypeMeta(type)) {
+      return res.status(400).json({ ok: false, error: 'Invalid nudge type.' })
+    }
+
+    const recipient = await EmailRecipient.findOne({
+      _id: req.params.id,
+      workspaceId: req.workspaceId,
+    })
+    if (!recipient) return res.status(404).json({ ok: false, error: 'Recipient not found' })
+    if (!isNudgeEligible(recipient)) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Nudge only for leads who opened mail or clicked the meeting link (and have not booked yet).',
+      })
+    }
+
+    const config = await getWorkspaceConfig(req.workspaceId)
+    if (!canSendGmail(config.gmail)) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Mail is not ready. Set SMTP_* or connect Gmail.',
+      })
+    }
+
+    const bookingUrl =
+      (await resolveBookingUrl(req.workspaceId, recipient.meetingLink)) ||
+      recipient.mergeData?.meetingLink ||
+      ''
+
+    const payload = buildNudgeEmail({
+      type,
+      recipient,
+      bookingUrl,
+      signatureName: process.env.ADMIN_NAME?.trim() || 'Aftab',
+      signatureSite: process.env.ADMIN_SITE?.trim() || 'https://vorkspro.com',
+    })
+
+    let accessToken = null
+    let from =
+      config.gmail?.fromEmail ||
+      process.env.FROM_EMAIL?.trim() ||
+      process.env.SMTP_EMAIL?.trim() ||
+      ''
+
+    try {
+      await refreshGmailTokenIfNeeded(req.workspaceId)
+      const gmailAuth = await getGmailAccessToken(req.workspaceId)
+      accessToken = gmailAuth.accessToken
+      from = gmailAuth.fromEmail || from
+    } catch {
+      /* SMTP fallback */
+    }
+
+    const to = recipient.name
+      ? `"${recipient.name}" <${recipient.email}>`
+      : recipient.email
+
+    let result
+    if (accessToken) {
+      const { sendGmailMessage } = await import('../lib/gmailSend.js')
+      result = await sendGmailMessage({
+        accessToken,
+        from,
+        to,
+        subject: payload.subject,
+        text: payload.text,
+        html: payload.html,
+      })
+    } else {
+      const { sendMail, isMailerConfigured } = await import('../lib/mailer.js')
+      if (!isMailerConfigured()) {
+        return res.status(400).json({ ok: false, error: 'No mail transport ready.' })
+      }
+      result = await sendMail({
+        to,
+        subject: payload.subject,
+        text: payload.text,
+        html: payload.html,
+      })
+    }
+
+    recipient.lastNudgeType = type
+    recipient.lastNudgeAt = new Date()
+    await recipient.save()
+
+    broadcastEvent('EMAIL_NUDGE_SENT', {
+      workspaceId: req.workspaceId,
+      type,
+      email: recipient.email,
+      title: `${payload.label} sent`,
+      body: `Sent to ${recipient.email}`,
+      at: Date.now(),
+    })
+
+    res.json({
+      ok: true,
+      type,
+      messageId: result?.messageId || null,
+      recipient: mapRecipient(recipient),
     })
   } catch (err) {
     next(err)
@@ -724,8 +921,12 @@ router.get('/email/processed', async (req, res, next) => {
 /** Meeting pipeline: invited / clicked / scheduled */
 router.get('/email/meetings', async (req, res, next) => {
   try {
-    const limit = Math.min(Number(req.query.limit) || 100, 300)
+    const page = Math.max(1, Number(req.query.page) || 1)
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50)
+    const skip = (page - 1) * limit
     const autoSync = String(req.query.sync || '') === '1'
+    const meetingStatus = String(req.query.meetingStatus || '').trim()
+    const q = String(req.query.q || '').trim()
 
     let syncResult = null
     if (autoSync) {
@@ -741,7 +942,7 @@ router.get('/email/meetings', async (req, res, next) => {
       }
     }
 
-    const recipients = await EmailRecipient.find({
+    const filter = {
       workspaceId: req.workspaceId,
       $or: [
         { meetingStatus: { $in: ['invited', 'link_clicked', 'scheduled', 'completed', 'no_show'] } },
@@ -749,10 +950,41 @@ router.get('/email/meetings', async (req, res, next) => {
         { meetingScheduledAt: { $exists: true, $ne: null } },
         { calendarEventId: { $exists: true, $nin: [null, ''] } },
       ],
-    })
-      .sort({ meetingScheduledAt: -1, meetingClickedAt: -1, updatedAt: -1 })
-      .limit(limit)
-      .lean()
+    }
+
+    if (meetingStatus && meetingStatus !== 'all') {
+      filter.meetingStatus = meetingStatus
+      delete filter.$or
+    }
+
+    if (q) {
+      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+      filter.$and = [
+        ...(filter.$and || []),
+        {
+          $or: [
+            { email: rx },
+            { name: rx },
+            { company: rx },
+            { 'mergeData.name': rx },
+            { 'mergeData.company': rx },
+          ],
+        },
+      ]
+    }
+
+    const [total, meetingsBooked, recipients] = await Promise.all([
+      EmailRecipient.countDocuments(filter),
+      EmailRecipient.countDocuments({
+        workspaceId: req.workspaceId,
+        meetingStatus: 'scheduled',
+      }),
+      EmailRecipient.find(filter)
+        .sort({ meetingScheduledAt: -1, meetingClickedAt: -1, updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ])
 
     const campaignIds = [...new Set(recipients.map((r) => String(r.campaignId)))]
     const campaigns = await EmailCampaign.find({ _id: { $in: campaignIds } })
@@ -764,6 +996,14 @@ router.get('/email/meetings', async (req, res, next) => {
 
     res.json({
       ok: true,
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      counts: {
+        pipeline: total,
+        meetingsBooked,
+      },
       meetingLink: defaultLink,
       calendarConnected: isCalendarConnected(config),
       calendarBookingUrl: config.gmail?.calendarBookingUrl || '',
@@ -800,7 +1040,6 @@ router.get('/email/meetings', async (req, res, next) => {
           ...mapRecipient(r),
           name: displayName || r.name || '',
           campaignName: displayCampaignName(c),
-          // Real Meet/join URL only — do not fall back to booking page here
           meetingLink: r.meetingLink || '',
           bookingLink: defaultLink || c?.meetingLink || '',
           meetingScheduledAt: scheduledAt,
@@ -875,11 +1114,32 @@ router.post('/email/meetings/remove', async (req, res, next) => {
 
 router.get('/email/campaigns', async (req, res, next) => {
   try {
-    const campaigns = await EmailCampaign.find({ workspaceId: req.workspaceId })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean()
-    res.json({ ok: true, campaigns: campaigns.map(mapCampaign) })
+    const page = Math.max(1, Number(req.query.page) || 1)
+    const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100)
+    const skip = (page - 1) * limit
+    const q = String(req.query.q || '').trim()
+    const status = String(req.query.status || '').trim()
+
+    const filter = { workspaceId: req.workspaceId }
+    if (status && status !== 'all') filter.status = status
+    if (q) {
+      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+      filter.$or = [{ name: rx }, { subject: rx }]
+    }
+
+    const [total, campaigns] = await Promise.all([
+      EmailCampaign.countDocuments(filter),
+      EmailCampaign.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    ])
+
+    res.json({
+      ok: true,
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      campaigns: campaigns.map(mapCampaign),
+    })
   } catch (err) {
     next(err)
   }

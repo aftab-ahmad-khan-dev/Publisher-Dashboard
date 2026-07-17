@@ -13,7 +13,8 @@ self.addEventListener('activate', (event) => {
 })
 
 const NOTIFICATION_ICON = new URL('/icons/icon-192.png', self.location.origin).href
-const NOTIFICATION_BADGE = new URL('/icons/icon-192.png', self.location.origin).href
+/** Android status-bar badge must be white-on-transparent silhouette */
+const NOTIFICATION_BADGE = new URL('/icons/badge-96.png', self.location.origin).href
 
 function showBrowserNotification(payload = {}) {
   const title = payload.title || 'Publisher Suite'
