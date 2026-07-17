@@ -308,6 +308,10 @@ export async function getEmailSettings() {
   return apiFetch("/email/settings");
 }
 
+export async function getOverview() {
+  return apiFetch("/email/overview");
+}
+
 export async function listEmailTemplates(params = {}) {
   const qs = new URLSearchParams();
   if (params.type) qs.set("type", params.type);

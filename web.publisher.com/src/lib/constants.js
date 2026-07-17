@@ -115,6 +115,7 @@ export const PLATFORM_META = {
 }
 
 export const NAV_ITEMS = [
+  { path: '/overview', label: 'Overview', icon: 'overview' },
   { path: '/compose', label: 'Compose', icon: 'compose' },
   { path: '/email', label: 'Mail Box', icon: 'email' },
   { path: '/bulk', label: 'Bulk Upload', icon: 'bulk' },
@@ -128,6 +129,18 @@ export const NAV_ITEMS = [
 
 /** Grouped sidebar navigation for premium SaaS layout. */
 export const NAV_GROUPS = [
+  {
+    id: 'home',
+    label: 'Home',
+    items: [
+      {
+        path: '/overview',
+        label: 'Overview',
+        icon: 'overview',
+        description: 'Stats & follow-ups',
+      },
+    ],
+  },
   {
     id: 'create',
     label: 'Create',

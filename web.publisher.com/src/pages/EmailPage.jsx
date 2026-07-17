@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAppData } from '../contexts/AppDataContext'
 import { isLivePublishing } from '../lib/api'
 import { isLocalApi } from '../lib/apiBaseUrl'
@@ -379,12 +379,39 @@ function MeetingInviteControls(props) {
 export default function EmailPage() {
   const { apiConfig, showToast, runWithLoading } = useAppData()
   const live = isLivePublishing()
+  const [searchParams, setSearchParams] = useSearchParams()
   const mailReady =
     isGmailSendReady(apiConfig?.gmail) || isGmailConfigured(apiConfig?.gmail)
   const mailTransport =
     apiConfig?.gmail?.transport || (apiConfig?.gmail?.smtpConfigured ? 'smtp' : null)
 
-  const [tab, setTab] = useState('mailbox')
+  const initialTab = (() => {
+    const t = String(searchParams.get('tab') || '').trim()
+    return TABS.some((x) => x.id === t) ? t : 'mailbox'
+  })()
+  const [tab, setTabState] = useState(initialTab)
+
+  const setTab = useCallback(
+    (next) => {
+      setTabState(next)
+      setSearchParams(
+        (prev) => {
+          const p = new URLSearchParams(prev)
+          p.set('tab', next)
+          return p
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
+  useEffect(() => {
+    const t = String(searchParams.get('tab') || '').trim()
+    if (TABS.some((x) => x.id === t) && t !== tab) setTabState(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
   const [campaigns, setCampaigns] = useState([])
   const [processed, setProcessed] = useState([])
   const [meetings, setMeetings] = useState([])

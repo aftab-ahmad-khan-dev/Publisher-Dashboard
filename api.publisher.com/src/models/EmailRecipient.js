@@ -37,6 +37,24 @@ const emailRecipientSchema = new mongoose.Schema(
     clickedAt: Date,
     clickCount: { type: Number, default: 0 },
     lastClickedUrl: String,
+    /** calendar | portfolio | other — last classified click */
+    lastClickKind: {
+      type: String,
+      enum: ['', 'calendar', 'portfolio', 'other'],
+      default: '',
+    },
+    /** Recent click history for overview link-mix stats */
+    clickEvents: [
+      {
+        url: { type: String, default: '' },
+        kind: {
+          type: String,
+          enum: ['calendar', 'portfolio', 'other'],
+          default: 'other',
+        },
+        at: { type: Date, default: Date.now },
+      },
+    ],
     /** none | invited | link_clicked | scheduled | completed | no_show */
     meetingStatus: {
       type: String,

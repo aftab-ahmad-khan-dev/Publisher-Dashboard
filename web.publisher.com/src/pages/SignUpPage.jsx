@@ -7,7 +7,7 @@ export default function SignUpPage() {
   const { isLoaded, isSignedIn } = useAuth()
 
   if (isLoaded && isSignedIn) {
-    return <Navigate to="/compose" replace />
+    return <Navigate to="/overview" replace />
   }
 
   return (
@@ -49,7 +49,7 @@ export default function SignUpPage() {
               routing="path"
               path="/sign-up"
               signInUrl="/sign-in"
-              forceRedirectUrl="/compose"
+              forceRedirectUrl="/overview"
               appearance={clerkAppearance}
             />
           </div>

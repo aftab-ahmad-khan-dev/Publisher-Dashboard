@@ -23,6 +23,7 @@ import ApiConfigPage from './pages/ApiConfigPage'
 import GuidePage from './pages/GuidePage'
 import BulkUploadPage from './pages/BulkUploadPage'
 import EmailPage from './pages/EmailPage'
+import OverviewPage from './pages/OverviewPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import BillingPage from './pages/BillingPage'
 import AppToaster from './components/AppToaster'
@@ -82,6 +83,7 @@ function AppRoutes() {
         <Routes location={location}>
           <Route element={<ProtectedRoute />}>
             <Route element={<DashboardLayout />}>
+              <Route path="overview" element={<OverviewPage />} />
               <Route path="compose" element={<ComposePage />} />
               <Route path="bulk" element={<BulkUploadPage />} />
               <Route path="email" element={<EmailPage />} />
@@ -94,7 +96,7 @@ function AppRoutes() {
               <Route path="admin/users" element={<AdminUsersPage />} />
             </Route>
           </Route>
-          <Route path="*" element={<Navigate to="/compose" replace />} />
+          <Route path="*" element={<Navigate to="/overview" replace />} />
         </Routes>
       </motion.div>
     </AnimatePresence>

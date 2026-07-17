@@ -6,7 +6,7 @@ export default function LoginPage() {
   const { isLoaded, isSignedIn } = useAuth();
 
   if (isLoaded && isSignedIn) {
-    return <Navigate to='/compose' replace />;
+    return <Navigate to='/overview' replace />;
   }
 
   return (
@@ -55,7 +55,7 @@ export default function LoginPage() {
               routing='path'
               path='/sign-in'
               signUpUrl='/sign-up'
-              forceRedirectUrl='/compose'
+              forceRedirectUrl='/overview'
               appearance={clerkAppearance}
             />
           </div>

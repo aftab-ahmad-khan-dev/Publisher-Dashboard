@@ -56,6 +56,7 @@ export const PLAN_META = {
 
 /** Path → feature key used for gating */
 export const PATH_FEATURE = {
+  '/overview': 'compose',
   '/compose': 'compose',
   '/bulk': 'bulk',
   '/email': 'email',

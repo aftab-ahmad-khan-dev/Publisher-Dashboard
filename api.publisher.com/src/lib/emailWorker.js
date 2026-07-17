@@ -14,6 +14,7 @@ import { getWorkspaceConfig } from './configStore.js'
 import { getCalendarBookingUrl, isBookingUrl } from './googleCalendar.js'
 import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from './meetingCta.js'
 import { buildNichePain, buildNichePainShort } from './nichePain.js'
+import { classifyClickUrl, appendClickEvent } from './clickClassify.js'
 
 const TRANSPARENT_GIF = Buffer.from(
   'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
@@ -77,12 +78,10 @@ export async function recordEmailClick(trackingId, clickedUrl = '') {
   if (clickedUrl) recipient.lastClickedUrl = String(clickedUrl).slice(0, 2000)
 
   const url = String(clickedUrl || '')
-  const isMeetingClick =
-    /calendar\.google\.com/i.test(url) ||
-    /calendar\.app\.google/i.test(url) ||
-    /appointments/i.test(url) ||
-    /calendly\.com/i.test(url) ||
-    (recipient.meetingLink && url.includes(recipient.meetingLink.slice(0, 40)))
+  const clickKind = classifyClickUrl(url, recipient)
+  appendClickEvent(recipient, url, clickKind)
+
+  const isMeetingClick = clickKind === 'calendar'
 
   if (isMeetingClick) {
     const firstMeetingClick = !recipient.meetingClickedAt

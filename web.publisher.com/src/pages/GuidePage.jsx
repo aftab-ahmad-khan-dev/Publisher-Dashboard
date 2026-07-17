@@ -85,6 +85,19 @@ const GUIDES = [
     ],
     note: 'Open tracking needs a public API URL — set API_PUBLIC_URL on the server.',
   },
+  {
+    key: 'linkedin-export',
+    title: 'LinkedIn contact export (browser extension)',
+    portal: ['Setup Guide', 'https://publisher-dashboard.vercel.app/guide'],
+    fields: ['Load unpacked', 'Export CSV', 'Upload in Mail Box'],
+    steps: [
+      'Open chrome://extensions (or Edge/Brave equivalent) and enable Developer mode.',
+      'Click “Load unpacked” and select the repo folder extensions/linkedin-export (see README inside that folder).',
+      'Open a LinkedIn profile or people search page you can already see while logged in.',
+      'Click the extension → “Scan page & download CSV”, then upload that CSV in Mail Box → Campaigns as a lead source.',
+    ],
+    note: 'Exports only the visible DOM on the current tab (name, headline, company, location, profile URL). It is not an Apollo-style scraper and does not find emails LinkedIn hides.',
+  },
 ]
 
 function GuideCard({ g }) {
@@ -97,6 +110,8 @@ function GuideCard({ g }) {
           <span className="flex h-10 w-10 items-center justify-center rounded-[28%] bg-[#EA4335] text-sm font-bold text-white">
             M
           </span>
+        ) : g.key === 'linkedin-export' ? (
+          <PlatformIcon platform="linkedin" size="lg" shape="squircle" />
         ) : (
           <PlatformIcon platform={g.key} size="lg" shape="squircle" />
         )}

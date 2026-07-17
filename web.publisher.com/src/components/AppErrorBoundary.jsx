@@ -50,7 +50,7 @@ export default class AppErrorBoundary extends Component {
               Reload app
             </button>
             <a
-              href="/compose"
+              href="/overview"
               className="btn-secondary px-5 py-2.5 text-sm text-center"
               onClick={() => this.setState({ error: null })}
             >

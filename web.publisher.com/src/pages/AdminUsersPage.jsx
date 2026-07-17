@@ -189,7 +189,7 @@ export default function AdminUsersPage() {
   }, [ready, isAdmin, load])
 
   if (ready && !isAdmin) {
-    return <Navigate to="/compose" replace />
+    return <Navigate to="/overview" replace />
   }
 
   const activeCount = users.filter((u) => u.hasApiConfig).length

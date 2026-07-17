@@ -93,6 +93,7 @@ function mapRecipient(doc) {
     clickedAt: doc.clickedAt?.toISOString?.() || doc.clickedAt,
     clickCount: doc.clickCount || 0,
     lastClickedUrl: doc.lastClickedUrl || '',
+    lastClickKind: doc.lastClickKind || '',
     meetingStatus: doc.meetingStatus || 'none',
     meetingLink: doc.meetingLink || doc.mergeData?.meetingLink || '',
     meetingClickedAt: doc.meetingClickedAt?.toISOString?.() || doc.meetingClickedAt,
@@ -689,6 +690,17 @@ router.get('/email/mailbox/:id', async (req, res, next) => {
       recipient: mapRecipient(recipient),
       campaign: campaign ? mapCampaign(campaign) : null,
     })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** Workspace dashboard stats — mail rates, link mix, meetings, follow-ups */
+router.get('/email/overview', async (req, res, next) => {
+  try {
+    const { buildWorkspaceOverview } = await import('../lib/overview.js')
+    const overview = await buildWorkspaceOverview(req.workspaceId)
+    res.json({ ok: true, ...overview })
   } catch (err) {
     next(err)
   }

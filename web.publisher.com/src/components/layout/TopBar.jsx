@@ -17,7 +17,7 @@ function Breadcrumb() {
     <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-sm">
       <BrandLogo className="h-7 w-7 shrink-0 lg:hidden" />
       <div className="hidden min-w-0 items-center gap-2 sm:flex">
-        <Link to="/compose" className="truncate font-medium text-slate-500 transition hover:text-slate-300">
+        <Link to="/overview" className="truncate font-medium text-slate-500 transition hover:text-slate-300">
           Suite
         </Link>
         <span className="text-slate-700">/</span>
@@ -64,9 +64,9 @@ export default function TopBar() {
             <OrganizationSwitcher
               appearance={clerkAppearance}
               hidePersonal={false}
-              afterCreateOrganizationUrl="/compose"
-              afterSelectOrganizationUrl="/compose"
-              afterSelectPersonalUrl="/compose"
+              afterCreateOrganizationUrl="/overview"
+              afterSelectOrganizationUrl="/overview"
+              afterSelectPersonalUrl="/overview"
             />
             <UserButton appearance={clerkAppearance} afterSignOutUrl="/sign-in" />
           </div>
