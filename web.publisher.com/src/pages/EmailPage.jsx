@@ -97,7 +97,7 @@ function StatusChip({ status }) {
   )
 }
 
-function fmtTime(iso) {
+function fmtTime(iso, timeZone) {
   if (!iso) return '—'
   try {
     return new Date(iso).toLocaleString(undefined, {
@@ -107,9 +107,31 @@ function fmtTime(iso) {
       year: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
+      timeZoneName: 'short',
+      ...(timeZone ? { timeZone } : {}),
     })
   } catch {
-    return '—'
+    try {
+      return new Date(iso).toLocaleString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZoneName: 'short',
+      })
+    } catch {
+      return '—'
+    }
+  }
+}
+
+function localTimeZoneId() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+  } catch {
+    return ''
   }
 }
 
@@ -122,7 +144,7 @@ function inputClass() {
 }
 
 /**
- * Clear booking panel: lead’s selected time + Meet link + admin create-if-missing.
+ * Clear booking panel: lead’s selected time + your local conversion + Meet link + admin create.
  */
 function MeetingBookingBlock({
   meeting,
@@ -143,10 +165,21 @@ function MeetingBookingBlock({
     }
   }, [meeting.id, meeting.meetingScheduledAt])
 
-  const leadWhen =
-    meeting.slotLabel ||
-    (meeting.meetingScheduledAt ? fmtTime(meeting.meetingScheduledAt) : '')
-  const hasLeadBooking = Boolean(leadWhen)
+  const iso = meeting.meetingScheduledAt || ''
+  const eventTz = String(meeting.meetingTimeZone || '').trim()
+  const myTz = localTimeZoneId()
+  const hasLeadBooking = Boolean(iso || meeting.slotLabel)
+
+  const leadWhen = iso
+    ? fmtTime(iso, eventTz || undefined)
+    : meeting.slotLabel || ''
+  const leadDisplay =
+    (eventTz ? leadWhen : meeting.slotLabel) || leadWhen || meeting.slotLabel
+  const myWhen = iso ? fmtTime(iso) : ''
+  const sameZone =
+    Boolean(eventTz && myTz && eventTz.toLowerCase() === myTz.toLowerCase()) ||
+    (Boolean(myWhen) && leadDisplay === myWhen)
+
   const meetUrl = isMeetJoinUrl(meeting.meetingLink) ? meeting.meetingLink : ''
   const otherLink =
     meeting.meetingLink && !meetUrl ? String(meeting.meetingLink).trim() : ''
@@ -155,15 +188,32 @@ function MeetingBookingBlock({
     <div className={`space-y-2.5 ${compact ? 'min-w-0' : 'min-w-[260px] max-w-sm'}`}>
       <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.07] px-2.5 py-2">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-400/90">
-          Lead selected
+          When
         </p>
         {hasLeadBooking ? (
-          <>
-            <p className="mt-0.5 text-[12px] font-semibold leading-snug text-emerald-200">
-              {leadWhen}
-            </p>
-            <p className="mt-0.5 text-[10px] text-slate-500">From Google Calendar booking</p>
-          </>
+          <div className="mt-1 space-y-2">
+            <div>
+              <p className="text-[10px] font-medium text-emerald-400/80">
+                Lead selected{eventTz ? ` · ${eventTz.replace(/_/g, ' ')}` : ''}
+              </p>
+              <p className="text-[12px] font-semibold leading-snug text-emerald-200">
+                {leadDisplay}
+              </p>
+            </div>
+            {myWhen ? (
+              <div className="border-t border-emerald-500/15 pt-2">
+                <p className="text-[10px] font-medium text-sky-400/80">
+                  In your region{myTz ? ` · ${myTz.replace(/_/g, ' ')}` : ''}
+                </p>
+                <p className="text-[12px] font-semibold leading-snug text-sky-200">
+                  {myWhen}
+                </p>
+                {sameZone ? (
+                  <p className="mt-0.5 text-[10px] text-slate-500">Same clock time as the lead</p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         ) : (
           <p className="mt-0.5 text-[12px] text-slate-500">Not booked yet</p>
         )}

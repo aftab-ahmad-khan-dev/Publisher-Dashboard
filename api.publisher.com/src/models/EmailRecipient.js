@@ -46,6 +46,8 @@ const emailRecipientSchema = new mongoose.Schema(
     meetingLink: { type: String, default: '' },
     meetingClickedAt: Date,
     meetingScheduledAt: Date,
+    /** IANA timezone from the Calendar event (lead booking zone), e.g. Europe/Stockholm */
+    meetingTimeZone: { type: String, default: '' },
     meetingNotes: { type: String, default: '' },
     /** Google Calendar event id when invited/synced */
     calendarEventId: { type: String, default: '' },

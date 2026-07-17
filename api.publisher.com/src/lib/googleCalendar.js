@@ -522,6 +522,10 @@ export async function syncMeetingsFromCalendar(workspaceId, accessToken) {
             }
           }
         }
+        if (timeZone && recipient.meetingTimeZone !== timeZone) {
+          recipient.meetingTimeZone = timeZone
+          changed = true
+        }
 
         const advanceable = ['none', 'invited', 'link_clicked']
         if (advanceable.includes(prevStatus)) {

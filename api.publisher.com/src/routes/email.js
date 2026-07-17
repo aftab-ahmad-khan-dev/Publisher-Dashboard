@@ -96,6 +96,7 @@ function mapRecipient(doc) {
     meetingLink: doc.meetingLink || doc.mergeData?.meetingLink || '',
     meetingClickedAt: doc.meetingClickedAt?.toISOString?.() || doc.meetingClickedAt,
     meetingScheduledAt: doc.meetingScheduledAt?.toISOString?.() || doc.meetingScheduledAt,
+    meetingTimeZone: doc.meetingTimeZone || '',
     meetingNotes: doc.meetingNotes || '',
     calendarEventId: doc.calendarEventId || '',
     mailboxFolder: doc.mailboxFolder === 'junk' ? 'junk' : 'inbox',
@@ -777,6 +778,7 @@ router.get('/email/meetings', async (req, res, next) => {
         const scheduledAt = r.meetingScheduledAt
           ? new Date(r.meetingScheduledAt).toISOString()
           : null
+        const eventTz = String(r.meetingTimeZone || '').trim()
         let slotLabel = ''
         if (scheduledAt) {
           try {
@@ -788,6 +790,7 @@ router.get('/email/meetings', async (req, res, next) => {
               hour: 'numeric',
               minute: '2-digit',
               timeZoneName: 'short',
+              ...(eventTz ? { timeZone: eventTz } : {}),
             }).format(new Date(scheduledAt))
           } catch {
             slotLabel = scheduledAt
@@ -801,6 +804,7 @@ router.get('/email/meetings', async (req, res, next) => {
           meetingLink: r.meetingLink || '',
           bookingLink: defaultLink || c?.meetingLink || '',
           meetingScheduledAt: scheduledAt,
+          meetingTimeZone: eventTz,
           slotLabel,
         }
       }),
@@ -818,9 +822,13 @@ router.patch('/email/meetings/:id', async (req, res, next) => {
     })
     if (!recipient) return res.status(404).json({ ok: false, error: 'Not found' })
 
-    const { meetingStatus, meetingScheduledAt, meetingNotes, meetingLink } = req.body || {}
+    const { meetingStatus, meetingScheduledAt, meetingNotes, meetingLink, meetingTimeZone } =
+      req.body || {}
     if (meetingStatus) recipient.meetingStatus = meetingStatus
     if (meetingScheduledAt) recipient.meetingScheduledAt = new Date(meetingScheduledAt)
+    if (meetingTimeZone != null) {
+      recipient.meetingTimeZone = String(meetingTimeZone).trim().slice(0, 80)
+    }
     if (meetingNotes != null) recipient.meetingNotes = String(meetingNotes).slice(0, 2000)
     if (meetingLink != null) recipient.meetingLink = String(meetingLink).slice(0, 2000)
     await recipient.save()
@@ -1320,6 +1328,8 @@ router.post('/email/calendar/invite', requirePlanFeature('email'), async (req, r
     if (recipient) {
       recipient.meetingStatus = 'scheduled'
       recipient.meetingScheduledAt = start
+      recipient.meetingTimeZone =
+        timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
       if (meetLink) recipient.meetingLink = meetLink
       recipient.calendarEventId = result.eventId || ''
       recipient.meetingReminderSentAt = null
