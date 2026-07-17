@@ -68,8 +68,8 @@ export function notificationFromEvent(event) {
       tone: 'success',
     },
     MEETING_REMINDER: {
-      title: event.title || 'Meeting starting soon',
-      body: event.body || 'Join with the Google Meet link in ~5–10 minutes.',
+      title: event.title || 'Meeting in ~10 min',
+      body: event.body || 'Lead was reminded — meeting starts in about 10 minutes.',
       tone: 'warn',
     },
     EMAIL_CAMPAIGN_DONE: {

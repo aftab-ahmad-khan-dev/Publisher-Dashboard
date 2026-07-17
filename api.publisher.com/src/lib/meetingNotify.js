@@ -1,5 +1,6 @@
 /**
- * Send Meet join emails + 5–10 minute pre-meeting reminders to lead and admin.
+ * Meet join confirmation emails + ~10 minute pre-meeting reminders.
+ * Manual or auto: lead gets mail with Meet link; admin gets in-app + push via SSE.
  */
 import { EmailRecipient } from '../models/EmailRecipient.js'
 import { sendMail, isMailerConfigured } from './mailer.js'
@@ -15,17 +16,24 @@ function adminEmail() {
   )
 }
 
-function formatWhen(isoOrDate) {
+function formatWhen(isoOrDate, timeZone) {
   try {
-    return new Date(isoOrDate).toLocaleString(undefined, {
+    const opts = {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
-    })
+      timeZoneName: 'short',
+    }
+    if (timeZone) opts.timeZone = timeZone
+    return new Date(isoOrDate).toLocaleString(undefined, opts)
   } catch {
-    return String(isoOrDate || '')
+    try {
+      return new Date(isoOrDate).toLocaleString()
+    } catch {
+      return String(isoOrDate || '')
+    }
   }
 }
 
@@ -39,6 +47,33 @@ function escape(s) {
 
 export function isMeetJoinUrl(url) {
   return /meet\.google\.com|hangouts\.google\.com/i.test(String(url || ''))
+}
+
+export function resolveJoinLink(recipient) {
+  let meetLink = String(recipient?.meetingLink || recipient?.mergeData?.meetingLink || '').trim()
+  if (meetLink && !isMeetJoinUrl(meetLink) && !/^https?:\/\//i.test(meetLink)) {
+    meetLink = ''
+  }
+  if (
+    meetLink &&
+    !isMeetJoinUrl(meetLink) &&
+    /calendar\.app\.google|appointments\.google|calendly\.com/i.test(meetLink)
+  ) {
+    // Booking pages are not join links for a reminder
+    meetLink = ''
+  }
+  return meetLink
+}
+
+export function canSendMeetingReminder(recipient) {
+  if (!recipient?.email) return false
+  if (!recipient.meetingScheduledAt) return false
+  const status = recipient.meetingStatus || 'none'
+  if (!['scheduled', 'invited', 'link_clicked'].includes(status)) return false
+  const start = new Date(recipient.meetingScheduledAt).getTime()
+  if (!Number.isFinite(start)) return false
+  // Allow from now until meeting starts (and a small grace after for late manual sends)
+  return start > Date.now() - 5 * 60 * 1000
 }
 
 /**
@@ -67,7 +102,6 @@ export async function emailMeetLinkToParties({
   const hasMeet = isMeetJoinUrl(joinUrl)
   const joinLabel = hasMeet ? 'Join Google Meet' : 'Open meeting details'
 
-  // In-app / SW notification even when SMTP is down — booking confirmation must reach the dashboard
   if (broadcast) {
     broadcastEvent('MEETING_SCHEDULED', {
       workspaceId: workspaceId || undefined,
@@ -95,7 +129,7 @@ export async function emailMeetLinkToParties({
         : '',
       '',
       'Save this email — join with the link at the scheduled time.',
-      'You will also get a reminder about 5–10 minutes before.',
+      'You will also get a reminder about 10 minutes before.',
       '',
       '— Publisher Suite',
     ]
@@ -122,7 +156,7 @@ export async function emailMeetLinkToParties({
       ? `<p style="font-size:12px;"><a href="${escape(calendarHtmlLink)}">Open in Google Calendar</a></p>`
       : ''
   }
-  <p style="font-size:12px;color:#64748b;">You will get a reminder about 5–10 minutes before the meeting.</p>
+  <p style="font-size:12px;color:#64748b;">You will get a reminder about 10 minutes before the meeting.</p>
 </body></html>`
 
   const results = { lead: false, admin: false }
@@ -163,14 +197,132 @@ export async function emailMeetLinkToParties({
 }
 
 /**
- * Find meetings starting in the next ~10 minutes and remind lead and admin once.
+ * Send ~10 min meeting reminder to the lead (Meet link included).
+ * Always notifies admin via in-app + push (SSE → dashboard SW).
+ */
+export async function sendMeetingReminder(recipient, { auto = false, force = false } = {}) {
+  if (!recipient) return { ok: false, error: 'Recipient not found.' }
+  if (!force && !canSendMeetingReminder(recipient)) {
+    return {
+      ok: false,
+      error: 'Reminder only for upcoming booked meetings.',
+    }
+  }
+  if (!force && recipient.meetingReminderSentAt) {
+    return { ok: false, error: 'Reminder already sent for this meeting.', alreadySent: true }
+  }
+
+  const meetLink = resolveJoinLink(recipient)
+  const when = formatWhen(recipient.meetingScheduledAt, recipient.meetingTimeZone || undefined)
+  const name = String(recipient.name || recipient.mergeData?.name || '').trim()
+  const first = name.split(/\s+/).filter(Boolean)[0] || ''
+  const hasJoin = Boolean(meetLink && /^https?:\/\//i.test(meetLink))
+  const hasMeet = isMeetJoinUrl(meetLink)
+
+  const text = [
+    `Hi${first ? ` ${first}` : ''},`,
+    '',
+    'Reminder: you booked a meeting that starts in about 10 minutes.',
+    '',
+    `When: ${when}`,
+    hasJoin
+      ? `${hasMeet ? 'Google Meet' : 'Meeting link'}: ${meetLink}`
+      : 'Open your calendar invite for the join details.',
+    '',
+    'See you shortly.',
+    '',
+    '— Publisher Suite',
+  ].join('\n')
+
+  const html = `<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;color:#0f172a;line-height:1.55;font-size:15px;">
+    <p>Hi${first ? ` ${escape(first)}` : ''},</p>
+    <p><strong>Reminder:</strong> you booked a meeting that starts in about <strong>10 minutes</strong>.</p>
+    <p><strong>When:</strong> ${escape(when)}</p>
+    ${
+      hasJoin
+        ? `<p style="margin:20px 0;">
+      <a href="${escape(meetLink)}" style="display:inline-block;padding:12px 20px;background:#0f3d68;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">
+        ${hasMeet ? 'Join Google Meet' : 'Open meeting link'}
+      </a>
+    </p>
+    <p style="font-size:12px;word-break:break-all;"><a href="${escape(meetLink)}">${escape(meetLink)}</a></p>`
+        : `<p style="font-size:13px;color:#64748b;">Open your Google Calendar invite for the join link.</p>`
+    }
+    <p>See you shortly.</p>
+    <p style="font-size:12px;color:#64748b;">— Publisher Suite</p>
+  </body></html>`
+
+  // Admin dashboard + push even if SMTP is down
+  broadcastEvent('MEETING_REMINDER', {
+    workspaceId: recipient.workspaceId || undefined,
+    title: auto ? 'Auto: meeting in ~10 min' : 'Meeting reminder sent',
+    body: `${recipient.email} · ${when}`,
+    meetLink: meetLink || '',
+    email: recipient.email,
+    href: '/email?tab=meetings',
+    auto: Boolean(auto),
+    at: Date.now(),
+  })
+
+  let mailed = false
+  if (isMailerConfigured() && recipient.email) {
+    try {
+      await sendMail({
+        to: recipient.email,
+        subject: `Reminder — meeting in 10 minutes · ${when}`,
+        text,
+        html,
+      })
+      mailed = true
+    } catch (err) {
+      logger.warn('Meeting reminder email to lead failed', {
+        id: String(recipient._id),
+        error: err.message,
+      })
+    }
+  }
+
+  const admin = adminEmail()
+  if (
+    isMailerConfigured() &&
+    admin &&
+    admin.toLowerCase() !== String(recipient.email || '').toLowerCase()
+  ) {
+    try {
+      await sendMail({
+        to: admin,
+        subject: `${auto ? '[Auto] ' : ''}Starting soon — ${recipient.email} (${when})`,
+        text,
+        html,
+      })
+    } catch (err) {
+      logger.warn('Meeting reminder email to admin failed', { error: err.message })
+    }
+  }
+
+  await EmailRecipient.updateOne(
+    { _id: recipient._id },
+    { $set: { meetingReminderSentAt: new Date() } },
+  )
+
+  return {
+    ok: true,
+    mailed,
+    auto: Boolean(auto),
+    meetLink: meetLink || '',
+    appNotified: true,
+  }
+}
+
+/**
+ * Auto-remind when a meeting is within the next ~10 minutes and admin has not
+ * already sent a reminder.
  */
 export async function runMeetingReminders() {
-  if (!isMailerConfigured()) return { ok: true, sent: 0, skipped: 'no-mailer' }
-
   const now = Date.now()
+  // Fire once in the 10→0 minute window before start
   const windowEnd = new Date(now + 10 * 60 * 1000)
-  const windowStart = new Date(now + 4 * 60 * 1000)
+  const windowStart = new Date(now)
 
   const due = await EmailRecipient.find({
     meetingScheduledAt: { $gte: windowStart, $lte: windowEnd },
@@ -178,79 +330,14 @@ export async function runMeetingReminders() {
     $or: [{ meetingReminderSentAt: null }, { meetingReminderSentAt: { $exists: false } }],
   })
     .limit(40)
-    .lean()
 
   let sent = 0
-  const admin = adminEmail()
-
-  for (const r of due) {
-    let meetLink = String(r.meetingLink || r.mergeData?.meetingLink || '').trim()
-    // Prefer a real Meet URL; booking pages are not join links
-    if (meetLink && !isMeetJoinUrl(meetLink) && !/^https?:\/\//i.test(meetLink)) {
-      meetLink = ''
-    }
-    if (meetLink && !isMeetJoinUrl(meetLink) && /calendar\.app\.google|appointments\.google/i.test(meetLink)) {
-      meetLink = ''
-    }
-
-    const when = formatWhen(r.meetingScheduledAt)
-    const name = r.name || r.mergeData?.name || ''
-    const title = `Meeting with ${name || r.email}`
-    const hasJoin = Boolean(meetLink && /^https?:\/\//i.test(meetLink))
-    const text = [
-      `Reminder: your meeting starts in about 5–10 minutes.`,
-      '',
-      `When: ${when}`,
-      hasJoin ? `Join: ${meetLink}` : 'Open your calendar invite for the join details.',
-      '',
-      '— Publisher Suite',
-    ].join('\n')
-    const html = `<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;color:#0f172a;">
-      <p><strong>Reminder:</strong> your meeting starts in about 5–10 minutes.</p>
-      <p><strong>When:</strong> ${escape(when)}</p>
-      ${
-        hasJoin
-          ? `<p><a href="${escape(meetLink)}" style="display:inline-block;padding:12px 20px;background:#0f3d68;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Join meeting</a></p>
-      <p style="font-size:12px;word-break:break-all;">${escape(meetLink)}</p>`
-          : `<p style="font-size:13px;color:#64748b;">Open your Google Calendar invite for the join link.</p>`
-      }
-    </body></html>`
-
+  for (const recipient of due) {
     try {
-      if (r.email) {
-        await sendMail({
-          to: r.email,
-          subject: `Starting soon — ${when}`,
-          text,
-          html,
-        })
-      }
-      if (admin && admin.toLowerCase() !== String(r.email || '').toLowerCase()) {
-        await sendMail({
-          to: admin,
-          subject: `Starting soon — ${r.email} (${when})`,
-          text,
-          html,
-        })
-      }
-
-      await EmailRecipient.updateOne(
-        { _id: r._id },
-        { $set: { meetingReminderSentAt: new Date() } },
-      )
-
-      broadcastEvent('MEETING_REMINDER', {
-        title: 'Meeting in ~5–10 min',
-        body: `${r.email} · ${when}`,
-        meetLink: meetLink || '',
-        href: '/email?tab=meetings',
-        workspaceId: r.workspaceId || undefined,
-        at: Date.now(),
-      })
-
-      sent += 1
+      const result = await sendMeetingReminder(recipient, { auto: true })
+      if (result.ok) sent += 1
     } catch (err) {
-      logger.warn('Meeting reminder failed', { id: String(r._id), error: err.message })
+      logger.warn('Meeting reminder failed', { id: String(recipient._id), error: err.message })
     }
   }
 

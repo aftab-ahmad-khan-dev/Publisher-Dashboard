@@ -99,6 +99,8 @@ function mapRecipient(doc) {
     meetingScheduledAt: doc.meetingScheduledAt?.toISOString?.() || doc.meetingScheduledAt,
     meetingTimeZone: doc.meetingTimeZone || '',
     meetingNotes: doc.meetingNotes || '',
+    meetingReminderSentAt:
+      doc.meetingReminderSentAt?.toISOString?.() || doc.meetingReminderSentAt || null,
     lastNudgeType: doc.lastNudgeType || '',
     lastNudgeAt: doc.lastNudgeAt?.toISOString?.() || doc.lastNudgeAt || null,
     nudgeAutoStage: doc.nudgeAutoStage || '',
@@ -859,6 +861,45 @@ router.post('/email/recipients/:id/nudge', requirePlanFeature('email'), async (r
       type,
       messageId: result.messageId || null,
       recipient: mapRecipient(recipient),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** Manual ~10 min meeting reminder (Meet link). Auto-sends if admin skips before the window. */
+router.post('/email/recipients/:id/reminder', requirePlanFeature('email'), async (req, res, next) => {
+  try {
+    const recipient = await EmailRecipient.findOne({
+      _id: req.params.id,
+      workspaceId: req.workspaceId,
+    })
+    if (!recipient) return res.status(404).json({ ok: false, error: 'Recipient not found' })
+
+    const { sendMeetingReminder, canSendMeetingReminder } = await import('../lib/meetingNotify.js')
+    if (!canSendMeetingReminder(recipient)) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Reminder only for upcoming booked meetings with a scheduled time.',
+      })
+    }
+
+    const force = Boolean(req.body?.force)
+    const result = await sendMeetingReminder(recipient, { auto: false, force })
+    if (!result.ok) {
+      return res.status(400).json({
+        ok: false,
+        error: result.error || 'Failed to send reminder.',
+        alreadySent: Boolean(result.alreadySent),
+      })
+    }
+
+    const fresh = await EmailRecipient.findById(recipient._id)
+    res.json({
+      ok: true,
+      mailed: result.mailed,
+      meetLink: result.meetLink || '',
+      recipient: mapRecipient(fresh || recipient),
     })
   } catch (err) {
     next(err)

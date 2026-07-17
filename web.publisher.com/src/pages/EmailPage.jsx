@@ -30,6 +30,7 @@ import {
   saveCalendarSettings,
   subscribeRealtime,
   sendEmailNudge,
+  sendMeetingReminder,
 } from '../lib/backendApi'
 import { mergeTemplate } from '../lib/emailParse'
 import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from '../lib/meetingCta'
@@ -59,6 +60,8 @@ const NUDGE_TOOLTIPS = {
     'Final Call — last slot + 10% off. Auto-sends after 48h if meeting status stays the same.',
   reason:
     'Reason — asks why they haven’t booked. Auto-sends 36h after Final Call if status is still unchanged.',
+  reminder:
+    'Reminder — emails the lead that their booked meeting starts in ~10 minutes, with the Meet link. If you don’t send it, it auto-sends in the 10‑min window and notifies you in the app.',
 }
 
 const MAILBOX_FOLDERS = [
@@ -667,6 +670,40 @@ export default function EmailPage() {
       r.meetingStatus === 'invited' ||
       Boolean(r.meetingClickedAt)
     )
+  }
+
+  const canShowReminder = (r) => {
+    if (!r?.meetingScheduledAt) return false
+    if (!['scheduled', 'invited', 'link_clicked'].includes(r.meetingStatus || '')) return false
+    const start = new Date(r.meetingScheduledAt).getTime()
+    if (!Number.isFinite(start)) return false
+    return start > Date.now() - 5 * 60 * 1000
+  }
+
+  const handleReminder = async (row) => {
+    setNudgeBusyId(`${row.id}:reminder`)
+    try {
+      await sendMeetingReminder(row.id, { force: Boolean(row.meetingReminderSentAt) })
+      showToast(`Meeting reminder sent to ${row.email}`, 'success')
+      setProcessed((prev) =>
+        prev.map((r) =>
+          r.id === row.id
+            ? { ...r, meetingReminderSentAt: new Date().toISOString() }
+            : r,
+        ),
+      )
+      setMeetings((prev) =>
+        prev.map((m) =>
+          m.id === row.id
+            ? { ...m, meetingReminderSentAt: new Date().toISOString() }
+            : m,
+        ),
+      )
+    } catch (err) {
+      showToast(err.message || 'Failed to send reminder', 'error')
+    } finally {
+      setNudgeBusyId(null)
+    }
   }
 
   const loadMeetings = useCallback(async (opts = {}) => {
@@ -2445,6 +2482,22 @@ export default function EmailPage() {
                             </button>
                           </>
                         )}
+                        {canShowReminder(r) && (
+                          <button
+                            type="button"
+                            className="has-tip rounded-lg bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold text-emerald-200 disabled:opacity-50"
+                            disabled={Boolean(nudgeBusyId)}
+                            aria-label={NUDGE_TOOLTIPS.reminder}
+                            data-tip={NUDGE_TOOLTIPS.reminder}
+                            onClick={() => handleReminder(r)}
+                          >
+                            {nudgeBusyId === `${r.id}:reminder`
+                              ? '…'
+                              : r.meetingReminderSentAt
+                                ? 'Re-send reminder'
+                                : 'Reminder'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
@@ -2598,6 +2651,22 @@ export default function EmailPage() {
                                 {nudgeBusyId === `${r.id}:reason` ? '…' : 'Reason'}
                               </button>
                             </>
+                          )}
+                          {canShowReminder(r) && (
+                            <button
+                              type="button"
+                              className="has-tip rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50"
+                              disabled={Boolean(nudgeBusyId)}
+                              aria-label={NUDGE_TOOLTIPS.reminder}
+                              data-tip={NUDGE_TOOLTIPS.reminder}
+                              onClick={() => handleReminder(r)}
+                            >
+                              {nudgeBusyId === `${r.id}:reminder`
+                                ? '…'
+                                : r.meetingReminderSentAt
+                                  ? 'Re-send reminder'
+                                  : 'Reminder'}
+                            </button>
                           )}
                           {r.mailboxFolder === 'junk' ? (
                             <>
@@ -3001,6 +3070,22 @@ export default function EmailPage() {
                           }}
                           compact
                         />
+                        {canShowReminder(m) && (
+                          <button
+                            type="button"
+                            className="has-tip mt-2 w-full rounded-lg bg-emerald-500/15 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-200 disabled:opacity-50"
+                            disabled={Boolean(nudgeBusyId)}
+                            aria-label={NUDGE_TOOLTIPS.reminder}
+                            data-tip={NUDGE_TOOLTIPS.reminder}
+                            onClick={() => handleReminder(m)}
+                          >
+                            {nudgeBusyId === `${m.id}:reminder`
+                              ? '…'
+                              : m.meetingReminderSentAt
+                                ? 'Re-send 10‑min reminder'
+                                : 'Send 10‑min reminder'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -3114,6 +3199,22 @@ export default function EmailPage() {
                             }
                           }}
                         />
+                        {canShowReminder(m) && (
+                          <button
+                            type="button"
+                            className="has-tip mt-1.5 rounded-lg bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50"
+                            disabled={Boolean(nudgeBusyId)}
+                            aria-label={NUDGE_TOOLTIPS.reminder}
+                            data-tip={NUDGE_TOOLTIPS.reminder}
+                            onClick={() => handleReminder(m)}
+                          >
+                            {nudgeBusyId === `${m.id}:reminder`
+                              ? '…'
+                              : m.meetingReminderSentAt
+                                ? 'Re-send reminder'
+                                : 'Reminder · 10 min'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -86,7 +86,7 @@ export function startScheduler() {
 
 export async function runDuePosts() {
   try {
-    // Pre-meeting reminders (5–10 min window) — same tick as publish scheduler
+    // Pre-meeting reminders (~10 min window) — same tick as publish scheduler
     try {
       const { runMeetingReminders } = await import('./meetingNotify.js')
       await runMeetingReminders()

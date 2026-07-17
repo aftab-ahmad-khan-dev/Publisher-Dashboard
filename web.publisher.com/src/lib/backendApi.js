@@ -336,6 +336,13 @@ export async function sendEmailNudge(id, type) {
   });
 }
 
+export async function sendMeetingReminder(id, body = {}) {
+  return apiFetch(`/email/recipients/${id}/reminder`, {
+    method: "POST",
+    body,
+  });
+}
+
 export async function listEmailMeetings(params = {}) {
   const qs = new URLSearchParams();
   if (params.limit) qs.set("limit", String(params.limit));
