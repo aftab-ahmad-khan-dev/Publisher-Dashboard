@@ -300,6 +300,10 @@ export async function saveCalendarSettings(body) {
   return apiFetch("/email/settings/calendar", { method: "PUT", body });
 }
 
+export async function saveEmailNudgeSettings(body) {
+  return apiFetch("/email/settings/nudges", { method: "PUT", body });
+}
+
 export async function getEmailSettings() {
   return apiFetch("/email/settings");
 }

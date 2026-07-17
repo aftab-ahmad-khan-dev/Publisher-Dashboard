@@ -66,6 +66,10 @@ export async function recordEmailClick(trackingId, clickedUrl = '') {
     recipient.openedAt = new Date()
     recipient.lastOpenedAt = recipient.openedAt
     if (!recipient.openCount) recipient.openCount = 1
+    if (!recipient.nudgeEngagedAt) recipient.nudgeEngagedAt = recipient.openedAt
+    if (!recipient.nudgeStatusSnapshot) {
+      recipient.nudgeStatusSnapshot = recipient.meetingStatus || 'none'
+    }
   } else {
     recipient.lastOpenedAt = new Date()
   }
@@ -87,6 +91,12 @@ export async function recordEmailClick(trackingId, clickedUrl = '') {
     }
     if (!recipient.meetingClickedAt) recipient.meetingClickedAt = new Date()
     if (!recipient.meetingLink && url) recipient.meetingLink = url
+    if (!recipient.nudgeEngagedAt) {
+      recipient.nudgeEngagedAt = recipient.meetingClickedAt || new Date()
+    }
+    if (!recipient.nudgeStatusSnapshot) {
+      recipient.nudgeStatusSnapshot = recipient.meetingStatus || 'link_clicked'
+    }
 
     await recipient.save()
 
@@ -179,6 +189,10 @@ export async function recordEmailOpen(trackingId) {
   if (wasFirst) {
     recipient.openedAt = recipient.lastOpenedAt
     if (recipient.status === 'sent') recipient.status = 'opened'
+    if (!recipient.nudgeEngagedAt) recipient.nudgeEngagedAt = recipient.openedAt
+    if (!recipient.nudgeStatusSnapshot) {
+      recipient.nudgeStatusSnapshot = recipient.meetingStatus || 'none'
+    }
   }
   await recipient.save()
 

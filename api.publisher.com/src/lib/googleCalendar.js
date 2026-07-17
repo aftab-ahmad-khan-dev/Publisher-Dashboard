@@ -530,6 +530,8 @@ export async function syncMeetingsFromCalendar(workspaceId, accessToken) {
         const advanceable = ['none', 'invited', 'link_clicked']
         if (advanceable.includes(prevStatus)) {
           recipient.meetingStatus = 'scheduled'
+          recipient.nudgeAutoStopped = true
+          recipient.nudgeAutoStage = 'done'
           statusBecameScheduled = true
           changed = true
         } else if (prevStatus === 'scheduled' && fresh && event.id && event.id !== prevEventId) {

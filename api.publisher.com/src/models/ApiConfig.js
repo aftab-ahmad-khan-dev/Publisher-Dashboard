@@ -52,6 +52,12 @@ const apiConfigSchema = new mongoose.Schema(
     defaults: {
       scheduleTime: { type: String, default: '12:00' },
     },
+    /** Auto nudge delays (hours) — Final Call → Reason → Follow Up */
+    emailNudges: {
+      finalCallHours: { type: Number, default: 48 },
+      reasonHours: { type: Number, default: 36 },
+      followUpHours: { type: Number, default: 24 },
+    },
   },
   { timestamps: true },
 )

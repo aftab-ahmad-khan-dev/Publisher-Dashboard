@@ -101,6 +101,9 @@ function mapRecipient(doc) {
     meetingNotes: doc.meetingNotes || '',
     lastNudgeType: doc.lastNudgeType || '',
     lastNudgeAt: doc.lastNudgeAt?.toISOString?.() || doc.lastNudgeAt || null,
+    nudgeAutoStage: doc.nudgeAutoStage || '',
+    nudgeAutoStopped: Boolean(doc.nudgeAutoStopped),
+    nudgeEngagedAt: doc.nudgeEngagedAt?.toISOString?.() || doc.nudgeEngagedAt || null,
     calendarEventId: doc.calendarEventId || '',
     mailboxFolder: doc.mailboxFolder === 'junk' ? 'junk' : 'inbox',
     gmailMessageId: doc.gmailMessageId,
@@ -701,11 +704,20 @@ router.get('/email/processed', async (req, res, next) => {
     const engagement = String(req.query.engagement || '').trim() // opened | clicked | meeting_clicked | engaged
     const campaignId = req.query.campaignId
 
+    const pipelineStatuses = ['sent', 'opened', 'clicked', 'failed', 'queued', 'sending']
+    const doneStatuses = ['sent', 'opened', 'clicked', 'failed']
+
     const base = {
       workspaceId: req.workspaceId,
-      status: { $in: ['sent', 'opened', 'clicked', 'failed', 'queued', 'sending'] },
+      status: { $in: pipelineStatuses },
     }
     if (campaignId) base.campaignId = campaignId
+
+    const doneFilter = {
+      workspaceId: req.workspaceId,
+      status: { $in: doneStatuses },
+      ...(campaignId ? { campaignId } : {}),
+    }
 
     const filter = { ...base }
     if (status && status !== 'all') {
@@ -749,20 +761,21 @@ router.get('/email/processed', async (req, res, next) => {
       filter.$and = [...(filter.$and || []), textMatch]
     }
 
-    const [total, meetingsBooked, recipients] = await Promise.all([
-      EmailRecipient.countDocuments(base),
-      EmailRecipient.countDocuments({
-        workspaceId: req.workspaceId,
-        meetingStatus: 'scheduled',
-      }),
-      EmailRecipient.find(filter)
-        .sort({ updatedAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-    ])
-
-    const filteredTotal = await EmailRecipient.countDocuments(filter)
+    const [pipelineTotal, processedDone, meetingsBooked, recipients, filteredTotal] =
+      await Promise.all([
+        EmailRecipient.countDocuments(base),
+        EmailRecipient.countDocuments(doneFilter),
+        EmailRecipient.countDocuments({
+          workspaceId: req.workspaceId,
+          meetingStatus: 'scheduled',
+        }),
+        EmailRecipient.find(filter)
+          .sort({ updatedAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        EmailRecipient.countDocuments(filter),
+      ])
 
     const campaignIds = [...new Set(recipients.map((r) => String(r.campaignId)))]
     const campaigns = await EmailCampaign.find({ _id: { $in: campaignIds } })
@@ -780,7 +793,8 @@ router.get('/email/processed', async (req, res, next) => {
       total: filteredTotal,
       totalPages: Math.max(1, Math.ceil(filteredTotal / limit)),
       counts: {
-        processed: total,
+        processed: processedDone,
+        total: pipelineTotal,
         meetingsBooked,
         filtered: filteredTotal,
       },
@@ -812,7 +826,8 @@ router.get('/email/processed', async (req, res, next) => {
 router.post('/email/recipients/:id/nudge', requirePlanFeature('email'), async (req, res, next) => {
   try {
     const type = String(req.body?.type || '').trim()
-    const { buildNudgeEmail, isNudgeEligible, nudgeTypeMeta } = await import('../lib/nudgeEmails.js')
+    const { isNudgeEligible, nudgeTypeMeta } = await import('../lib/nudgeEmails.js')
+    const { deliverNudge } = await import('../lib/autoNudges.js')
     if (!nudgeTypeMeta(type)) {
       return res.status(400).json({ ok: false, error: 'Invalid nudge type.' })
     }
@@ -829,88 +844,20 @@ router.post('/email/recipients/:id/nudge', requirePlanFeature('email'), async (r
       })
     }
 
-    const config = await getWorkspaceConfig(req.workspaceId)
-    if (!canSendGmail(config.gmail)) {
-      return res.status(400).json({
-        ok: false,
-        error: 'Mail is not ready. Set SMTP_* or connect Gmail.',
-      })
-    }
-
-    const bookingUrl =
-      (await resolveBookingUrl(req.workspaceId, recipient.meetingLink)) ||
-      recipient.mergeData?.meetingLink ||
-      ''
-
-    const payload = buildNudgeEmail({
-      type,
+    const result = await deliverNudge({
       recipient,
-      bookingUrl,
-      signatureName: process.env.ADMIN_NAME?.trim() || 'Aftab',
-      signatureSite: process.env.ADMIN_SITE?.trim() || 'https://vorkspro.com',
-    })
-
-    let accessToken = null
-    let from =
-      config.gmail?.fromEmail ||
-      process.env.FROM_EMAIL?.trim() ||
-      process.env.SMTP_EMAIL?.trim() ||
-      ''
-
-    try {
-      await refreshGmailTokenIfNeeded(req.workspaceId)
-      const gmailAuth = await getGmailAccessToken(req.workspaceId)
-      accessToken = gmailAuth.accessToken
-      from = gmailAuth.fromEmail || from
-    } catch {
-      /* SMTP fallback */
-    }
-
-    const to = recipient.name
-      ? `"${recipient.name}" <${recipient.email}>`
-      : recipient.email
-
-    let result
-    if (accessToken) {
-      const { sendGmailMessage } = await import('../lib/gmailSend.js')
-      result = await sendGmailMessage({
-        accessToken,
-        from,
-        to,
-        subject: payload.subject,
-        text: payload.text,
-        html: payload.html,
-      })
-    } else {
-      const { sendMail, isMailerConfigured } = await import('../lib/mailer.js')
-      if (!isMailerConfigured()) {
-        return res.status(400).json({ ok: false, error: 'No mail transport ready.' })
-      }
-      result = await sendMail({
-        to,
-        subject: payload.subject,
-        text: payload.text,
-        html: payload.html,
-      })
-    }
-
-    recipient.lastNudgeType = type
-    recipient.lastNudgeAt = new Date()
-    await recipient.save()
-
-    broadcastEvent('EMAIL_NUDGE_SENT', {
-      workspaceId: req.workspaceId,
       type,
-      email: recipient.email,
-      title: `${payload.label} sent`,
-      body: `Sent to ${recipient.email}`,
-      at: Date.now(),
+      workspaceId: req.workspaceId,
+      auto: false,
     })
+    if (!result.ok) {
+      return res.status(400).json({ ok: false, error: result.error || 'Failed to send.' })
+    }
 
     res.json({
       ok: true,
       type,
-      messageId: result?.messageId || null,
+      messageId: result.messageId || null,
       recipient: mapRecipient(recipient),
     })
   } catch (err) {
@@ -1063,7 +1010,12 @@ router.patch('/email/meetings/:id', async (req, res, next) => {
 
     const { meetingStatus, meetingScheduledAt, meetingNotes, meetingLink, meetingTimeZone } =
       req.body || {}
-    if (meetingStatus) recipient.meetingStatus = meetingStatus
+    if (meetingStatus) {
+      const prev = recipient.meetingStatus
+      const { applyMeetingStatusChange } = await import('../lib/autoNudges.js')
+      applyMeetingStatusChange(recipient, prev, meetingStatus)
+      recipient.meetingStatus = meetingStatus
+    }
     if (meetingScheduledAt) recipient.meetingScheduledAt = new Date(meetingScheduledAt)
     if (meetingTimeZone != null) {
       recipient.meetingTimeZone = String(meetingTimeZone).trim().slice(0, 80)
@@ -1189,6 +1141,7 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
       batchSize,
       batchDelayMs,
       sendNow,
+      scheduledAt,
       leadSourceId,
       meetingLink,
     } = req.body || {}
@@ -1223,9 +1176,20 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
         : (templateType || 'custom') === 'outreach'
           ? 'Outreach'
           : 'Email'
+    const templateName = String(templateList?.[0]?.name || '').trim()
     const safeCampaignName =
       humanizeLabel(name?.trim() || '', '') ||
-      `${typeLabel} · ${new Date().toLocaleDateString()}`
+      (templateName ? `${typeLabel} · ${templateName}` : typeLabel)
+
+    let startAt = null
+    if (scheduledAt) {
+      const parsedStart = new Date(scheduledAt)
+      if (!Number.isNaN(parsedStart.getTime()) && parsedStart.getTime() > Date.now() + 30_000) {
+        startAt = parsedStart
+      }
+    }
+    const startImmediately = Boolean(sendNow) && !startAt
+
     const booking = await resolveBookingUrl(req.workspaceId, meetingLink)
     const safeBooking = isBookingUrl(booking) ? booking : getCalendarBookingUrl()
 
@@ -1277,12 +1241,12 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
       cooldownMs,
       dailyCap,
       sendsSinceBreak: 0,
-      nextSendAt: null,
+      nextSendAt: startAt,
       leadSourceId: leadSourceId || undefined,
       meetingLink: safeBooking || '',
-      status: sendNow ? 'sending' : 'draft',
+      status: sendNow || startAt ? 'sending' : 'draft',
       stats: { total: parsed.length, sent: 0, failed: 0, opened: 0, clicked: 0 },
-      startedAt: sendNow ? new Date() : undefined,
+      startedAt: startImmediately ? new Date() : undefined,
     })
 
     await EmailRecipient.insertMany(
@@ -1327,7 +1291,7 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
       }),
     )
 
-    if (sendNow) {
+    if (startImmediately) {
       setImmediate(() => runCampaignSend(campaign._id, req.workspaceId))
     }
 
@@ -1335,7 +1299,8 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
       ok: true,
       campaign: mapCampaign(campaign.toObject()),
       recipientCount: parsed.length,
-      sending: Boolean(sendNow),
+      sending: Boolean(sendNow || startAt),
+      scheduledAt: startAt ? startAt.toISOString() : null,
       cooldownMs,
       dailyCap,
     })
@@ -1587,6 +1552,8 @@ router.post('/email/calendar/invite', requirePlanFeature('email'), async (req, r
 
     if (recipient) {
       recipient.meetingStatus = 'scheduled'
+      recipient.nudgeAutoStopped = true
+      recipient.nudgeAutoStage = 'done'
       recipient.meetingScheduledAt = start
       recipient.meetingTimeZone =
         timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
@@ -1659,7 +1626,9 @@ router.post('/email/calendar/sync', requirePlanFeature('email'), async (req, res
 
 router.get('/email/settings', async (req, res) => {
   try {
+    const { resolveEmailNudges } = await import('../lib/configStore.js')
     const config = await getWorkspaceConfig(req.workspaceId)
+    const emailNudges = resolveEmailNudges(config)
     res.json({
       ok: true,
       meetingLink: getCalendarBookingUrl(config),
@@ -1677,9 +1646,24 @@ router.get('/email/settings', async (req, res) => {
         batchSize: 18,
         dailyCap: 200,
       },
+      emailNudges,
     })
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+router.put('/email/settings/nudges', requirePlanFeature('email'), async (req, res, next) => {
+  try {
+    const { saveEmailNudgesConfig } = await import('../lib/configStore.js')
+    const emailNudges = await saveEmailNudgesConfig(req.workspaceId, {
+      finalCallHours: req.body?.finalCallHours,
+      reasonHours: req.body?.reasonHours,
+      followUpHours: req.body?.followUpHours,
+    })
+    res.json({ ok: true, emailNudges })
+  } catch (err) {
+    next(err)
   }
 })
 

@@ -58,6 +58,21 @@ const emailRecipientSchema = new mongoose.Schema(
     /** Last follow-up / final-call / reason nudge sent */
     lastNudgeType: { type: String, default: '' },
     lastNudgeAt: Date,
+    /**
+     * Auto nudge pipeline stage:
+     * '' = not started · final_call · reason · follow_up · done (finished or stopped)
+     */
+    nudgeAutoStage: {
+      type: String,
+      enum: ['', 'final_call', 'reason', 'follow_up', 'done'],
+      default: '',
+    },
+    /** When engagement first qualified for auto nudges (open / meeting click) */
+    nudgeEngagedAt: Date,
+    /** meetingStatus snapshot — auto continues only while this stays the same */
+    nudgeStatusSnapshot: { type: String, default: '' },
+    /** Admin updated status (or booked) — stops remaining auto nudges */
+    nudgeAutoStopped: { type: Boolean, default: false },
     /** inbox | junk — soft trash for mailbox UI */
     mailboxFolder: {
       type: String,

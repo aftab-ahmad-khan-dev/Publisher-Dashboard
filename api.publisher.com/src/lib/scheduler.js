@@ -109,6 +109,17 @@ export async function runDuePosts() {
       logger.warn('Email campaign resume tick failed', { error: err.message })
     }
 
+    // Auto Final Call → Reason → Follow Up when meeting status stays unchanged
+    try {
+      const { runAutoNudges } = await import('./autoNudges.js')
+      const nudgeResult = await runAutoNudges({ limit: 20 })
+      if (nudgeResult.sent > 0) {
+        logger.info('Auto nudges tick', nudgeResult)
+      }
+    } catch (err) {
+      logger.warn('Auto nudges tick failed', { error: err.message })
+    }
+
     const due = await ScheduledPost.find({
       status: 'scheduled',
       scheduledAt: { $lte: new Date() },

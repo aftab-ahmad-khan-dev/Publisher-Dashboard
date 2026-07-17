@@ -47,6 +47,8 @@ export default function DateTimePicker({
   allowAnyTime = true,
   label = 'Date & time',
   compact = false,
+  /** Force date + time stacked (for narrow cards) */
+  stack = false,
 }) {
   const parsed = parseDatetimeLocal(value)
   const dateValue = value?.split('T')[0] || ''
@@ -93,30 +95,36 @@ export default function DateTimePicker({
     onChange(setTimeOnDatetimeLocal(base, hour, minute || 0))
   }
 
+  const stacked = stack || compact
+
   return (
-    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+    <div className={compact ? 'space-y-1' : 'space-y-2'}>
       {label ? <label className="field-label">{label}</label> : null}
-      <div className={`datetime-picker group ${compact ? '!gap-1.5' : ''}`}>
-        <div className="relative flex-1">
+      <div
+        className={`datetime-picker group min-w-0 ${stacked ? 'datetime-picker--stack' : ''} ${
+          compact ? '!gap-1' : ''
+        }`}
+      >
+        <div className="relative min-w-0 flex-1">
           <input
             type="date"
             value={dateValue}
             min={minDateOnly || undefined}
             onChange={handleDateChange}
-            className={`datetime-input peer w-full ${compact ? '!py-1.5 !text-[11px]' : ''}`}
+            className={`datetime-input peer w-full min-w-0 ${compact ? '!px-2 !py-1.5 !text-[11px]' : ''}`}
           />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 peer-focus:text-indigo-400">
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 peer-focus:text-indigo-400">
             <CalendarIcon />
           </span>
         </div>
-        <div className={`relative shrink-0 ${compact ? 'w-[7.5rem]' : 'w-28 sm:w-[140px]'}`}>
+        <div className={`relative min-w-0 ${stacked ? 'w-full' : compact ? 'w-full sm:w-[7rem]' : 'w-28 sm:w-[140px]'} shrink-0`}>
           {allowAnyTime ? (
             <input
               type="time"
               step={60}
               value={timeInputValue}
               onChange={handleTimeInput}
-              className={`datetime-input w-full ${compact ? '!py-1.5 !text-[11px]' : ''}`}
+              className={`datetime-input w-full min-w-0 ${compact ? '!px-2 !py-1.5 !text-[11px]' : ''}`}
               aria-label="Time"
             />
           ) : (
@@ -140,7 +148,7 @@ export default function DateTimePicker({
         </div>
       </div>
       {(hint || displayLabel) && (
-        <p className="flex items-center gap-1.5 text-xs text-indigo-300/80">
+        <p className={`flex items-center gap-1.5 text-indigo-300/80 ${compact ? 'text-[9px]' : 'text-xs'}`}>
           <span className="inline-block h-1 w-1 rounded-full bg-indigo-400" />
           {hint || displayLabel}
         </p>

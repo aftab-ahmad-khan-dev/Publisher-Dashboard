@@ -1068,9 +1068,15 @@ body {
   @apply flex flex-col gap-2 sm:flex-row;
 }
 
+.datetime-picker--stack {
+  @apply !flex-col;
+}
+
 .datetime-input {
   @apply rounded-xl border border-white/[0.09] bg-[#0a0c14] px-4 py-2.5 text-sm text-slate-200 transition-all hover:border-white/14 focus:border-indigo-400/50 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none;
   color-scheme: dark;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .datetime-input[type="date"]::-webkit-calendar-picker-indicator {
@@ -1080,6 +1086,55 @@ body {
   width: 100%;
   height: 100%;
   cursor: pointer;
+}
+
+/* Unified search + filter toolbar */
+.saas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.saas-toolbar__search {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+  max-width: 18rem;
+}
+
+.saas-select,
+.saas-toolbar select.saas-input {
+  width: auto;
+  min-width: 8.5rem;
+  max-width: 14rem;
+  flex: 0 1 auto;
+  padding: 0.45rem 1.75rem 0.45rem 0.7rem;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  cursor: pointer;
+}
+
+.saas-toolbar .saas-input,
+.saas-toolbar .saas-select {
+  height: 2.125rem;
+  padding-top: 0;
+  padding-bottom: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.saas-toolbar .btn-secondary,
+.saas-toolbar .btn-primary {
+  height: 2.125rem;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* Segmented control */
@@ -2223,4 +2278,39 @@ button:focus-visible {
     opacity: 0;
     transform: translateY(-120%);
   }
+}
+
+/* Instant hover tip for action buttons (nudge, etc.) */
+.has-tip {
+  position: relative;
+}
+
+.has-tip[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  z-index: 40;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  width: max-content;
+  max-width: min(16rem, 70vw);
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.96);
+  color: #e2e8f0;
+  font-size: 0.65rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%) translateY(2px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.has-tip[data-tip]:hover::after,
+.has-tip[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }

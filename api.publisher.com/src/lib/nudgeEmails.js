@@ -45,6 +45,22 @@ export function nudgeTypeMeta(type) {
   return TYPES[type] || null
 }
 
+/** Stable key for “status unchanged” checks in the auto nudge pipeline. */
+export function currentMeetingStatusKey(recipient) {
+  return String(recipient?.meetingStatus || 'none')
+}
+
+export function engagementStartedAt(recipient) {
+  if (!recipient) return null
+  if (recipient.nudgeEngagedAt) return new Date(recipient.nudgeEngagedAt)
+  const times = [recipient.openedAt, recipient.clickedAt, recipient.meetingClickedAt]
+    .filter(Boolean)
+    .map((t) => new Date(t).getTime())
+    .filter((t) => Number.isFinite(t))
+  if (!times.length) return null
+  return new Date(Math.min(...times))
+}
+
 export function buildNudgeEmail({ type, recipient, bookingUrl, signatureName = 'Aftab', signatureSite = '' }) {
   const meta = nudgeTypeMeta(type)
   if (!meta) return null

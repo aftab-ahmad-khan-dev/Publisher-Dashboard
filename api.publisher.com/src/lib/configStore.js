@@ -65,6 +65,11 @@ const DEFAULT_CONFIG = {
   defaults: {
     scheduleTime: '12:00',
   },
+  emailNudges: {
+    finalCallHours: 48,
+    reasonHours: 36,
+    followUpHours: 24,
+  },
 }
 
 const META_SECRET_FIELDS = ['appSecret', 'pageToken']
@@ -206,6 +211,13 @@ function docToConfig(doc) {
     defaults: {
       scheduleTime: doc.defaults?.scheduleTime || DEFAULT_CONFIG.defaults.scheduleTime,
     },
+    emailNudges: {
+      finalCallHours:
+        doc.emailNudges?.finalCallHours ?? DEFAULT_CONFIG.emailNudges.finalCallHours,
+      reasonHours: doc.emailNudges?.reasonHours ?? DEFAULT_CONFIG.emailNudges.reasonHours,
+      followUpHours:
+        doc.emailNudges?.followUpHours ?? DEFAULT_CONFIG.emailNudges.followUpHours,
+    },
   }
 }
 
@@ -275,6 +287,13 @@ function fillFromEnv(config) {
     defaults: {
       scheduleTime: config.defaults?.scheduleTime || DEFAULT_CONFIG.defaults.scheduleTime,
     },
+    emailNudges: {
+      finalCallHours:
+        config.emailNudges?.finalCallHours ?? DEFAULT_CONFIG.emailNudges.finalCallHours,
+      reasonHours: config.emailNudges?.reasonHours ?? DEFAULT_CONFIG.emailNudges.reasonHours,
+      followUpHours:
+        config.emailNudges?.followUpHours ?? DEFAULT_CONFIG.emailNudges.followUpHours,
+    },
   }
 }
 
@@ -305,6 +324,13 @@ export async function saveWorkspaceConfig(workspaceId, config) {
     defaults: {
       scheduleTime: config.defaults?.scheduleTime ?? prev.defaults?.scheduleTime,
     },
+    emailNudges: {
+      finalCallHours:
+        config.emailNudges?.finalCallHours ?? prev.emailNudges?.finalCallHours,
+      reasonHours: config.emailNudges?.reasonHours ?? prev.emailNudges?.reasonHours,
+      followUpHours:
+        config.emailNudges?.followUpHours ?? prev.emailNudges?.followUpHours,
+    },
   })
 
   await ApiConfig.findOneAndUpdate(
@@ -321,6 +347,7 @@ export async function saveWorkspaceConfig(workspaceId, config) {
       webhookUrl: next.webhookUrl,
       notificationsEnabled: next.notificationsEnabled,
       defaults: next.defaults,
+      emailNudges: next.emailNudges,
     },
     { upsert: true, new: true },
   )
@@ -393,6 +420,46 @@ export async function saveDefaultsConfig(workspaceId, defaultsPatch) {
   })
 }
 
+function clampNudgeHours(value, fallback) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(720, Math.max(1, Math.round(n)))
+}
+
+export function normalizeEmailNudges(patch = {}, prev = {}) {
+  return {
+    finalCallHours: clampNudgeHours(
+      patch.finalCallHours ?? prev.finalCallHours,
+      DEFAULT_CONFIG.emailNudges.finalCallHours,
+    ),
+    reasonHours: clampNudgeHours(
+      patch.reasonHours ?? prev.reasonHours,
+      DEFAULT_CONFIG.emailNudges.reasonHours,
+    ),
+    followUpHours: clampNudgeHours(
+      patch.followUpHours ?? prev.followUpHours,
+      DEFAULT_CONFIG.emailNudges.followUpHours,
+    ),
+  }
+}
+
+/** Resolve workspace nudge hours from DB (defaults 48 / 36 / 24). */
+export function resolveEmailNudges(config) {
+  return normalizeEmailNudges(config?.emailNudges || {}, DEFAULT_CONFIG.emailNudges)
+}
+
+export async function saveEmailNudgesConfig(workspaceId, patch) {
+  const existing = await loadRawDoc(workspaceId)
+  const prev = docToConfig(existing?.toObject?.() || existing) || { ...DEFAULT_CONFIG }
+  const emailNudges = normalizeEmailNudges(patch, prev.emailNudges)
+  await ApiConfig.findOneAndUpdate(
+    { workspaceId },
+    { $set: { workspaceId, emailNudges } },
+    { upsert: true, new: true },
+  )
+  return emailNudges
+}
+
 export async function saveLinkedInTokens(workspaceId, tokens) {
   return saveLinkedInConfig(workspaceId, tokens)
 }
@@ -456,6 +523,7 @@ export async function saveGmailConfig(workspaceId, gmailPatch) {
       webhookUrl: prev.webhookUrl,
       notificationsEnabled: prev.notificationsEnabled,
       defaults: prev.defaults,
+      emailNudges: prev.emailNudges,
     },
     { upsert: true, new: true },
   )
@@ -481,6 +549,13 @@ export function resolveConfig(stored, bodyConfig) {
     notificationsEnabled: bodyConfig.notificationsEnabled ?? stored.notificationsEnabled,
     defaults: {
       scheduleTime: bodyConfig.defaults?.scheduleTime ?? stored.defaults?.scheduleTime,
+    },
+    emailNudges: {
+      finalCallHours:
+        bodyConfig.emailNudges?.finalCallHours ?? stored.emailNudges?.finalCallHours,
+      reasonHours: bodyConfig.emailNudges?.reasonHours ?? stored.emailNudges?.reasonHours,
+      followUpHours:
+        bodyConfig.emailNudges?.followUpHours ?? stored.emailNudges?.followUpHours,
     },
   })
 }
