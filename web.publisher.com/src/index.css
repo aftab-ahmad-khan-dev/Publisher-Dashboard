@@ -587,7 +587,9 @@ body {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
   background: rgba(255, 255, 255, 0.02);
-  overflow: hidden;
+  /* Clip horizontal bleed for rounded corners only — never trap vertical scroll */
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .saas-table th {

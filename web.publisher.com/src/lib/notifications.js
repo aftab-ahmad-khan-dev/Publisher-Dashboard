@@ -149,13 +149,17 @@ export async function notifyViaServiceWorker(payload) {
   }
   if (Notification.permission !== 'granted') return false
 
+  const origin = window.location.origin
+  // Absolute URLs — relative paths often fail in SW/Notification and show a blank/white dot
+  const appIcon = `${origin}/icons/icon-192.png`
+
   const body = {
     title: payload.title,
     body: payload.body || '',
     tag: payload.tag || `notif-${Date.now()}`,
     href: payload.href || '/compose',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/badge-72.png',
+    icon: payload.icon || appIcon,
+    badge: payload.badge || appIcon,
   }
 
   const options = {
@@ -203,11 +207,15 @@ export async function notifyViaServiceWorker(payload) {
 /** Build SW payload from an in-app notification item or realtime event. */
 export function browserPayloadFromItem(item) {
   if (!item) return null
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const appIcon = origin ? `${origin}/icons/icon-192.png` : '/icons/icon-192.png'
   return {
     title: item.title,
     body: item.body,
     tag: item.id || item.tag || `notif-${item.at || Date.now()}`,
     href: item.href || '/compose',
+    icon: appIcon,
+    badge: appIcon,
   }
 }
 

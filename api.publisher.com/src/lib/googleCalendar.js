@@ -522,16 +522,6 @@ export async function syncMeetingsFromCalendar(workspaceId, accessToken) {
             }
           }
         }
-        if (
-          slotLabel &&
-          recipient.meetingNotes !== slotLabel &&
-          !String(recipient.meetingNotes || '').includes(slotLabel)
-        ) {
-          recipient.meetingNotes = recipient.meetingNotes
-            ? `${slotLabel} · ${recipient.meetingNotes}`.slice(0, 2000)
-            : slotLabel
-          changed = true
-        }
 
         const advanceable = ['none', 'invited', 'link_clicked']
         if (advanceable.includes(prevStatus)) {

@@ -12,15 +12,17 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim())
 })
 
-const NOTIFICATION_ICON = '/icons/icon-192.png'
-const NOTIFICATION_BADGE = '/icons/badge-72.png'
+const NOTIFICATION_ICON = new URL('/icons/icon-192.png', self.location.origin).href
+const NOTIFICATION_BADGE = new URL('/icons/icon-192.png', self.location.origin).href
 
 function showBrowserNotification(payload = {}) {
   const title = payload.title || 'Publisher Suite'
+  const icon = payload.icon || NOTIFICATION_ICON
+  const badge = payload.badge || NOTIFICATION_BADGE
   return self.registration.showNotification(title, {
     body: payload.body || '',
-    icon: payload.icon || NOTIFICATION_ICON,
-    badge: payload.badge || NOTIFICATION_BADGE,
+    icon,
+    badge,
     tag: payload.tag || `notif-${Date.now()}`,
     data: {
       href: payload.href || '/compose',

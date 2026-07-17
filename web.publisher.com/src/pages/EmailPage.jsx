@@ -38,7 +38,7 @@ import {
 } from '../lib/emailTemplates'
 import LeadSourcePanel from '../components/email/LeadSourcePanel'
 import ConfirmDialog from '../components/ConfirmDialog'
-import PageShell from '../components/PageShell'
+import PageShell, { PageScroll } from '../components/PageShell'
 import PageHeader from '../components/PageHeader'
 import DateTimePicker from '../components/DateTimePicker'
 import { toDatetimeLocalValue } from '../lib/scheduleUtils'
@@ -101,8 +101,10 @@ function fmtTime(iso) {
   if (!iso) return '—'
   try {
     return new Date(iso).toLocaleString(undefined, {
+      weekday: 'short',
       month: 'short',
       day: 'numeric',
+      year: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
     })
@@ -111,17 +113,23 @@ function fmtTime(iso) {
   }
 }
 
+function isMeetJoinUrl(url) {
+  return /meet\.google\.com|hangouts\.google\.com/i.test(String(url || ''))
+}
+
 function inputClass() {
   return 'saas-input'
 }
 
-/** Free date + any time for Meet invites (no “today only” / preset-hour lock). */
-function MeetingInviteControls({
+/**
+ * Clear booking panel: lead’s selected time + Meet link + admin create-if-missing.
+ */
+function MeetingBookingBlock({
   meeting,
   inviting,
   canInvite,
   onInvite,
-  onScheduleBlur,
+  compact = false,
 }) {
   const [when, setWhen] = useState(() =>
     meeting.meetingScheduledAt
@@ -135,32 +143,95 @@ function MeetingInviteControls({
     }
   }, [meeting.id, meeting.meetingScheduledAt])
 
+  const leadWhen =
+    meeting.slotLabel ||
+    (meeting.meetingScheduledAt ? fmtTime(meeting.meetingScheduledAt) : '')
+  const hasLeadBooking = Boolean(leadWhen)
+  const meetUrl = isMeetJoinUrl(meeting.meetingLink) ? meeting.meetingLink : ''
+  const otherLink =
+    meeting.meetingLink && !meetUrl ? String(meeting.meetingLink).trim() : ''
+
   return (
-    <div className="flex min-w-[220px] flex-col gap-1.5">
-      <DateTimePicker
-        value={when}
-        onChange={(next) => {
-          setWhen(next)
-        }}
-        allowAnyTime
-        label=""
-        compact
-        hint="Any day · any time"
-      />
-      <button
-        type="button"
-        className="rounded-lg bg-indigo-500/20 px-2 py-1 text-[10px] font-semibold text-indigo-200 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30 disabled:opacity-50"
-        disabled={inviting || !canInvite}
-        onClick={() => {
-          if (!when) return
-          onInvite(when)
-          if (when) onScheduleBlur?.(when)
-        }}
-      >
-        {inviting ? 'Inviting…' : 'Invite with Meet'}
-      </button>
+    <div className={`space-y-2.5 ${compact ? 'min-w-0' : 'min-w-[260px] max-w-sm'}`}>
+      <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.07] px-2.5 py-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-400/90">
+          Lead selected
+        </p>
+        {hasLeadBooking ? (
+          <>
+            <p className="mt-0.5 text-[12px] font-semibold leading-snug text-emerald-200">
+              {leadWhen}
+            </p>
+            <p className="mt-0.5 text-[10px] text-slate-500">From Google Calendar booking</p>
+          </>
+        ) : (
+          <p className="mt-0.5 text-[12px] text-slate-500">Not booked yet</p>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/[0.06] px-2.5 py-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-300/90">
+          Meet link
+        </p>
+        {meetUrl ? (
+          <a
+            href={meetUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-1 inline-flex max-w-full items-center gap-1 truncate text-[12px] font-semibold text-indigo-200 underline hover:text-white"
+          >
+            Open Google Meet
+          </a>
+        ) : otherLink ? (
+          <a
+            href={otherLink}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-1 block truncate text-[11px] text-indigo-300 underline"
+          >
+            {otherLink}
+          </a>
+        ) : (
+          <p className="mt-0.5 text-[12px] text-slate-500">No Meet link yet</p>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+          {hasLeadBooking ? 'Admin · new / reschedule Meet' : 'Admin · create Meet invite'}
+        </p>
+        <p className="mt-0.5 mb-1.5 text-[10px] leading-snug text-slate-500">
+          {hasLeadBooking
+            ? 'Lead already picked a time. Use this only to send a new Meet invite.'
+            : 'Lead has not booked — pick a date/time and send a Meet invite.'}
+        </p>
+        <DateTimePicker
+          value={when}
+          onChange={setWhen}
+          allowAnyTime
+          label=""
+          compact
+          hint="Any day · any time"
+        />
+        <button
+          type="button"
+          className="mt-1.5 w-full rounded-lg bg-indigo-500/25 px-2 py-1.5 text-[11px] font-semibold text-indigo-100 ring-1 ring-indigo-400/35 hover:bg-indigo-500/35 disabled:opacity-50"
+          disabled={inviting || !canInvite || !when}
+          onClick={() => {
+            if (!when) return
+            onInvite(when)
+          }}
+        >
+          {inviting ? 'Creating…' : hasLeadBooking ? 'Send new Meet invite' : 'Invite with Meet'}
+        </button>
+      </div>
     </div>
   )
+}
+
+/** @deprecated alias kept if referenced elsewhere */
+function MeetingInviteControls(props) {
+  return <MeetingBookingBlock {...props} />
 }
 
 export default function EmailPage() {
@@ -1130,7 +1201,8 @@ export default function EmailPage() {
 
       {/* ─── Campaigns tab ─── */}
       {tab === 'campaigns' && (
-        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto lg:grid-cols-[1.1fr_0.9fr]">
+        <PageScroll className="pb-8">
+        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-4">
             <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 saas-panel">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -1493,11 +1565,13 @@ export default function EmailPage() {
             </section>
           </div>
         </div>
+        </PageScroll>
       )}
 
       {/* ─── Processed mail table ─── */}
       {tab === 'processed' && (
-        <div className="saas-table-wrap flex min-h-0 flex-1 flex-col overflow-hidden">
+        <PageScroll className="pb-8">
+        <div className="saas-table-wrap">
           <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-4 py-3">
             <input
               className={`${inputClass()} max-w-xs`}
@@ -1573,8 +1647,8 @@ export default function EmailPage() {
               </div>
             )}
           </div>
-          <div className="saas-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
-            {filteredProcessed.length === 0 ? (
+          <div>
+              {filteredProcessed.length === 0 ? (
               <p className="px-4 py-8 text-center text-xs text-slate-500 md:hidden">
                 No processed mail yet. Start a campaign from the Campaigns tab.
               </p>
@@ -1809,12 +1883,13 @@ export default function EmailPage() {
             </table>
           </div>
         </div>
+        </PageScroll>
       )}
 
       {/* ─── Meetings tab ─── */}
       {tab === 'meetings' && (
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain lg:overflow-hidden">
-          <section className="saas-panel shrink-0 space-y-4 p-4">
+        <PageScroll className="space-y-4 pb-8">
+          <section className="saas-panel space-y-4 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-white">Google Calendar</h3>
@@ -1885,40 +1960,47 @@ export default function EmailPage() {
                   </a>
                 )}
               </div>
-              <div className="mt-2 space-y-1.5 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-2.5 text-[11px] leading-relaxed text-sky-100/90">
-                <p className="font-semibold text-sky-50">
-                  “No availability” on the booking page is Google’s setting — not this dashboard.
-                </p>
-                <p>
-                  Connecting Calendar lets us create Meet invites and sync bookings. It does{' '}
-                  <span className="font-semibold">not</span> open Appointment Schedule slots.
-                  Open hours are only controlled inside Google Calendar.
-                </p>
-                <ol className="list-decimal space-y-1 pl-4 text-sky-100/80">
-                  <li>
-                    Open{' '}
-                    <a
-                      href="https://calendar.google.com/calendar/u/0/r/appointment"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-semibold text-sky-200 underline hover:text-white"
-                    >
-                      Google Calendar → Appointment schedules
-                    </a>
-                  </li>
-                  <li>Edit your “1:1 Meeting” schedule → Availability: every day, full hours (or Copy time to all)</li>
-                  <li>
-                    Turn off or loosen “Check calendars for availability” if busy events are blocking every slot
-                  </li>
-                  <li>
-                    Scheduling window: min notice near 0, max advance far enough (e.g. 60–120 days)
-                  </li>
-                </ol>
-                <p className="text-sky-100/70">
-                  From this Meetings table you can still Invite any date/time yourself (no Google availability
-                  limits). Guests using the public booking link only see what Google marks as open.
-                </p>
-              </div>
+              <details className="mt-2 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-2.5 text-[11px] leading-relaxed text-sky-100/90">
+                <summary className="cursor-pointer font-semibold text-sky-50">
+                  “No availability” is a Google Calendar setting — tap for fix steps
+                </summary>
+                <div className="mt-2 space-y-1.5">
+                  <p>
+                    Connecting Calendar lets us create Meet invites and sync bookings. It does{' '}
+                    <span className="font-semibold">not</span> open Appointment Schedule slots.
+                    Open hours are only controlled inside Google Calendar.
+                  </p>
+                  <ol className="list-decimal space-y-1 pl-4 text-sky-100/80">
+                    <li>
+                      Open{' '}
+                      <a
+                        href="https://calendar.google.com/calendar/u/0/r/appointment"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold text-sky-200 underline hover:text-white"
+                      >
+                        Google Calendar → Appointment schedules
+                      </a>
+                    </li>
+                    <li>
+                      Edit your “1:1 Meeting” schedule → Availability: every day, full hours (or
+                      Copy time to all)
+                    </li>
+                    <li>
+                      Turn off or loosen “Check calendars for availability” if busy events are
+                      blocking every slot
+                    </li>
+                    <li>
+                      Scheduling window: min notice near 0, max advance far enough (e.g. 60–120
+                      days)
+                    </li>
+                  </ol>
+                  <p className="text-sky-100/70">
+                    From this Meetings list you can still Invite any date/time yourself. Guests
+                    using the public booking link only see what Google marks as open.
+                  </p>
+                </div>
+              </details>
               <p className="mt-1.5 text-[10px] text-slate-600">
                 Paste the public booking link above once — every campaign reuses it. Google does not allow apps to
                 create or rewrite Appointment Schedule hours via API.
@@ -1926,8 +2008,8 @@ export default function EmailPage() {
             </div>
           </section>
 
-          <div className="saas-table-wrap flex min-h-[20rem] shrink-0 flex-col overflow-hidden lg:min-h-0 lg:flex-1">
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
+          <div className="saas-table-wrap">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
               <h3 className="text-sm font-semibold text-white">Scheduled & meeting pipeline</h3>
               <div className="flex flex-wrap items-center gap-2">
                 {selectedMeetingIds.size > 0 && (
@@ -1997,9 +2079,9 @@ export default function EmailPage() {
               </div>
             )}
 
-            <div className="saas-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain pb-24 lg:pb-0">
+            <div>
               {meetings.length === 0 ? (
-                <p className="px-4 py-8 text-center text-xs text-slate-500 md:hidden">
+                <p className="px-4 py-8 text-center text-xs text-slate-500">
                   No meeting activity yet. Open this tab to sync Calendar bookings, or tap Refresh +
                   sync.
                 </p>
@@ -2057,50 +2139,42 @@ export default function EmailPage() {
                           </select>
                         </span>
                       </div>
-                      <div className="mobile-data-card__row">
-                        <span className="mobile-data-card__label">Booked</span>
-                        <span className="mobile-data-card__value text-emerald-300">
-                          {m.slotLabel ||
-                            (m.meetingScheduledAt
-                              ? new Date(m.meetingScheduledAt).toLocaleString(undefined, {
-                                  weekday: 'short',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: 'numeric',
-                                  minute: '2-digit',
-                                })
-                              : 'Not booked')}
-                        </span>
-                      </div>
-                      <div className="mt-2">
-                        <MeetingInviteControls
+                      <div className="mt-3 border-t border-white/[0.06] pt-3">
+                        <MeetingBookingBlock
                           meeting={m}
                           inviting={invitingId === m.id}
                           canInvite={calendarConnected || apiConfig?.gmail?.hasRefreshToken}
                           onInvite={(when) => handleInviteMeet(m, when)}
-                          onScheduleBlur={(when) => {
-                            updateEmailMeeting(m.id, {
-                              meetingStatus: 'scheduled',
-                              meetingScheduledAt: new Date(when).toISOString(),
-                            }).catch(() => {})
+                          compact
+                        />
+                      </div>
+                      <div className="mt-2">
+                        <input
+                          className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[11px] text-white"
+                          defaultValue={
+                            m.meetingNotes && m.meetingNotes !== m.slotLabel
+                              ? m.meetingNotes
+                              : ''
+                          }
+                          placeholder="Admin notes…"
+                          onBlur={(e) => {
+                            const next = e.target.value
+                            const prev =
+                              m.meetingNotes && m.meetingNotes !== m.slotLabel
+                                ? m.meetingNotes
+                                : ''
+                            if (next === prev) return
+                            updateEmailMeeting(m.id, { meetingNotes: next })
+                              .then(() => loadMeetings({ sync: false }))
+                              .catch((err) => showToast(err.message, 'error'))
                           }}
                         />
                       </div>
-                      {m.meetingLink ? (
-                        <a
-                          href={m.meetingLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-2 block truncate text-[11px] text-indigo-300 underline"
-                        >
-                          {m.meetingLink}
-                        </a>
-                      ) : null}
                     </div>
                   ))}
                 </div>
               )}
-              <table className="saas-table saas-table--desktop-only w-full min-w-[1240px] text-left text-xs">
+              <table className="saas-table saas-table--desktop-only w-full min-w-[980px] text-left text-xs">
                 <thead>
                   <tr>
                     <th className="w-10 px-3 py-2.5">
@@ -2127,17 +2201,15 @@ export default function EmailPage() {
                     <th className="px-3 py-2.5">Lead</th>
                     <th className="px-3 py-2.5">Company</th>
                     <th className="px-3 py-2.5">Campaign</th>
-                    <th className="px-3 py-2.5">Meeting status</th>
-                    <th className="px-3 py-2.5">Booked slot</th>
-                    <th className="px-3 py-2.5">Schedule / Meet</th>
-                    <th className="px-3 py-2.5">Meeting link</th>
+                    <th className="px-3 py-2.5">Status</th>
+                    <th className="px-3 py-2.5">Booking · Meet · Admin invite</th>
                     <th className="px-3 py-2.5">Notes</th>
                   </tr>
                 </thead>
                 <tbody>
                   {meetings.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="px-3 py-8 text-center text-slate-500">
+                      <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
                         No meeting activity yet. Open this tab to sync Calendar bookings, or click Sync now.
                       </td>
                     </tr>
@@ -2192,60 +2264,30 @@ export default function EmailPage() {
                         </select>
                       </td>
                       <td className="px-3 py-2">
-                        {m.slotLabel || m.meetingScheduledAt ? (
-                          <div>
-                            <p className="font-semibold text-emerald-300">
-                              {m.slotLabel ||
-                                new Date(m.meetingScheduledAt).toLocaleString(undefined, {
-                                  weekday: 'short',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: 'numeric',
-                                  minute: '2-digit',
-                                })}
-                            </p>
-                            <p className="mt-0.5 text-[10px] text-slate-500">From Google Calendar</p>
-                          </div>
-                        ) : (
-                          <span className="text-slate-600">Not booked yet</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        <MeetingInviteControls
+                        <MeetingBookingBlock
                           meeting={m}
                           inviting={invitingId === m.id}
                           canInvite={calendarConnected || apiConfig?.gmail?.hasRefreshToken}
                           onInvite={(when) => handleInviteMeet(m, when)}
-                          onScheduleBlur={(when) => {
-                            updateEmailMeeting(m.id, {
-                              meetingStatus: 'scheduled',
-                              meetingScheduledAt: new Date(when).toISOString(),
-                            }).catch(() => {})
-                          }}
                         />
-                      </td>
-                      <td className="max-w-[200px] px-3 py-2">
-                        {m.meetingLink ? (
-                          <a
-                            href={m.meetingLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block truncate text-indigo-300 hover:underline"
-                          >
-                            {m.meetingLink}
-                          </a>
-                        ) : (
-                          <span className="text-slate-600">—</span>
-                        )}
                       </td>
                       <td className="px-3 py-2">
                         <input
                           className="w-40 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white"
-                          defaultValue={m.meetingNotes || ''}
+                          defaultValue={
+                            m.meetingNotes && m.meetingNotes !== m.slotLabel
+                              ? m.meetingNotes
+                              : ''
+                          }
                           placeholder="Notes…"
                           onBlur={(e) => {
-                            if (e.target.value === (m.meetingNotes || '')) return
-                            updateEmailMeeting(m.id, { meetingNotes: e.target.value })
+                            const next = e.target.value
+                            const prev =
+                              m.meetingNotes && m.meetingNotes !== m.slotLabel
+                                ? m.meetingNotes
+                                : ''
+                            if (next === prev) return
+                            updateEmailMeeting(m.id, { meetingNotes: next })
                               .then(() => loadMeetings({ sync: false }))
                               .catch((err) => showToast(err.message, 'error'))
                           }}
@@ -2257,7 +2299,7 @@ export default function EmailPage() {
               </table>
             </div>
           </div>
-        </div>
+        </PageScroll>
       )}
 
       <ConfirmDialog

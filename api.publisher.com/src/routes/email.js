@@ -797,7 +797,9 @@ router.get('/email/meetings', async (req, res, next) => {
           ...mapRecipient(r),
           name: displayName || r.name || '',
           campaignName: displayCampaignName(c),
-          meetingLink: r.meetingLink || c?.meetingLink || defaultLink,
+          // Real Meet/join URL only — do not fall back to booking page here
+          meetingLink: r.meetingLink || '',
+          bookingLink: defaultLink || c?.meetingLink || '',
           meetingScheduledAt: scheduledAt,
           slotLabel,
         }
