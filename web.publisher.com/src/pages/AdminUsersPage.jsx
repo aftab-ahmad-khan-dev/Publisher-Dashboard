@@ -285,7 +285,26 @@ export default function AdminUsersPage() {
             <EmptyState title="No signups yet" description="New accounts will show here with plan status." />
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-white/10">
-              <table className="saas-table w-full text-left text-sm">
+              <div className="mobile-data-cards !border-0 !bg-transparent !p-3">
+                {signups.map((s) => (
+                  <div key={s.id} className="mobile-data-card">
+                    <p className="mobile-data-card__title">{s.name}</p>
+                    <p className="mobile-data-card__meta">{s.email || s.workspaceId}</p>
+                    <div className="mobile-data-card__row">
+                      <span className="mobile-data-card__label">Joined</span>
+                      <span className="mobile-data-card__value">{formatWhen(s.createdAt)}</span>
+                    </div>
+                    <div className="mobile-data-card__row">
+                      <span className="mobile-data-card__label">Plan</span>
+                      <span className="mobile-data-card__value">
+                        {PLAN_META[s.plan]?.name || s.plan || 'None'}
+                      </span>
+                    </div>
+                    <div className="mt-2">{planBadge(s.plan, s.status)}</div>
+                  </div>
+                ))}
+              </div>
+              <table className="saas-table saas-table--desktop-only w-full text-left text-sm">
                 <thead>
                   <tr>
                     <th className="px-3 py-2.5">User</th>

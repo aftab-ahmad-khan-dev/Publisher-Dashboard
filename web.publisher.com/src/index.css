@@ -326,14 +326,15 @@ body {
   color: #fcd34d;
 }
 
-/* Glossy notification panel — desktop popover / mobile native sheet */
+/* Glossy notification panel — desktop fixed popover / mobile native sheet (portaled to body) */
 .notif-panel {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  max-height: min(78dvh, 560px);
-  padding-bottom: env(safe-area-inset-bottom);
+  /* Sit above BottomNav (~5.25rem) + safe area */
+  max-height: min(72dvh, 520px);
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   animation: notif-sheet-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -348,7 +349,7 @@ body {
   border-bottom: none;
   background:
     linear-gradient(165deg, rgba(255, 255, 255, 0.14), transparent 42%),
-    linear-gradient(180deg, rgba(22, 26, 40, 0.96), rgba(8, 10, 18, 0.98));
+    linear-gradient(180deg, rgba(22, 26, 40, 0.98), rgba(8, 10, 18, 0.99));
   box-shadow:
     0 -8px 40px rgba(0, 0, 0, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
@@ -370,15 +371,20 @@ body {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 @media (min-width: 640px) {
+  .notif-backdrop {
+    background: transparent !important;
+    backdrop-filter: none !important;
+  }
+
   .notif-panel {
-    position: absolute;
     left: auto;
-    right: 0;
+    right: 0.75rem;
     bottom: auto;
-    top: calc(100% + 0.5rem);
+    top: 3.75rem;
     width: 22rem;
     max-height: min(70vh, 480px);
     padding-bottom: 0;
@@ -420,11 +426,68 @@ body {
   }
 }
 
-@supports (padding: env(safe-area-inset-bottom)) {
-  @media (display-mode: standalone) {
-    .notif-panel {
-      max-height: min(82dvh, 620px);
-    }
+/* Mobile mini-cards for wide data tables */
+.mobile-data-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.75rem;
+}
+
+.mobile-data-card {
+  border-radius: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  padding: 0.85rem 0.9rem;
+}
+
+.mobile-data-card__title {
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: #e2e8f0;
+}
+
+.mobile-data-card__meta {
+  margin-top: 0.15rem;
+  font-size: 0.6875rem;
+  color: #64748b;
+  word-break: break-all;
+}
+
+.mobile-data-card__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
+  font-size: 0.6875rem;
+}
+
+.mobile-data-card__label {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.mobile-data-card__value {
+  color: #cbd5e1;
+  text-align: right;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .mobile-data-cards {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .saas-table--desktop-only {
+    display: none !important;
+  }
+
+  .saas-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
   }
 }
 

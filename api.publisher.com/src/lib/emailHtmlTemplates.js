@@ -469,6 +469,8 @@ I built VorksPro so teams can publish and run outreach from one place instead of
 ::trust::Built for operators who ship — used by founders who hate busywork
 ::offer::Publish once|Outreach in one place|Live calendars|Campaign tracking
 
+Also available as Custom · Enterprise · CRM · SaaS builds when you need more than a publishing seat.
+
 Product: https://vorkspro.com
 
 If it looks useful for {{company}}, pick a time on my calendar and I will walk you through it.`,
@@ -492,6 +494,8 @@ VorksPro helps {{industry}} teams in {{region}} publish and follow up without sw
 ::trust::Built by a practitioner — not another bloated marketing suite
 ::offer::Social publishing|Email outreach|Meetings|Lead tracking
 
+Need Custom · Enterprise · CRM · SaaS builds around the same stack? Happy to scope that too.
+
 Overview: https://vorkspro.com
 
 Choose any day and time on my Google Calendar that works for you.`,
@@ -514,6 +518,8 @@ VorksPro is the product I use with founders who want outreach and publishing in 
 ::benefit::Cleaner process · Faster campaigns · Less admin drag
 ::trust::Trusted by teams that value clarity over complexity
 ::offer::Outreach|Publishing|Calendar booking|Status write-back
+
+Beyond the product: Custom · Enterprise · CRM · SaaS builds for teams that need a tailored stack.
 
 https://vorkspro.com
 

@@ -12,7 +12,7 @@ export function PageBody({ children, className = '' }) {
 
 export function PageScroll({ children, className = '' }) {
   return (
-    <div className={`saas-page-scroll scrollbar-none min-h-0 flex-1 overflow-y-auto overflow-x-hidden ${className}`}>
+    <div className={`saas-page-scroll scrollbar-none min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch] ${className}`}>
       {children}
     </div>
   )

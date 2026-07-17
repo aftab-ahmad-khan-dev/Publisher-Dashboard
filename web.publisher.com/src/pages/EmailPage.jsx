@@ -290,7 +290,7 @@ export default function EmailPage() {
     }
   }, [live, folder, mailboxQuery, showToast])
 
-  const REFRESH_MS = 5 * 60 * 1000 // mail status + meetings + calendar sync every 5 min
+  const REFRESH_MS = 90_000 // auto-refresh mail + meetings every ~1.5 min
 
   const refreshAll = useCallback(async () => {
     await Promise.all([
@@ -1535,8 +1535,73 @@ export default function EmailPage() {
               </div>
             )}
           </div>
-          <div className="saas-scroll min-h-0 flex-1 overflow-auto">
-            <table className="saas-table w-full min-w-[1100px] text-left text-xs">
+          <div className="saas-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
+            {filteredProcessed.length === 0 ? (
+              <p className="px-4 py-8 text-center text-xs text-slate-500 md:hidden">
+                No processed mail yet. Start a campaign from the Campaigns tab.
+              </p>
+            ) : (
+              <div className="mobile-data-cards">
+                {filteredProcessed.map((r) => {
+                  const displayName =
+                    r.name ||
+                    r.mergeData?.name ||
+                    (r.email ? r.email.split('@')[0] : '') ||
+                    '—'
+                  return (
+                    <div key={r.id} className="mobile-data-card">
+                      <div className="flex items-start gap-2">
+                        {selectMode && (
+                          <input
+                            type="checkbox"
+                            checked={selectedMailIds.has(r.id)}
+                            onChange={() => toggleMailSelect(r.id)}
+                            className="mt-0.5 rounded border-white/20"
+                          />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="mobile-data-card__title">{displayName}</p>
+                          <p className="mobile-data-card__meta">{r.email}</p>
+                        </div>
+                        <StatusChip status={r.status} />
+                      </div>
+                      <div className="mobile-data-card__row">
+                        <span className="mobile-data-card__label">Company</span>
+                        <span className="mobile-data-card__value">
+                          {r.company || r.mergeData?.company || '—'}
+                        </span>
+                      </div>
+                      <div className="mobile-data-card__row">
+                        <span className="mobile-data-card__label">Opens / Clicks</span>
+                        <span className="mobile-data-card__value">
+                          {r.openCount || 0} · {r.clickCount || 0}
+                        </span>
+                      </div>
+                      <div className="mobile-data-card__row">
+                        <span className="mobile-data-card__label">Meeting</span>
+                        <span className="mobile-data-card__value">
+                          <StatusChip status={r.meetingStatus || 'none'} />
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          className="rounded-lg bg-white/[0.06] px-2.5 py-1 text-[10px] font-semibold text-slate-300"
+                          onClick={() => {
+                            setTab('mailbox')
+                            setFolder(r.mailboxFolder === 'junk' ? 'junk' : 'sent')
+                            setSelectedId(r.id)
+                          }}
+                        >
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <table className="saas-table saas-table--desktop-only w-full min-w-[1100px] text-left text-xs">
               <thead>
                 <tr>
                   {selectMode && (
@@ -1894,8 +1959,110 @@ export default function EmailPage() {
               </div>
             )}
 
-            <div className="saas-scroll min-h-0 flex-1 overflow-auto">
-              <table className="saas-table w-full min-w-[1240px] text-left text-xs">
+            <div className="saas-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
+              {meetings.length === 0 ? (
+                <p className="px-4 py-8 text-center text-xs text-slate-500 md:hidden">
+                  No meeting activity yet. Open this tab to sync Calendar bookings, or tap Refresh +
+                  sync.
+                </p>
+              ) : (
+                <div className="mobile-data-cards">
+                  {meetings.map((m) => (
+                    <div
+                      key={m.id}
+                      className={`mobile-data-card ${
+                        selectedMeetingIds.has(m.id) ? 'ring-1 ring-indigo-500/40' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-indigo-500"
+                          checked={selectedMeetingIds.has(m.id)}
+                          onChange={(e) => {
+                            setSelectedMeetingIds((prev) => {
+                              const next = new Set(prev)
+                              if (e.target.checked) next.add(m.id)
+                              else next.delete(m.id)
+                              return next
+                            })
+                          }}
+                          aria-label={`Select ${m.name || m.email}`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="mobile-data-card__title">{m.name || '—'}</p>
+                          <p className="mobile-data-card__meta">{m.email}</p>
+                        </div>
+                      </div>
+                      <div className="mobile-data-card__row">
+                        <span className="mobile-data-card__label">Company</span>
+                        <span className="mobile-data-card__value">{m.company || '—'}</span>
+                      </div>
+                      <div className="mobile-data-card__row">
+                        <span className="mobile-data-card__label">Status</span>
+                        <span className="mobile-data-card__value">
+                          <select
+                            className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white"
+                            value={m.meetingStatus || 'none'}
+                            onChange={(e) => {
+                              const meetingStatus = e.target.value
+                              updateEmailMeeting(m.id, { meetingStatus })
+                                .then(() => loadMeetings({ sync: false }))
+                                .catch((err) => showToast(err.message, 'error'))
+                            }}
+                          >
+                            {MEETING_STATUSES.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.label}
+                              </option>
+                            ))}
+                          </select>
+                        </span>
+                      </div>
+                      <div className="mobile-data-card__row">
+                        <span className="mobile-data-card__label">Booked</span>
+                        <span className="mobile-data-card__value text-emerald-300">
+                          {m.slotLabel ||
+                            (m.meetingScheduledAt
+                              ? new Date(m.meetingScheduledAt).toLocaleString(undefined, {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })
+                              : 'Not booked')}
+                        </span>
+                      </div>
+                      <div className="mt-2">
+                        <MeetingInviteControls
+                          meeting={m}
+                          inviting={invitingId === m.id}
+                          canInvite={calendarConnected || apiConfig?.gmail?.hasRefreshToken}
+                          onInvite={(when) => handleInviteMeet(m, when)}
+                          onScheduleBlur={(when) => {
+                            updateEmailMeeting(m.id, {
+                              meetingStatus: 'scheduled',
+                              meetingScheduledAt: new Date(when).toISOString(),
+                            }).catch(() => {})
+                          }}
+                        />
+                      </div>
+                      {m.meetingLink ? (
+                        <a
+                          href={m.meetingLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 block truncate text-[11px] text-indigo-300 underline"
+                        >
+                          {m.meetingLink}
+                        </a>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <table className="saas-table saas-table--desktop-only w-full min-w-[1240px] text-left text-xs">
                 <thead>
                   <tr>
                     <th className="w-10 px-3 py-2.5">

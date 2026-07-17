@@ -388,6 +388,15 @@ export function AppDataProvider({ children }) {
     if (isAuthenticated) refreshFromServer()
   }, [isAuthenticated, refreshFromServer])
 
+  // Soft auto-refresh so queue / drafts stay current without manual reload (~90s)
+  useEffect(() => {
+    if (!live || !isAuthenticated) return undefined
+    const id = setInterval(() => {
+      refreshFromServer().catch(() => {})
+    }, 90_000)
+    return () => clearInterval(id)
+  }, [live, isAuthenticated, refreshFromServer])
+
   const pushInAppNotification = useCallback((event) => {
     const item = notificationFromEvent(event)
     if (!item) return null

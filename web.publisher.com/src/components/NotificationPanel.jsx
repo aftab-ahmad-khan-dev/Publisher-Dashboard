@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useAppData } from '../contexts/AppDataContext'
 import { ensureServiceWorkerReady, requestNotificationPermission } from '../lib/notifications'
@@ -18,14 +19,20 @@ function formatWhen(ts) {
     if (diff < 60_000) return 'Just now'
     if (diff < 3600_000) return `${Math.floor(diff / 60_000)}m ago`
     if (diff < 86400_000) return `${Math.floor(diff / 3600_000)}h ago`
-    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    return d.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
   } catch {
     return ''
   }
 }
 
 /**
- * Glossy notification panel — desktop popover, mobile/PWA native-style bottom sheet.
+ * Glossy notification panel — always portaled to body so overflow:hidden layouts
+ * cannot clip it on mobile.
  */
 export default function NotificationPanel() {
   const {
@@ -37,19 +44,25 @@ export default function NotificationPanel() {
   } = useAppData()
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
+  const panelRef = useRef(null)
 
   useEffect(() => {
     if (!open) return undefined
     const onDoc = (e) => {
-      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false)
+      const t = e.target
+      if (rootRef.current?.contains(t)) return
+      if (panelRef.current?.contains(t)) return
+      setOpen(false)
     }
     const onKey = (e) => {
       if (e.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
+    document.addEventListener('touchstart', onDoc, { passive: true })
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('touchstart', onDoc)
       document.removeEventListener('keydown', onKey)
     }
   }, [open])
@@ -57,7 +70,6 @@ export default function NotificationPanel() {
   useEffect(() => {
     if (!open) return undefined
     const prev = document.body.style.overflow
-    // Lock scroll only on mobile sheet
     const mq = window.matchMedia('(max-width: 639px)')
     if (mq.matches) document.body.style.overflow = 'hidden'
     return () => {
@@ -70,42 +82,19 @@ export default function NotificationPanel() {
     await requestNotificationPermission()
   }
 
-  return (
-    <div className="relative" ref={rootRef}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="notif-bell relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
-        aria-label="Notifications"
-        aria-expanded={open}
-      >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-          />
-        </svg>
-        {unreadNotificationCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-500 px-1 text-[9px] font-bold text-white shadow-lg shadow-indigo-500/40">
-            {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
-          </span>
-        )}
-      </button>
-
-      {open && (
+  const sheet = open
+    ? createPortal(
         <>
-          {/* Mobile backdrop */}
           <div
-            className="fixed inset-0 z-[90] bg-black/55 backdrop-blur-[2px] sm:hidden"
+            className="notif-backdrop fixed inset-0 z-[200] bg-black/55 backdrop-blur-[2px] sm:bg-transparent sm:backdrop-blur-none"
             onClick={() => setOpen(false)}
             aria-hidden
           />
-
           <div
+            ref={panelRef}
             role="dialog"
             aria-label="Notifications"
-            className="notif-panel z-[95] sm:absolute sm:right-0 sm:top-[calc(100%+0.5rem)] sm:w-[22rem]"
+            className="notif-panel z-[210]"
           >
             <div className="notif-panel__chrome">
               <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
@@ -133,7 +122,13 @@ export default function NotificationPanel() {
                     onClick={() => setOpen(false)}
                     aria-label="Close"
                   >
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <svg
+                      className="h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
                       <path strokeLinecap="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -179,8 +174,12 @@ export default function NotificationPanel() {
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-2">
-                              <p className="truncate text-[13px] font-semibold text-white">{n.title}</p>
-                              <span className="shrink-0 text-[10px] text-slate-600">{formatWhen(n.at)}</span>
+                              <p className="truncate text-[13px] font-semibold text-white">
+                                {n.title}
+                              </p>
+                              <span className="shrink-0 text-[10px] text-slate-600">
+                                {formatWhen(n.at)}
+                              </span>
                             </div>
                             <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-slate-400">
                               {n.body}
@@ -206,8 +205,34 @@ export default function NotificationPanel() {
               )}
             </div>
           </div>
-        </>
-      )}
+        </>,
+        document.body,
+      )
+    : null
+
+  return (
+    <div className="relative z-[40]" ref={rootRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="notif-bell relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
+        aria-label="Notifications"
+        aria-expanded={open}
+      >
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+          />
+        </svg>
+        {unreadNotificationCount > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-500 px-1 text-[9px] font-bold text-white shadow-lg shadow-indigo-500/40">
+            {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+          </span>
+        )}
+      </button>
+      {sheet}
     </div>
   )
 }
