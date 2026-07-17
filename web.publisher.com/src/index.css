@@ -326,6 +326,108 @@ body {
   color: #fcd34d;
 }
 
+/* Glossy notification panel — desktop popover / mobile native sheet */
+.notif-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: min(78dvh, 560px);
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: notif-sheet-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.notif-panel__chrome {
+  display: flex;
+  height: 100%;
+  max-height: inherit;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 1.25rem 1.25rem 0 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: none;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.14), transparent 42%),
+    linear-gradient(180deg, rgba(22, 26, 40, 0.96), rgba(8, 10, 18, 0.98));
+  box-shadow:
+    0 -8px 40px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(1.35);
+}
+
+.notif-panel__chrome::before {
+  content: '';
+  display: block;
+  width: 2.5rem;
+  height: 0.28rem;
+  margin: 0.55rem auto 0;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.notif-panel__list {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 640px) {
+  .notif-panel {
+    position: absolute;
+    left: auto;
+    right: 0;
+    bottom: auto;
+    top: calc(100% + 0.5rem);
+    width: 22rem;
+    max-height: min(70vh, 480px);
+    padding-bottom: 0;
+    animation: notif-pop 0.2s ease-out;
+  }
+
+  .notif-panel__chrome {
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 20px 50px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .notif-panel__chrome::before {
+    display: none;
+  }
+}
+
+@keyframes notif-sheet-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes notif-pop {
+  from {
+    transform: translateY(-6px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  @media (display-mode: standalone) {
+    .notif-panel {
+      max-height: min(82dvh, 620px);
+    }
+  }
+}
+
 /* Page header */
 .saas-page-header__accent {
   height: 1.75rem;
@@ -2012,4 +2114,48 @@ input:focus,
 select:focus,
 button:focus-visible {
   outline: none;
+}
+
+/* Mobile toast = notification banner from top; swipe to dismiss (Sonner) */
+@media (max-width: 639px) {
+  [data-sonner-toaster][data-y-position='top'] {
+    top: max(0.75rem, env(safe-area-inset-top, 0px)) !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-inline: 0.75rem;
+  }
+
+  [data-sonner-toaster][data-y-position='top'] [data-sonner-toast] {
+    --width: calc(100vw - 1.5rem);
+    width: var(--width) !important;
+    max-width: var(--width) !important;
+    margin-inline: auto;
+    animation: mobile-toast-in 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  [data-sonner-toaster][data-y-position='top'] [data-sonner-toast][data-removed='true'] {
+    animation: mobile-toast-out 0.28s ease-in forwards;
+  }
+}
+
+@keyframes mobile-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-120%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mobile-toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(-120%);
+  }
 }

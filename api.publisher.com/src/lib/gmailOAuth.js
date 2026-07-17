@@ -1,7 +1,7 @@
 import crypto from 'crypto'
-import { getWorkspaceConfig, saveGmailTokens } from './configStore.js'
+import { getWorkspaceConfig, saveGmailTokens, saveGmailConfig } from './configStore.js'
 import { logger } from './logger.js'
-import { apiPublicBase } from './publicUrl.js'
+import { apiPublicBase, webPublicBase } from './publicUrl.js'
 
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
@@ -17,9 +17,9 @@ const OAUTH_STATE_TTL_MS = 15 * 60 * 1000
 const DEFAULT_127_REDIRECT = `http://127.0.0.1:3001${GMAIL_CALLBACK_PATH}`
 const DEFAULT_LOCAL_REDIRECT = DEFAULT_127_REDIRECT
 
-/** Build a callback URL from API_PUBLIC_URL (the deployed domain) when set. */
-function publicCallback(path) {
-  const base = apiPublicBase()
+/** Build a callback URL from a public origin (WEB or API). */
+function publicCallback(path, origin) {
+  const base = (origin || '').replace(/\/+$/, '')
   return base ? `${base}${path}` : null
 }
 
@@ -39,6 +39,23 @@ export function normalizeGmailRedirectUri(uri) {
   }
 }
 
+/**
+ * Prefer the URI registered in Google Cloud (GMAIL_REDIRECT_URI / WEB_URL),
+ * not the separate API deploy host. Locally always use 127.0.0.1:3001.
+ */
+export function resolveGmailRedirectUri() {
+  if (process.env.VERCEL !== '1' && process.env.NODE_ENV !== 'production') {
+    const port = Number(process.env.PORT) || 3001
+    return normalizeGmailRedirectUri(`http://127.0.0.1:${port}${GMAIL_CALLBACK_PATH}`)
+  }
+  return (
+    normalizeGmailRedirectUri(process.env.GMAIL_REDIRECT_URI) ||
+    normalizeGmailRedirectUri(publicCallback(GMAIL_CALLBACK_PATH, webPublicBase())) ||
+    normalizeGmailRedirectUri(publicCallback(GMAIL_CALLBACK_PATH, apiPublicBase())) ||
+    DEFAULT_LOCAL_REDIRECT
+  )
+}
+
 export function getGmailOAuthSetup(config = {}) {
   const { clientId, clientSecret, redirectUri } = getClientCredentials(config)
   const fromEnv = normalizeGmailRedirectUri(process.env.GMAIL_REDIRECT_URI)
@@ -46,6 +63,7 @@ export function getGmailOAuthSetup(config = {}) {
     DEFAULT_LOCAL_REDIRECT,
     DEFAULT_127_REDIRECT,
     fromEnv,
+    normalizeGmailRedirectUri(publicCallback(GMAIL_CALLBACK_PATH, webPublicBase())),
     redirectUri,
   ].filter((u, i, a) => u && a.indexOf(u) === i)
 
@@ -101,16 +119,39 @@ function parseOAuthState(state) {
   return { workspaceId: String(payload.w) }
 }
 
+/**
+ * Prefer a complete Client ID + Secret pair from one source.
+ * Never mix DB Client ID with .env Secret (or vice versa) — that causes Google "Unauthorized".
+ */
 function getClientCredentials(config) {
+  const envId = process.env.GMAIL_CLIENT_ID?.trim() || ''
+  const envSecret = process.env.GMAIL_CLIENT_SECRET?.trim() || ''
+  const dbId = config.gmail?.clientId?.trim() || ''
+  const dbSecret = config.gmail?.clientSecret?.trim() || ''
+
+  const redirectUri = resolveGmailRedirectUri()
+
+  // Complete DB pair always wins
+  if (dbId && dbSecret) {
+    return { clientId: dbId, clientSecret: dbSecret, redirectUri }
+  }
+  // Complete env pair only when DB has no conflicting Client ID
+  if (envId && envSecret && (!dbId || dbId === envId)) {
+    return { clientId: envId, clientSecret: envSecret, redirectUri }
+  }
+  // Same Client ID in both places — allow secret from either
+  if (dbId && envSecret && (!envId || envId === dbId)) {
+    return { clientId: dbId, clientSecret: dbSecret || envSecret, redirectUri }
+  }
+  if (envId && dbSecret && (!dbId || dbId === envId)) {
+    return { clientId: envId, clientSecret: dbSecret, redirectUri }
+  }
+
+  // Incomplete / conflicting — do not invent a mixed pair
   return {
-    clientId:
-      process.env.GMAIL_CLIENT_ID?.trim() || config.gmail?.clientId?.trim() || '',
-    clientSecret:
-      process.env.GMAIL_CLIENT_SECRET?.trim() || config.gmail?.clientSecret?.trim() || '',
-    redirectUri:
-      normalizeGmailRedirectUri(publicCallback(GMAIL_CALLBACK_PATH)) ||
-      normalizeGmailRedirectUri(process.env.GMAIL_REDIRECT_URI) ||
-      DEFAULT_LOCAL_REDIRECT,
+    clientId: dbId || envId,
+    clientSecret: '',
+    redirectUri,
   }
 }
 
@@ -119,7 +160,7 @@ export function startGmailAuth(workspaceId) {
     const { clientId, redirectUri } = getClientCredentials(config)
     if (!clientId) {
       throw new Error(
-        'Gmail Client ID is required. Paste it in API Config → Save Gmail now, or set GMAIL_CLIENT_ID in api.publisher.com/.env and restart the API server.',
+        'Gmail Client ID is required. Paste it in Integrations → Save, or set GMAIL_CLIENT_ID in api .env.',
       )
     }
 
@@ -135,11 +176,11 @@ export function startGmailAuth(workspaceId) {
       state,
     })
 
-    const dbClientId = config.gmail?.clientId?.trim()
-    if (dbClientId && dbClientId !== clientId) {
-      logger.warn(
-        'Gmail Client ID in MongoDB differs from GMAIL_CLIENT_ID in .env — OAuth uses .env. Add redirect URI to the .env client in Google Cloud.',
-        { envClient: clientId.slice(0, 24), dbClient: dbClientId.slice(0, 24) },
+    const envClientId = process.env.GMAIL_CLIENT_ID?.trim()
+    if (envClientId && config.gmail?.clientId?.trim() && envClientId !== config.gmail.clientId.trim()) {
+      logger.info(
+        'Gmail OAuth using Client ID saved in Integrations (DB). Env GMAIL_CLIENT_ID is ignored while DB has a value.',
+        { dbClient: config.gmail.clientId.trim().slice(0, 28), envClient: envClientId.slice(0, 28) },
       )
     }
     logger.info('Gmail OAuth → Google (register this redirect URI on this Client ID)', {
@@ -161,6 +202,11 @@ export async function handleGmailCallback(code, state) {
 
   const config = await getWorkspaceConfig(pending.workspaceId)
   const { clientId, clientSecret, redirectUri } = getClientCredentials(config)
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      'Gmail Client ID and Client Secret must both be saved together. Paste both from the same Google Cloud Web client → Integrations → Save Gmail now → Connect Gmail.',
+    )
+  }
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -178,7 +224,12 @@ export async function handleGmailCallback(code, state) {
   if (!tokenRes.ok) {
     if (tokenData.error === 'invalid_client') {
       throw new Error(
-        'The provided client secret is invalid. In Google Cloud → Credentials → your Web client (same Client ID as .env) → Client secrets → create/copy secret → paste into GMAIL_CLIENT_SECRET in api .env, restart API, Save Gmail now, then Connect again.',
+        'Google rejected this Client Secret. In Google Cloud → your Web client → Client secrets → Add secret, copy the full value once, paste Client ID + Secret in Integrations, Save Gmail now, then Connect Gmail again.',
+      )
+    }
+    if (/redirect_uri_mismatch/i.test(tokenData.error_description || tokenData.error || '')) {
+      throw new Error(
+        `Redirect URI mismatch. Add this exact URI on the Google client: ${redirectUri}`,
       )
     }
     throw new Error(tokenData.error_description || tokenData.error || 'Gmail token exchange failed')
@@ -215,14 +266,15 @@ export async function refreshGmailTokenIfNeeded(workspaceId) {
   if (!gmail?.refreshToken?.trim()) return config
 
   const expires = gmail.tokenExpiresAt ? new Date(gmail.tokenExpiresAt).getTime() : 0
-  if (expires > Date.now() + 60_000 && gmail.accessToken?.trim()) {
+  // Refresh 5 minutes early so Calendar/Mail Box never hit a mid-request expiry.
+  if (expires > Date.now() + 5 * 60_000 && gmail.accessToken?.trim()) {
     return config
   }
 
   const { clientId, clientSecret } = getClientCredentials(config)
   if (!clientId || !clientSecret) {
     throw new Error(
-      'Gmail OAuth client is missing. Paste Client ID + Secret in Integrations, then Connect Gmail.',
+      'Gmail Client ID and Client Secret must both be set (same Google Cloud client). Paste both in Integrations → Save, then Connect Gmail.',
     )
   }
 
@@ -239,14 +291,49 @@ export async function refreshGmailTokenIfNeeded(workspaceId) {
 
   const tokenData = await tokenRes.json().catch(() => ({}))
   if (!tokenRes.ok) {
-    await saveGmailTokens(workspaceId, {
-      accessToken: '',
-      tokenExpiresAt: null,
-    })
     const detail = tokenData.error_description || tokenData.error || `HTTP ${tokenRes.status}`
-    logger.warn('Gmail token refresh failed', { detail })
+    logger.warn('Gmail token refresh failed', { detail, error: tokenData.error })
+
+    const staleSession =
+      tokenData.error === 'unauthorized_client' ||
+      tokenData.error === 'invalid_grant' ||
+      /unauthorized/i.test(detail)
+
+    if (
+      /OAuth client was deleted/i.test(detail) ||
+      tokenData.error === 'deleted_client' ||
+      (/deleted/i.test(detail) && tokenData.error !== 'unauthorized_client')
+    ) {
+      throw new Error(
+        'Google OAuth client was deleted. Create a new Web client, paste Client ID + Secret in Integrations, then Connect Gmail.',
+      )
+    }
+
+    if (staleSession) {
+      // Refresh token belongs to an old client — wipe it so Test/Sync stop looping this error
+      try {
+        await saveGmailConfig(workspaceId, {
+          accessToken: '__CLEAR__',
+          refreshToken: '__CLEAR__',
+          tokenExpiresAt: null,
+          connected: false,
+        })
+      } catch (clearErr) {
+        logger.warn('Could not clear stale Gmail tokens', { message: clearErr.message })
+      }
+      throw new Error(
+        'Gmail needs a fresh Connect (old login was for a different Google client). Open Integrations → Connect Gmail and accept permissions.',
+      )
+    }
+
+    if (tokenData.error === 'invalid_client') {
+      throw new Error(
+        'Google rejected this Client Secret. Paste Client ID + Secret from the same Web client → Save Gmail now → Connect Gmail.',
+      )
+    }
+
     throw new Error(
-      'Gmail session expired or invalid. Reconnect Gmail in Integrations (accept Calendar permissions).',
+      `Gmail token refresh failed (${detail}). Try Connect Gmail again in Integrations.`,
     )
   }
 
@@ -275,12 +362,16 @@ export async function getGmailAccessToken(workspaceId) {
 /** Map Google Calendar API auth failures to a reconnect message. */
 export function calendarAuthErrorMessage(err) {
   const msg = String(err?.message || err || '')
+  if (/invalid_grant|session expired or revoked/i.test(msg)) {
+    return 'Google Calendar auth expired. Reconnect Gmail in Integrations and accept Calendar access.'
+  }
+  if (/insufficient|ACCESS_TOKEN_SCOPE|permission/i.test(msg)) {
+    return 'Gmail is connected but missing Calendar permission. Reconnect Gmail and accept Calendar access.'
+  }
   if (
-    /invalid authentication credentials|invalid_grant|401|Login Required|UNAUTHENTICATED/i.test(
-      msg,
-    )
+    /invalid authentication credentials|401|Login Required|UNAUTHENTICATED/i.test(msg)
   ) {
-    return 'Google Calendar auth failed. Reconnect Gmail in Integrations and accept Calendar access.'
+    return 'Google Calendar request failed. Open Integrations → Test Gmail, then Sync again. If it still fails, Reconnect Gmail.'
   }
   return msg
 }

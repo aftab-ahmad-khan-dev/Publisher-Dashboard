@@ -344,22 +344,21 @@ export default function ApiConfigPage() {
 
   const connectGmail = async () => {
     const payload = gmailPayloadForSave(form.gmail);
+    const typedSecret = Boolean(form.gmail?.clientSecret?.trim());
     const hasId = Boolean(payload.clientId) || gmailOAuthSetup?.clientIdConfigured;
     const hasSecret =
-      Boolean(form.gmail?.clientSecret?.trim()) ||
-      form.gmail?.hasClientSecret ||
-      gmailOAuthSetup?.clientSecretConfigured;
+      typedSecret || form.gmail?.hasClientSecret || gmailOAuthSetup?.clientSecretConfigured;
 
     if (!hasId) {
       showToast(
-        "Paste Google Client ID (and Secret), click Save Gmail now, then Connect. Or set GMAIL_CLIENT_ID in api.publisher.com/.env and restart the API.",
+        "Paste Google Client ID and Client Secret from the same Web client, then Save Gmail now.",
         "error",
       );
       return;
     }
     if (!hasSecret) {
       showToast(
-        "Client Secret is required before Connect (paste it, save, or set GMAIL_CLIENT_SECRET in api .env).",
+        "Client Secret is required. Paste it from Google Cloud → the same Web client as the Client ID.",
         "error",
       );
       return;
@@ -367,7 +366,7 @@ export default function ApiConfigPage() {
 
     if (live) {
       try {
-        if (payload.clientId || form.gmail?.clientSecret?.trim()) {
+        if (payload.clientId || typedSecret) {
           await saveGmailConfig(payload);
         }
       } catch (err) {
@@ -802,7 +801,7 @@ export default function ApiConfigPage() {
                       value={form.gmail?.clientSecret || ""}
                       hasStored={form.gmail?.hasClientSecret}
                       onChange={(v) => update("gmail", "clientSecret", v)}
-                      help='https://console.cloud.google.com/apis/credentials'
+                      help='Must be from the same Web client as Client ID. Google shows the secret only once — use Add secret if you lost it, then paste both and Connect Gmail.'
                     />
                   </div>
                   {form.gmail?.fromEmail && (

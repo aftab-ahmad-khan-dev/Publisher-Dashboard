@@ -170,7 +170,7 @@ export default function ImageEditModal({ file, previewUrl, onClose, onApply }) {
             onClick={handleApply}
             className="rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-5 py-2 text-sm font-bold text-white disabled:opacity-50"
           >
-            {busy ? 'Saving…' : 'Apply to composer'}
+            {busy ? 'Saving…' : 'Apply'}
           </button>
         </div>
       </div>

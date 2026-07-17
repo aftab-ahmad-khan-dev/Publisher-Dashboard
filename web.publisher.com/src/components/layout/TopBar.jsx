@@ -1,11 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
 import { OrganizationSwitcher, UserButton } from '@clerk/clerk-react'
 import { useAppData } from '../../contexts/AppDataContext'
-import { isLivePublishing } from '../../lib/api'
 import { NAV_ITEMS } from '../../lib/constants'
 import { ADMIN_NAV_ITEM } from '../../lib/admin'
 import { clerkAppearance } from '../../lib/clerkAppearance'
 import BrandLogo from '../BrandLogo'
+import NotificationPanel from '../NotificationPanel'
 
 function Breadcrumb() {
   const { pathname } = useLocation()
@@ -30,7 +30,6 @@ function Breadcrumb() {
 
 export default function TopBar() {
   const { queue, drafts, processing, processingLabel } = useAppData()
-  const live = isLivePublishing()
   const scheduled = queue?.length ?? 0
   const draftCount = drafts?.length ?? 0
 
@@ -59,14 +58,7 @@ export default function TopBar() {
             </span>
           </div>
 
-          {live ? (
-            <span className="saas-status-pill saas-status-pill--live hidden sm:inline-flex">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-              Live API
-            </span>
-          ) : (
-            <span className="saas-status-pill saas-status-pill--demo hidden sm:inline-flex">Demo mode</span>
-          )}
+          <NotificationPanel />
 
           <div className="saas-topbar__account">
             <OrganizationSwitcher

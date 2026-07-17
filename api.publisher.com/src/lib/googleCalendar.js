@@ -60,20 +60,153 @@ export function getCalendarBookingUrl(configOrLink) {
 }
 
 function extractMeetLink(event) {
-  if (event?.hangoutLink) return event.hangoutLink
+  if (event?.hangoutLink && /meet\.google\.com/i.test(event.hangoutLink)) {
+    return event.hangoutLink
+  }
   const entries = event?.conferenceData?.entryPoints || []
+  for (const e of entries) {
+    if (e?.uri && /meet\.google\.com/i.test(e.uri)) return e.uri
+  }
   const video = entries.find((e) => e.entryPointType === 'video' && e.uri)
-  return video?.uri || ''
+  if (video?.uri) return video.uri
+
+  // Appointment Schedule / older events sometimes only put Meet in description or location
+  const blob = [event?.hangoutLink, event?.location, event?.description]
+    .filter(Boolean)
+    .join('\n')
+  const m = String(blob).match(/https?:\/\/meet\.google\.com\/[a-z0-9-]+/i)
+  return m ? m[0] : ''
+}
+
+function eventHasConference(event) {
+  if (!event) return false
+  if (extractMeetLink(event)) return true
+  const cd = event.conferenceData
+  if (!cd) return false
+  return Boolean(
+    cd.conferenceId ||
+      cd.createRequest ||
+      (Array.isArray(cd.entryPoints) && cd.entryPoints.length) ||
+      cd.conferenceSolution,
+  )
+}
+
+async function fetchCalendarEvent(accessToken, eventId) {
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  )
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) return null
+  return data
+}
+
+/**
+ * Attach Google Meet to an existing event when missing, then return the join URL.
+ * Never creates a second conference if one already exists (same room for host + guest).
+ */
+export async function ensureMeetOnEvent(accessToken, eventId, eventHint = null) {
+  let event = eventHint
+  if (!event || !extractMeetLink(event)) {
+    event = (await fetchCalendarEvent(accessToken, eventId)) || eventHint
+  }
+  if (!event?.id) return { meetLink: '', event: event || null }
+
+  let meetLink = extractMeetLink(event)
+  if (meetLink) return { meetLink, event }
+
+  // Conference pending / present but link not ready yet — wait and re-fetch, do NOT create another Meet
+  if (eventHasConference(event)) {
+    for (let i = 0; i < 3; i++) {
+      await new Promise((r) => setTimeout(r, 600))
+      const fresh = await fetchCalendarEvent(accessToken, eventId)
+      if (fresh) {
+        event = fresh
+        meetLink = extractMeetLink(fresh)
+        if (meetLink) return { meetLink, event: fresh }
+      }
+    }
+    return { meetLink: '', event }
+  }
+
+  const requestId = `meet-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  const patchRes = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}` +
+      '?conferenceDataVersion=1&sendUpdates=all',
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        conferenceData: {
+          createRequest: {
+            requestId,
+            conferenceSolutionKey: { type: 'hangoutsMeet' },
+          },
+        },
+      }),
+    },
+  )
+  let patched = await patchRes.json().catch(() => ({}))
+  if (!patchRes.ok) {
+    return { meetLink: '', event }
+  }
+
+  meetLink = extractMeetLink(patched)
+  if (!meetLink) {
+    for (let i = 0; i < 3; i++) {
+      await new Promise((r) => setTimeout(r, 700))
+      const fresh = await fetchCalendarEvent(accessToken, eventId)
+      if (fresh) {
+        patched = fresh
+        meetLink = extractMeetLink(fresh)
+        if (meetLink) break
+      }
+    }
+  }
+
+  if (meetLink) {
+    const desc = String(patched.description || event.description || '').trim()
+    if (!desc.includes(meetLink)) {
+      await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}` +
+          '?conferenceDataVersion=1&sendUpdates=none',
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            description: [
+              desc.replace(/\n*Google Meet:\s*https?:\/\/meet\.google\.com\/\S+/gi, '').trim(),
+              '',
+              `Google Meet: ${meetLink}`,
+              'Join with this link at the scheduled time — same room for host and guest.',
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          }),
+        },
+      ).catch(() => {})
+    }
+  }
+
+  return { meetLink, event: patched }
 }
 
 /**
  * Create a one-off calendar event invite with Google Meet.
+ * Lead + admin both receive Google Calendar invites (sendUpdates=all).
  */
 export async function createCalendarInvite({
   accessToken,
   summary,
   description,
   attendeeEmail,
+  adminEmail,
   startIso,
   endIso,
   timeZone = 'UTC',
@@ -82,6 +215,15 @@ export async function createCalendarInvite({
   const url =
     'https://www.googleapis.com/calendar/v3/calendars/primary/events' +
     '?conferenceDataVersion=1&sendUpdates=all'
+
+  const attendees = []
+  const seen = new Set()
+  for (const email of [attendeeEmail, adminEmail]) {
+    const e = String(email || '').trim().toLowerCase()
+    if (!e || seen.has(e)) continue
+    seen.add(e)
+    attendees.push({ email: e })
+  }
 
   const res = await fetch(url, {
     method: 'POST',
@@ -94,7 +236,9 @@ export async function createCalendarInvite({
       description: description || '',
       start: { dateTime: startIso, timeZone },
       end: { dateTime: endIso, timeZone },
-      attendees: attendeeEmail ? [{ email: attendeeEmail }] : [],
+      attendees,
+      guestsCanModify: false,
+      guestsCanInviteOthers: false,
       conferenceData: {
         createRequest: {
           requestId,
@@ -103,11 +247,46 @@ export async function createCalendarInvite({
       },
     }),
   })
-  const data = await res.json().catch(() => ({}))
+  let data = await res.json().catch(() => ({}))
   if (!res.ok) {
     throw new Error(data.error?.message || `Calendar API ${res.status}`)
   }
-  const meetLink = extractMeetLink(data)
+
+  let meetLink = extractMeetLink(data)
+  // Google sometimes returns the event before Meet is attached — re-fetch once
+  if (!meetLink && data.id) {
+    await new Promise((r) => setTimeout(r, 800))
+    const fresh = await fetchCalendarEvent(accessToken, data.id)
+    if (fresh) {
+      data = fresh
+      meetLink = extractMeetLink(fresh)
+    }
+  }
+
+  // Patch description with Meet link (no new conference — same room for everyone)
+  if (meetLink && data.id) {
+    const descWithMeet = [
+      String(description || '').trim(),
+      '',
+      `Google Meet: ${meetLink}`,
+      'Join with this link at the scheduled time — same room for host and guest.',
+    ]
+      .filter(Boolean)
+      .join('\n')
+    await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(data.id)}` +
+        '?conferenceDataVersion=1&sendUpdates=none',
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ description: descWithMeet }),
+      },
+    ).catch(() => {})
+  }
+
   return {
     ok: true,
     eventId: data.id,
@@ -124,14 +303,14 @@ export async function listUpcomingEvents({
   accessToken,
   timeMin,
   timeMax,
-  maxResults = 100,
+  maxResults = 250,
 }) {
   const params = new URLSearchParams({
     singleEvents: 'true',
     orderBy: 'startTime',
     maxResults: String(Math.min(maxResults, 250)),
-    timeMin: timeMin || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    timeMax: timeMax || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+    timeMin: timeMin || new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    timeMax: timeMax || new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString(),
   })
   const res = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
@@ -146,29 +325,159 @@ export async function listUpcomingEvents({
   return data.items || []
 }
 
+/** Collect guest emails from attendees only (never organizer/creator — that spam-notifies the host). */
+function emailsFromEvent(event) {
+  const found = new Set()
+  for (const a of event.attendees || []) {
+    if (a?.self) continue
+    if (a?.organizer) continue
+    const e = String(a.email || '')
+      .trim()
+      .toLowerCase()
+    if (e) found.add(e)
+  }
+  return [...found]
+}
+
+function adminEmailsSet() {
+  return new Set(
+    [
+      process.env.ADMIN_EMAIL,
+      process.env.FROM_EMAIL,
+      process.env.SMTP_EMAIL,
+      'aftabahmadkhan.dev@gmail.com',
+    ]
+      .map((e) => String(e || '').trim().toLowerCase())
+      .filter(Boolean),
+  )
+}
+
+/** True when the calendar event was created/updated recently (real new booking). */
+function isFreshBooking(event) {
+  const now = Date.now()
+  const created = event?.created ? new Date(event.created).getTime() : 0
+  if (created && now - created <= 3 * 60 * 60 * 1000) return true
+  const updated = event?.updated ? new Date(event.updated).getTime() : 0
+  // Brand-new appointment updates often bump `updated` while `created` is slightly older
+  if (created && updated && now - updated <= 45 * 60 * 1000 && now - created <= 24 * 60 * 60 * 1000) {
+    return true
+  }
+  return false
+}
+
+function isUpcomingMeeting(startDate) {
+  if (!startDate || Number.isNaN(startDate.getTime())) return false
+  const t = startDate.getTime()
+  const now = Date.now()
+  // Ignore meetings that already started more than 10 minutes ago
+  if (t < now - 10 * 60 * 1000) return false
+  return true
+}
+
+function formatSlot(startDate, timeZone) {
+  if (!startDate || Number.isNaN(startDate.getTime())) return ''
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: timeZone || undefined,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    }).format(startDate)
+  } catch {
+    return startDate.toISOString()
+  }
+}
+
 /**
- * Match Calendar events to email recipients by attendee email and update meeting pipeline.
+ * Match Calendar events to email recipients by guest email and update meeting pipeline.
+ * Also returns unmatched appointment bookings so the UI can show booked slots.
+ * Ensures Meet on the event and emails the guest + admin when a booking is new.
  */
 export async function syncMeetingsFromCalendar(workspaceId, accessToken) {
   const events = await listUpcomingEvents({ accessToken })
   let updated = 0
   const matched = []
   const newlyScheduled = []
+  const unmatchedBookings = []
+  const notifiedKeys = new Set()
+  const hostEmails = adminEmailsSet()
+
+  const { emailMeetLinkToParties, isMeetJoinUrl } = await import('./meetingNotify.js')
+
+  async function resolveJoinLink(event) {
+    let meetLink = extractMeetLink(event)
+    if (!meetLink && event.id) {
+      const ensured = await ensureMeetOnEvent(accessToken, event.id, event)
+      meetLink = ensured.meetLink || ''
+      if (ensured.event) Object.assign(event, ensured.event)
+    }
+    return meetLink
+  }
+
+  async function notifyGuestOnce({
+    email,
+    name,
+    meetLink,
+    whenIso,
+    summary,
+    htmlLink,
+    recipientId,
+    broadcast = true,
+  }) {
+    const normalized = String(email || '').trim().toLowerCase()
+    if (!normalized || hostEmails.has(normalized)) return null
+    const key = `${normalized}|${whenIso || ''}|${meetLink || ''}`
+    if (notifiedKeys.has(key)) return null
+    notifiedKeys.add(key)
+
+    const result = await emailMeetLinkToParties({
+      leadEmail: email,
+      leadName: name || '',
+      meetLink,
+      whenIso,
+      summary: summary || 'Meeting',
+      calendarHtmlLink: htmlLink || '',
+      workspaceId,
+      broadcast,
+    }).catch(() => null)
+
+    if (recipientId) {
+      await EmailRecipient.updateOne(
+        { _id: recipientId },
+        { $set: { meetingConfirmSentAt: new Date() } },
+      ).catch(() => {})
+    }
+    return result
+  }
 
   for (const event of events) {
-    const attendees = (event.attendees || []).filter((a) => a.email && !a.self)
-    if (!attendees.length) continue
+    if (event.status === 'cancelled') continue
 
+    const guestEmails = emailsFromEvent(event).filter((e) => !hostEmails.has(e))
     const startRaw = event.start?.dateTime || event.start?.date
     const startDate = startRaw ? new Date(startRaw) : null
-    const meetLink = extractMeetLink(event) || event.htmlLink || ''
+    const endRaw = event.end?.dateTime || event.end?.date
+    const endDate = endRaw ? new Date(endRaw) : null
+    const timeZone = event.start?.timeZone || event.end?.timeZone || ''
+    const slotLabel = formatSlot(startDate, timeZone)
+    const summary = event.summary || 'Meeting'
+    const htmlLink = event.htmlLink || ''
+    const fresh = isFreshBooking(event)
+    const upcoming = isUpcomingMeeting(startDate)
 
-    for (const att of attendees) {
-      const email = String(att.email || '')
-        .trim()
-        .toLowerCase()
-      if (!email) continue
+    if (!guestEmails.length) continue
+    // Skip old past events for Meet attach + notify
+    if (!upcoming && !fresh) continue
 
+    const meetLink = upcoming || fresh ? await resolveJoinLink(event) : extractMeetLink(event)
+    const whenIso = startDate && !Number.isNaN(startDate.getTime()) ? startDate.toISOString() : null
+
+    let anyMatched = false
+    for (const email of guestEmails) {
       const recipients = await EmailRecipient.find({
         workspaceId,
         email: { $regex: new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
@@ -176,32 +485,63 @@ export async function syncMeetingsFromCalendar(workspaceId, accessToken) {
         .sort({ updatedAt: -1 })
         .limit(5)
 
+      if (!recipients.length) continue
+      anyMatched = true
+
       for (const recipient of recipients) {
         let changed = false
-        let justScheduled = false
+        let statusBecameScheduled = false
+        const prevStatus = recipient.meetingStatus || 'none'
+        const prevEventId = String(recipient.calendarEventId || '')
+        const prevLink = String(recipient.meetingLink || '')
+
         if (event.id && recipient.calendarEventId !== event.id) {
           recipient.calendarEventId = event.id
           changed = true
         }
         if (meetLink && recipient.meetingLink !== meetLink) {
-          recipient.meetingLink = meetLink
-          changed = true
+          if (isMeetJoinUrl(meetLink) || !prevLink || !isMeetJoinUrl(prevLink)) {
+            recipient.meetingLink = meetLink
+            changed = true
+          }
         }
         if (startDate && !Number.isNaN(startDate.getTime())) {
           const prev = recipient.meetingScheduledAt
             ? new Date(recipient.meetingScheduledAt).getTime()
             : 0
           if (prev !== startDate.getTime()) {
-            recipient.meetingScheduledAt = startDate
-            changed = true
+            const prevIsFuture = prev > Date.now() - 10 * 60 * 1000
+            const thisIsSooner = !prev || startDate.getTime() < prev
+            if (!prevIsFuture || thisIsSooner || event.id === prevEventId) {
+              recipient.meetingScheduledAt = startDate
+              changed = true
+              if (fresh && event.id !== prevEventId) {
+                recipient.meetingConfirmSentAt = null
+                recipient.meetingReminderSentAt = null
+              }
+            }
           }
         }
-        const advanceable = ['none', 'invited', 'link_clicked']
-        if (advanceable.includes(recipient.meetingStatus || 'none')) {
-          recipient.meetingStatus = 'scheduled'
+        if (
+          slotLabel &&
+          recipient.meetingNotes !== slotLabel &&
+          !String(recipient.meetingNotes || '').includes(slotLabel)
+        ) {
+          recipient.meetingNotes = recipient.meetingNotes
+            ? `${slotLabel} · ${recipient.meetingNotes}`.slice(0, 2000)
+            : slotLabel
           changed = true
-          justScheduled = true
         }
+
+        const advanceable = ['none', 'invited', 'link_clicked']
+        if (advanceable.includes(prevStatus)) {
+          recipient.meetingStatus = 'scheduled'
+          statusBecameScheduled = true
+          changed = true
+        } else if (prevStatus === 'scheduled' && fresh && event.id && event.id !== prevEventId) {
+          statusBecameScheduled = true
+        }
+
         if (changed) {
           await recipient.save()
           updated += 1
@@ -210,46 +550,102 @@ export async function syncMeetingsFromCalendar(workspaceId, accessToken) {
             email: recipient.email,
             eventId: event.id,
             meetingLink: meetLink,
-            meetingScheduledAt: startDate?.toISOString?.() || null,
-            summary: event.summary || 'Meeting',
+            meetingScheduledAt: whenIso,
+            slotLabel,
+            summary,
           }
           matched.push(row)
-          if (justScheduled) newlyScheduled.push(row)
+          if (statusBecameScheduled) newlyScheduled.push(row)
         }
+
+        // Only notify for real NEW bookings — never backfill historical calendar rows
+        const shouldNotify =
+          upcoming &&
+          fresh &&
+          statusBecameScheduled &&
+          Boolean(recipient.email) &&
+          !recipient.meetingConfirmSentAt
+
+        if (shouldNotify) {
+          await notifyGuestOnce({
+            email: recipient.email,
+            name: recipient.name || recipient.mergeData?.name || '',
+            meetLink,
+            whenIso,
+            summary,
+            htmlLink,
+            recipientId: recipient._id,
+            broadcast: true,
+          })
+        } else if (
+          recipient.meetingStatus === 'scheduled' &&
+          !recipient.meetingConfirmSentAt &&
+          !fresh
+        ) {
+          await EmailRecipient.updateOne(
+            { _id: recipient._id },
+            { $set: { meetingConfirmSentAt: new Date() } },
+          ).catch(() => {})
+        }
+      }
+    }
+
+    if (!anyMatched && upcoming && startDate && !Number.isNaN(startDate.getTime())) {
+      unmatchedBookings.push({
+        eventId: event.id,
+        summary,
+        meetingScheduledAt: whenIso,
+        meetingScheduledEndAt:
+          endDate && !Number.isNaN(endDate.getTime()) ? endDate.toISOString() : null,
+        slotLabel,
+        meetingLink: meetLink,
+        guests: guestEmails,
+      })
+
+      const alreadyMarked = /\[publisher-meet-notified\]/i.test(String(event.description || ''))
+      if (!alreadyMarked && fresh) {
+        for (const email of guestEmails) {
+          await notifyGuestOnce({
+            email,
+            name: '',
+            meetLink,
+            whenIso,
+            summary,
+            htmlLink,
+            recipientId: null,
+            broadcast: true,
+          })
+        }
+      }
+      if (!alreadyMarked && event.id) {
+        const desc = String(event.description || '').trim()
+        await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(event.id)}` +
+            '?conferenceDataVersion=1&sendUpdates=none',
+          {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              description: `${desc}${desc ? '\n\n' : ''}[publisher-meet-notified]`,
+            }),
+          },
+        ).catch(() => {})
       }
     }
   }
 
-  if (newlyScheduled.length) {
-    try {
-      const { sendMail, isMailerConfigured } = await import('./mailer.js')
-      if (isMailerConfigured()) {
-        const admin = process.env.ADMIN_EMAIL?.trim() || 'aftabahmadkhan.dev@gmail.com'
-        for (const m of newlyScheduled) {
-          await sendMail({
-            to: admin,
-            subject: `Meeting booked — ${m.email}`,
-            text: [
-              `A lead booked a meeting on your calendar.`,
-              '',
-              `Lead: ${m.email}`,
-              `When: ${m.meetingScheduledAt || 'see calendar'}`,
-              `Event: ${m.summary}`,
-              m.meetingLink ? `Link: ${m.meetingLink}` : '',
-              '',
-              '— Publisher Suite',
-            ]
-              .filter(Boolean)
-              .join('\n'),
-          }).catch(() => {})
-        }
-      }
-    } catch {
-      /* non-fatal */
-    }
+  return {
+    ok: true,
+    updated,
+    matched,
+    newlyScheduled: newlyScheduled.length,
+    unmatchedBookings,
+    eventsScanned: events.length,
+    guestsNotified: notifiedKeys.size,
   }
-
-  return { ok: true, updated, matched, newlyScheduled: newlyScheduled.length, eventsScanned: events.length }
 }
 
 /**

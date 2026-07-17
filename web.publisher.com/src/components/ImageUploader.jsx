@@ -277,16 +277,29 @@ export default function ImageUploader({
                 >
                   Clear all
                 </button>
-                {imageType !== 'video' && replaceActiveMedia && (
+              </div>
+
+              {imageType !== 'video' && (
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => setEditOpen(true)}
-                    className="absolute top-2 left-2 rounded-full bg-indigo-600/90 px-2.5 py-1 text-xs font-semibold text-white hover:bg-indigo-500"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 hover:opacity-95"
                   >
-                    Edit
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2.414a2 2 0 01.586-1.414z"
+                      />
+                    </svg>
+                    Edit image
                   </button>
-                )}
-              </div>
+                  <p className="self-center text-[11px] text-slate-500">
+                    Crop, filters, and platform presets
+                  </p>
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-2">
                 {CROP_HINTS.map((hint) => (
@@ -346,7 +359,11 @@ export default function ImageUploader({
           file={image}
           previewUrl={imagePreviewUrl}
           onClose={() => setEditOpen(false)}
-          onApply={(nextFile) => replaceActiveMedia?.(nextFile)}
+          onApply={(nextFile) => {
+            if (replaceActiveMedia) replaceActiveMedia(nextFile)
+            else addMediaFiles?.([nextFile])
+            setEditOpen(false)
+          }}
         />
       )}
     </div>

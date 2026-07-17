@@ -4,6 +4,7 @@
  * Title rows above the header row are tolerated.
  */
 import ExcelJS from 'exceljs'
+import { buildNichePain, buildNichePainShort } from './nichePain.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i
 const NO_EMAIL_RE = /^(no\s*email|n\/?a|none|-|null|undefined)$/i
@@ -128,15 +129,28 @@ export function buildLeadMergeData(row, sheetName = '', bookingUrl = '') {
     process.env.GOOGLE_CALENDAR_BOOKING_URL?.trim() ||
     ''
 
-  const fomoLine = loc.country
-    ? loc.city && loc.city !== loc.country
-      ? `Teams in ${loc.city}, ${loc.country} are already moving on this`
-      : `Teams across ${loc.country} are already moving on this`
-    : sheetName
-      ? `Teams in ${sheetName} are already moving on this`
-      : 'Teams in your market are already moving on this'
+  const place =
+    loc.city && loc.country && loc.city !== loc.country
+      ? `${loc.city}, ${loc.country}`
+      : loc.country || loc.city || sheetName || 'your market'
+
+  const industryBit = industry ? `${industry} ` : ''
+  const punchOptions = [
+    `Most ${industryBit}teams in ${place} still lose weeks to agency handoffs and half-finished builds.`,
+    `${place} is moving fast, and the teams that ship web, mobile, and desktop in one stack are pulling ahead.`,
+    `The real pain for ${industryBit}founders in ${place} is not ideas. It is reliable delivery without the agency tax.`,
+    `If ${company || 'your team'} still juggles freelancers for web, mobile, and desktop, that gap is costing you speed.`,
+    `Teams in ${place} are already consolidating product work with one senior builder. Waiting is the expensive option.`,
+  ]
+  // Stable pick from email so the same lead always gets the same punch line
+  const seed = String(row.email || name || place)
+    .split('')
+    .reduce((a, c) => a + c.charCodeAt(0), 0)
+  const fomoLine = punchOptions[seed % punchOptions.length]
 
   const greeting = firstName ? `Hi ${firstName}` : name ? `Hi ${name}` : 'Hi there'
+  const nichePain = buildNichePain({ industry, company, place })
+  const nichePainShort = buildNichePainShort({ industry })
 
   return {
     email: row.email,
@@ -156,6 +170,8 @@ export function buildLeadMergeData(row, sheetName = '', bookingUrl = '') {
     nicheLabel: industry || company || 'your industry',
     greeting,
     fomoLine,
+    nichePain,
+    nichePainShort,
     meetingLink,
     update: row.update || '',
     rowNumber: row.rowNumber,
@@ -178,7 +194,8 @@ function rowsFromWorksheet(ws) {
   return rows
 }
 
-function parseSheetRows(sheetName, rows, { skipAlreadyEmailed = true } = {}) {
+function parseSheetRows(sheetName, rows, options = {}) {
+  const { skipAlreadyEmailed = true } = options
   const found = findHeaderRow(rows)
   if (!found) {
     return {

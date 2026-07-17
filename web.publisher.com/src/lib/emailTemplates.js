@@ -1,50 +1,52 @@
 /**
- * Themed outreach + product (VorksPro) email templates with FOMO + signature.
- * Merge tags: {{greeting}} {{firstName}} {{company}} {{designation}} {{city}}
- * {{country}} {{region}} {{industry}} {{fomoLine}} {{meetingLink}}
+ * Outreach + product email templates (plain-text / UI fallback).
+ * Structure: greeting → FOMO/pain punch → body → offer block (caps + value) → CTA.
  */
 
 export const SIGNATURE = {
   name: 'Aftab Ahmad Khan',
-  role: 'Solo Full-Stack Developer · MERN · Shopify · AI',
+  role: 'Product Engineer · Web · Mobile · Desktop · AI',
+  headline: 'Full-stack web, native mobile, and desktop apps',
   site: 'https://aftabahmadkhan.online',
   email: 'aftabahmadkhan.dev@gmail.com',
   product: 'https://vorkspro.com',
 }
 
 export function formatSignature({ includeMeeting = false, meetingLink = '' } = {}) {
-  const lines = [
-    SIGNATURE.name,
-    SIGNATURE.role,
-    SIGNATURE.site,
-    SIGNATURE.email,
-  ]
+  const lines = [SIGNATURE.name, SIGNATURE.role, SIGNATURE.site, SIGNATURE.email]
   if (includeMeeting && meetingLink) {
-    lines.push(`Schedule a meeting (pick a free slot): ${meetingLink}`)
+    lines.push(`Schedule a meeting: ${meetingLink}`)
   }
   return lines.join('\n')
 }
+
+const TRUST =
+  'Trusted by founders worldwide — 97+ shipped projects · 5.0 feedback · clients in 14+ countries'
 
 export const OUTREACH_TEMPLATES = [
   {
     id: 'outreach-direct',
     name: 'Direct hire',
     type: 'outreach',
-    subject: '{{firstName}}, production software without the agency overhead',
+    subject: '{{firstName}}, end-to-end product build for {{company}}',
     body: `{{greeting}},
 
-I help founders ship production MERN, Shopify, SaaS, and AI products end-to-end — solo, no outsourcing.
+{{fomoLine}}
 
-{{fomoLine}}. If {{company}} needs a senior builder who owns scope, milestones, and handoff, I may be a fit.
+I ship production software across web, mobile, and desktop, plus AI workflows when they add real leverage. One senior engineer owns scope, milestones, and handoff.
 
-Portfolio & proof: https://aftabahmadkhan.online
-(97+ projects · 5.0 feedback · clients in 14+ countries)
+The problem: {{nichePain}}
+The solution: One senior owns web, mobile, and desktop from scope to ship
+How easy it is: Clear milestones and handoff — no freelancer juggling
+What you get: Faster delivery · Single accountable owner · Production-ready work
+${TRUST}
+Tech stack: Web / MERN / Shopify · iOS & Android · Desktop apps · SaaS & AI
 
-If you prefer to start the contract on Fiverr or Upwork, that works for me too — happy to meet you where your process already is.
+If {{company}} needs that kind of ownership, I am happy to share relevant work.
 
-Worth a short reply?
+Portfolio: https://aftabahmadkhan.online
 
-Prefer a quick call? Schedule a meeting (pick a free slot): {{meetingLink}}
+A short reply is enough, or book a brief call: {{meetingLink}}
 
 ${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
   },
@@ -52,33 +54,71 @@ ${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
     id: 'outreach-ceo',
     name: 'CEO / founder',
     type: 'outreach',
-    subject: 'For {{designation}} at {{company}} — senior delivery, direct hire',
+    subject: 'For {{designation}} at {{company}}, delivery without the agency stack',
     body: `{{greeting}},
 
-Most {{industry}} teams I talk to in {{country}} don't need another agency slide deck. They need someone who ships.
+{{fomoLine}}
 
-I'm Aftab — solo full-stack (MERN, Shopify, AI automation). {{fomoLine}}.
+Most {{industry}} leaders do not need another slide deck. They need someone who can ship web, mobile, and desktop products and stay on the work.
 
-Happy to share a short case study relevant to {{company}}. If contracting via Fiverr/Upwork is easier on your side, I'm fine with that as well.
+The problem: {{nichePain}}
+The solution: One product engineer across stack — web, mobile, desktop, AI
+How easy it is: You get one thread of communication and one delivery plan
+What you get: Less overhead · Faster decisions · Work that reaches production
+Trusted delivery partner — 97+ projects · 5.0 feedback · 14+ countries
+Tech stack: Web platforms · Mobile apps · Desktop software · AI workflows
 
-Prefer a quick call? Schedule a meeting: {{meetingLink}}
+I can send a short case study relevant to {{company}}. If a quick call helps: {{meetingLink}}
 
 ${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
   },
   {
-    id: 'outreach-fomo',
-    name: 'Region FOMO',
+    id: 'outreach-mobile',
+    name: 'Mobile & desktop',
     type: 'outreach',
-    subject: '{{city}} / {{country}} teams are tightening their build stack',
+    subject: '{{company}}: mobile and desktop product engineering',
     body: `{{greeting}},
 
-{{fomoLine}} — especially around MERN SaaS, Shopify ops, and AI workflows.
+{{fomoLine}}
 
-I partner directly with founders (no junior handoff). Details: https://aftabahmadkhan.online
+Alongside web and SaaS, I design and ship mobile apps (iOS / Android) and desktop applications for teams that need more than a marketing site.
 
-Open to a quick reply if {{company}} is evaluating a build or rebuild. Fiverr/Upwork contracts are fine if that's your preferred start.
+The problem: {{nichePain}}
+The solution: Native-quality mobile and desktop built with a solid API and admin
+How easy it is: One builder from prototype to store / installable release
+What you get: Polished UX · Shared backend · Faster path to users
+Builders trust consistency — 97+ shipped projects · 5.0 client feedback
+Tech stack: iOS & Android · Desktop apps · Cross-platform · API + admin
 
-Prefer a quick call? Schedule a meeting: {{meetingLink}}
+If {{company}} is planning a mobile or desktop build, or a rebuild, I would be glad to walk through approach and timeline.
+
+Portfolio: https://aftabahmadkhan.online
+
+Schedule a meeting: {{meetingLink}}
+
+${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
+  },
+  {
+    id: 'outreach-region',
+    name: 'Region focus',
+    type: 'outreach',
+    subject: 'Product engineering for teams in {{city}} / {{country}}',
+    body: `{{greeting}},
+
+{{fomoLine}}
+
+I partner directly with founders on web platforms, mobile apps, desktop software, Shopify / SaaS, and AI workflows, with no junior handoff.
+
+The problem: {{nichePain}}
+The solution: Direct founder partnership with full-stack product ownership
+How easy it is: Simple engagement — scope, build, ship, support
+What you get: Speed to market · Clear accountability · Cross-platform coverage
+Preferred by growing teams — 97+ projects · 5.0 feedback · 14+ countries
+Tech stack: Web · Mobile · Desktop · Shopify & SaaS · AI automation
+
+Details and reviews: https://aftabahmadkhan.online
+
+If {{company}} is evaluating a build, a short reply works. Or schedule a brief call: {{meetingLink}}
 
 ${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
   },
@@ -89,14 +129,23 @@ export const PRODUCT_TEMPLATES = [
     id: 'product-intro',
     name: 'VorksPro intro',
     type: 'product',
-    subject: '{{company}} — a faster ops stack with VorksPro',
+    subject: '{{company}}: publishing and outreach without the tab chaos',
     body: `{{greeting}},
 
-{{fomoLine}}. I built VorksPro to help teams cut the busywork between tools and get publishing + outreach under control.
+{{fomoLine}}
+
+I built VorksPro so teams can publish and run outreach from one place instead of juggling tools.
+
+The problem: {{nichePain}}
+The solution: One calm workspace for publishing and outreach
+How easy it is: Connect accounts, load leads, send — without spreadsheet gymnastics
+What you get: Less tool switching · Clear pipeline · Faster follow-up
+Built for operators who ship — used by founders who hate busywork
+Publish once · Outreach in one place · Live calendars · Campaign tracking
 
 Product: https://vorkspro.com
 
-If it looks relevant for {{company}}, pick a time on my calendar that works for you — availability is live:
+If it looks useful for {{company}}, pick any day and time on my calendar:
 {{meetingLink}}
 
 ${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
@@ -105,39 +154,54 @@ ${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
     id: 'product-meeting',
     name: 'Book a demo',
     type: 'product',
-    subject: '15 min on VorksPro for {{company}}?',
+    subject: '15 minutes on VorksPro for {{company}}?',
     body: `{{greeting}},
 
-Quick context: VorksPro helps {{industry}} teams in {{region}} ship and follow up without tab chaos.
+{{fomoLine}}
 
-See it here: https://vorkspro.com
+VorksPro helps {{industry}} teams in {{region}} publish and follow up without switching between half a dozen tabs.
 
-Schedule a meeting — you'll only see times I'm free:
+The problem: {{nichePain}}
+The solution: Publishing + outreach + meetings in one flow
+How easy it is: Fifteen minutes to see if it fits your team
+What you get: Visibility · Consistency · Time back every week
+Built by a practitioner — not another bloated marketing suite
+Social publishing · Email outreach · Meetings · Lead tracking
+
+Overview: https://vorkspro.com
+
+Choose any day and time on my Google Calendar:
 {{meetingLink}}
-
-Looking forward to it if the timing works.
 
 ${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
   },
   {
-    id: 'product-fomo',
+    id: 'product-region',
     name: 'Region + product',
     type: 'product',
-    subject: '{{country}} teams are booking VorksPro walkthroughs',
+    subject: 'VorksPro walkthrough for teams in {{country}}',
     body: `{{greeting}},
 
-{{fomoLine}}. VorksPro is the product I use with founders who want outreach + publishing in one place.
+{{fomoLine}}
+
+VorksPro is the product I use with founders who want outreach and publishing in one calm workflow.
+
+The problem: {{nichePain}}
+The solution: One operator-friendly stack for ship + follow-up
+How easy it is: Book a walkthrough — bring your real workflow questions
+What you get: Cleaner process · Faster campaigns · Less admin drag
+Trusted by teams that value clarity over complexity
+Outreach · Publishing · Calendar booking · Status write-back
 
 https://vorkspro.com
 
-Book a walkthrough when it suits you — the link shows my live availability:
+Book a walkthrough any day and time that works:
 {{meetingLink}}
 
 ${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
   },
 ]
 
-/** Legacy pain-first templates kept for shuffle compatibility */
 export const EMAIL_TEMPLATES = [
   ...OUTREACH_TEMPLATES.map((t) => ({ name: t.name, subject: t.subject, body: t.body })),
   ...PRODUCT_TEMPLATES.map((t) => ({ name: t.name, subject: t.subject, body: t.body })),
@@ -150,39 +214,40 @@ export function templatesForType(type) {
 }
 
 export function toCampaignTemplates(list, meetingLink = '') {
+  const FONT =
+    "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
   return list.map((t) => {
     const link = meetingLink || '{{meetingLink}}'
     const body = String(t.body || '').replaceAll('{{meetingLink}}', link)
     const scheduleBtn = link
-      ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px 0 4px;">
+      ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0 8px;">
   <tr>
     <td style="padding-right:10px;padding-bottom:8px;">
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-        <td style="border-radius:10px;background:#0f172a;">
-          <a href="${SIGNATURE.site}" style="display:inline-block;padding:12px 20px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;">View portfolio</a>
+        <td style="border-radius:8px;background:#0b1220;">
+          <a href="${SIGNATURE.site}" style="display:inline-block;padding:12px 18px;font-size:13px;font-weight:600;color:#ffffff;text-decoration:none;font-family:${FONT};">View portfolio</a>
         </td>
       </tr></table>
     </td>
     <td style="padding-bottom:8px;">
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-        <td style="border-radius:10px;background:#4f46e5;">
-          <a href="${link}" style="display:inline-block;padding:12px 20px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;">Schedule a meeting</a>
+        <td style="border-radius:8px;background:#0f3d68;">
+          <a href="${link}" style="display:inline-block;padding:12px 18px;font-size:13px;font-weight:600;color:#ffffff;text-decoration:none;font-family:${FONT};">Schedule a meeting</a>
         </td>
       </tr></table>
     </td>
   </tr>
 </table>
-<p style="font-size:12px;color:#64748b;margin:0 0 16px;">Schedule opens my Google Calendar — only available times are shown.</p>`
+<p style="font-size:12px;color:#64748b;margin:0 0 16px;font-family:${FONT};">Choose any day and time that works for you on my calendar.</p>`
       : ''
     let htmlBody = body.includes('<table role="presentation"')
       ? body
-      : `<div style="font-family:system-ui,sans-serif;line-height:1.55;color:#111">${body
+      : `<div style="font-family:${FONT};line-height:1.7;color:#1e293b;font-size:15px;">${body
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;')
           .replace(/\n/g, '<br>\n')}</div>${scheduleBtn}`
     if (meetingLink) {
-      // dynamic import avoided — inline minimal rewrite for schedule labels
       htmlBody = htmlBody.replace(
         /<a\b([^>]*?)href\s*=\s*(["'])([^"']*)\2([^>]*)>([\s\S]*?)<\/a>/gi,
         (full, pre, quote, _href, post, inner) => {

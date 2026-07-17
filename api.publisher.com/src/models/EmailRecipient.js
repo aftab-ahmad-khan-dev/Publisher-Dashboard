@@ -49,6 +49,10 @@ const emailRecipientSchema = new mongoose.Schema(
     meetingNotes: { type: String, default: '' },
     /** Google Calendar event id when invited/synced */
     calendarEventId: { type: String, default: '' },
+    /** When we emailed the 5–10 min pre-meeting reminder */
+    meetingReminderSentAt: Date,
+    /** When guest was emailed Meet link + time confirmation */
+    meetingConfirmSentAt: Date,
     /** inbox | junk — soft trash for mailbox UI */
     mailboxFolder: {
       type: String,

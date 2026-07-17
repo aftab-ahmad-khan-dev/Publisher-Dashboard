@@ -14,9 +14,9 @@ import {
   parseWorkbookBuffer,
   parseCsvText,
 } from '../lib/leadWorkbook.js'
-import { importGoogleSheet } from '../lib/googleSheets.js'
+import { importGoogleSheet, importWorkbookFromLink } from '../lib/googleSheets.js'
 import { flushLeadStatusUpdates } from '../lib/leadWriteback.js'
-import { createCalendarInvite, getCalendarBookingUrl, isBookingUrl, syncMeetingsFromCalendar } from '../lib/googleCalendar.js'
+import { createCalendarInvite, getCalendarBookingUrl, isBookingUrl, syncMeetingsFromCalendar, ensureMeetOnEvent } from '../lib/googleCalendar.js'
 import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from '../lib/meetingCta.js'
 import {
   listEmailHtmlTemplates,
@@ -183,14 +183,26 @@ router.put('/config/gmail', async (req, res, next) => {
 
 router.post('/connections/gmail/test', async (req, res, next) => {
   try {
+    // Only persist non-secret fields from the form — never wipe OAuth tokens on Test.
     if (req.body?.gmail) {
-      await saveGmailConfig(req.workspaceId, req.body.gmail)
+      const g = req.body.gmail
+      await saveGmailConfig(req.workspaceId, {
+        clientId: g.clientId,
+        fromEmail: g.fromEmail,
+        calendarBookingUrl: g.calendarBookingUrl,
+        ...(g.clientSecret?.trim() ? { clientSecret: g.clientSecret } : {}),
+      })
     }
     await refreshGmailTokenIfNeeded(req.workspaceId)
-    const { accessToken } = await getGmailAccessToken(req.workspaceId)
+    const { accessToken, fromEmail } = await getGmailAccessToken(req.workspaceId)
     const result = await testGmailConnection(null, accessToken)
     if (!result.ok) return res.status(400).json(result)
-    res.json({ ...result, saved: true })
+    res.json({
+      ...result,
+      saved: true,
+      fromEmail: fromEmail || result.emailAddress,
+      message: result.message || 'Gmail token refreshed and verified.',
+    })
   } catch (err) {
     res.status(400).json({ ok: false, error: err.message })
   }
@@ -283,21 +295,24 @@ router.post('/email/leads/sheets', async (req, res, next) => {
       dedupe = true,
     } = req.body || {}
     const bookingUrl = await resolveBookingUrl(req.workspaceId)
-    const { spreadsheetId, buffer, parsed } = await importGoogleSheet(url, {
+    const { spreadsheetId, buffer, parsed, kind, sourceUrl } = await importWorkbookFromLink(url, {
       sheetNames,
       skipAlreadyEmailed,
       dedupe,
       bookingUrl,
     })
 
+    const isSheets = kind === 'sheets' && spreadsheetId
     const source = await LeadSource.create({
       workspaceId: req.workspaceId,
-      name: 'Google Sheet',
-      type: 'sheets',
-      spreadsheetId,
-      spreadsheetUrl: url,
+      name: isSheets ? 'Google Sheet' : 'Excel link',
+      type: isSheets ? 'sheets' : 'xlsx',
+      spreadsheetId: spreadsheetId || undefined,
+      spreadsheetUrl: sourceUrl || url,
       fileData: buffer,
-      fileName: `sheet-${spreadsheetId}.xlsx`,
+      fileName: isSheets
+        ? `sheet-${spreadsheetId}.xlsx`
+        : `link-import-${Date.now()}.xlsx`,
       sheetsMeta: parsed.sheets.map((s) => ({
         sheetName: s.sheetName,
         ok: s.ok,
@@ -323,7 +338,8 @@ router.post('/email/leads/sheets', async (req, res, next) => {
       quarantine: parsed.quarantine,
       skipped: parsed.skipped,
       stats: parsed.stats,
-      spreadsheetId,
+      spreadsheetId: spreadsheetId || null,
+      kind: kind || 'xlsx-url',
     })
   } catch (err) {
     res.status(400).json({ ok: false, error: err.message })
@@ -701,14 +717,32 @@ router.get('/email/processed', async (req, res, next) => {
 router.get('/email/meetings', async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 100, 300)
+    const autoSync = String(req.query.sync || '') === '1'
+
+    let syncResult = null
+    if (autoSync) {
+      try {
+        const config = await getWorkspaceConfig(req.workspaceId)
+        if (isCalendarConnected(config)) {
+          await refreshGmailTokenIfNeeded(req.workspaceId)
+          const { accessToken } = await getGmailAccessToken(req.workspaceId)
+          syncResult = await syncMeetingsFromCalendar(req.workspaceId, accessToken)
+        }
+      } catch (err) {
+        syncResult = { ok: false, error: calendarAuthErrorMessage(err) }
+      }
+    }
+
     const recipients = await EmailRecipient.find({
       workspaceId: req.workspaceId,
       $or: [
         { meetingStatus: { $in: ['invited', 'link_clicked', 'scheduled', 'completed', 'no_show'] } },
         { meetingClickedAt: { $exists: true, $ne: null } },
+        { meetingScheduledAt: { $exists: true, $ne: null } },
+        { calendarEventId: { $exists: true, $nin: [null, ''] } },
       ],
     })
-      .sort({ meetingClickedAt: -1, updatedAt: -1 })
+      .sort({ meetingScheduledAt: -1, meetingClickedAt: -1, updatedAt: -1 })
       .limit(limit)
       .lean()
 
@@ -725,17 +759,40 @@ router.get('/email/meetings', async (req, res, next) => {
       meetingLink: defaultLink,
       calendarConnected: isCalendarConnected(config),
       calendarBookingUrl: config.gmail?.calendarBookingUrl || '',
+      sync: syncResult,
+      unmatchedBookings: syncResult?.unmatchedBookings || [],
       meetings: recipients.map((r) => {
         const c = byId[String(r.campaignId)]
         const displayName =
           String(r.name || r.mergeData?.name || '').trim() ||
           String(r.email || '').split('@')[0] ||
           ''
+        const scheduledAt = r.meetingScheduledAt
+          ? new Date(r.meetingScheduledAt).toISOString()
+          : null
+        let slotLabel = ''
+        if (scheduledAt) {
+          try {
+            slotLabel = new Intl.DateTimeFormat('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              timeZoneName: 'short',
+            }).format(new Date(scheduledAt))
+          } catch {
+            slotLabel = scheduledAt
+          }
+        }
         return {
           ...mapRecipient(r),
           name: displayName || r.name || '',
           campaignName: displayCampaignName(c),
           meetingLink: r.meetingLink || c?.meetingLink || defaultLink,
+          meetingScheduledAt: scheduledAt,
+          slotLabel,
         }
       }),
     })
@@ -760,6 +817,40 @@ router.patch('/email/meetings/:id', async (req, res, next) => {
     await recipient.save()
 
     res.json({ ok: true, recipient: mapRecipient(recipient) })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** Remove leads from the meeting pipeline (keeps campaign recipient; clears meeting fields). */
+router.post('/email/meetings/remove', async (req, res, next) => {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String).filter(Boolean) : []
+    if (!ids.length) {
+      return res.status(400).json({ ok: false, error: 'Select at least one row to remove.' })
+    }
+
+    const result = await EmailRecipient.updateMany(
+      { _id: { $in: ids }, workspaceId: req.workspaceId },
+      {
+        $set: {
+          meetingStatus: 'none',
+          meetingScheduledAt: null,
+          meetingClickedAt: null,
+          meetingNotes: '',
+          meetingLink: '',
+          calendarEventId: '',
+          meetingReminderSentAt: null,
+          meetingConfirmSentAt: null,
+        },
+      },
+    )
+
+    res.json({
+      ok: true,
+      removed: result.modifiedCount || 0,
+      matched: result.matchedCount || 0,
+    })
   } catch (err) {
     next(err)
   }
@@ -1174,26 +1265,49 @@ router.post('/email/calendar/invite', requirePlanFeature('email'), async (req, r
       : new Date(start.getTime() + mins * 60 * 1000)
 
     await refreshGmailTokenIfNeeded(req.workspaceId)
-    const { accessToken } = await getGmailAccessToken(req.workspaceId)
+    const { accessToken, fromEmail } = await getGmailAccessToken(req.workspaceId)
+    const admin =
+      process.env.ADMIN_EMAIL?.trim() ||
+      fromEmail ||
+      process.env.FROM_EMAIL?.trim() ||
+      process.env.SMTP_EMAIL?.trim() ||
+      ''
+
+    const leadName = recipient?.name || recipient?.mergeData?.name || ''
     const result = await createCalendarInvite({
       accessToken,
       summary:
         summary ||
-        (recipient ? `Meeting with ${recipient.name || recipient.email}` : 'Meeting'),
-      description: description || '',
+        (recipient ? `Meeting with ${leadName || recipient.email}` : 'Meeting'),
+      description:
+        description ||
+        [
+          leadName ? `Meeting with ${leadName}` : 'Meeting',
+          email ? `Guest: ${email}` : '',
+          'A Google Meet link will be attached to this event.',
+        ]
+          .filter(Boolean)
+          .join('\n'),
       attendeeEmail: email,
+      adminEmail: admin,
       startIso: start.toISOString(),
       endIso: end.toISOString(),
       timeZone: timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     })
 
-    const meetOrHtml = result.meetLink || result.hangoutLink || result.htmlLink || ''
+    let meetLink = result.meetLink || result.hangoutLink || ''
+    if (!meetLink && result.eventId) {
+      const ensured = await ensureMeetOnEvent(accessToken, result.eventId)
+      meetLink = ensured.meetLink || ''
+    }
 
     if (recipient) {
       recipient.meetingStatus = 'scheduled'
       recipient.meetingScheduledAt = start
-      recipient.meetingLink = meetOrHtml || recipient.meetingLink
+      if (meetLink) recipient.meetingLink = meetLink
       recipient.calendarEventId = result.eventId || ''
+      recipient.meetingReminderSentAt = null
+      recipient.meetingConfirmSentAt = null
       if (!recipient.mergeData) recipient.mergeData = {}
       recipient.mergeData = {
         ...recipient.mergeData,
@@ -1202,10 +1316,37 @@ router.post('/email/calendar/invite', requirePlanFeature('email'), async (req, r
       await recipient.save()
     }
 
+    // Email the SAME Meet URL to lead + admin (one room)
+    if (email && (meetLink || start.toISOString())) {
+      try {
+        const { emailMeetLinkToParties } = await import('../lib/meetingNotify.js')
+        const mailed = await emailMeetLinkToParties({
+          leadEmail: email,
+          leadName,
+          meetLink,
+          whenIso: start.toISOString(),
+          summary:
+            summary ||
+            (recipient ? `Meeting with ${leadName || email}` : 'Meeting'),
+          calendarHtmlLink: result.htmlLink || '',
+          workspaceId: req.workspaceId,
+          broadcast: true,
+        })
+        if (recipient && mailed?.lead) {
+          recipient.meetingConfirmSentAt = new Date()
+          await recipient.save()
+        }
+      } catch {
+        /* non-fatal */
+      }
+    }
+
     res.json({
       ...result,
-      meetingLink: meetOrHtml,
+      meetLink,
+      meetingLink: meetLink || result.htmlLink || '',
       recipient: recipient ? mapRecipient(recipient) : null,
+      emailedParties: Boolean(meetLink || email),
     })
   } catch (err) {
     res.status(400).json({ ok: false, error: calendarAuthErrorMessage(err) })

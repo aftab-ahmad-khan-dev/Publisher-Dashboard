@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import Modal from './Modal'
 import DateTimePicker from './DateTimePicker'
 import PlatformIcon from './PlatformIcon'
+import ImageEditModal from './ImageEditModal'
 import { PLATFORM_META, PLATFORM_ORDER } from '../lib/constants'
 import { toDatetimeLocalValue } from '../lib/scheduleUtils'
 import { useScheduledImageUrl, ScheduledImagePlaceholder } from '../lib/scheduledImage.jsx'
@@ -20,6 +21,8 @@ export default function EditScheduledModal({ open, item, onClose, onSave }) {
   const [imageFile, setImageFile] = useState(null)
   const [newPreviewUrl, setNewPreviewUrl] = useState(null)
   const [imageRemoved, setImageRemoved] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editBusy, setEditBusy] = useState(false)
   const fileInputRef = useRef(null)
   const [seededId, setSeededId] = useState(null)
 
@@ -40,6 +43,7 @@ export default function EditScheduledModal({ open, item, onClose, onSave }) {
     setImageFile(null)
     setNewPreviewUrl(null)
     setImageRemoved(false)
+    setEditOpen(false)
     setError('')
   }
 
@@ -69,7 +73,40 @@ export default function EditScheduledModal({ open, item, onClose, onSave }) {
     if (newPreviewUrl) URL.revokeObjectURL(newPreviewUrl)
     setNewPreviewUrl(null)
     setImageRemoved(true)
+    setEditOpen(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const openImageEditor = async () => {
+    if (imageFile && newPreviewUrl) {
+      setEditOpen(true)
+      return
+    }
+    if (!displayUrl) {
+      setError('Add or replace an image before editing.')
+      return
+    }
+    setEditBusy(true)
+    setError('')
+    try {
+      const res = await fetch(displayUrl)
+      const blob = await res.blob()
+      if (!blob.type.startsWith('image/')) {
+        throw new Error('Not an image')
+      }
+      const ext = blob.type.split('/')[1] || 'jpg'
+      const file = new File([blob], `scheduled-${item?.id || 'image'}.${ext}`, {
+        type: blob.type || 'image/jpeg',
+      })
+      setImageRemoved(false)
+      setImageFile(file)
+      setNewPreviewUrl(URL.createObjectURL(file))
+      setEditOpen(true)
+    } catch {
+      setError('Could not load image for editing. Try Replace image first.')
+    } finally {
+      setEditBusy(false)
+    }
   }
 
   const handleSave = async () => {
@@ -163,14 +200,31 @@ export default function EditScheduledModal({ open, item, onClose, onSave }) {
               {displayUrl || showMissing ? 'Replace image' : 'Add image'}
             </button>
             {(displayUrl || showMissing) && (
-              <button
-                type="button"
-                onClick={handleRemoveImage}
-                className="rounded-xl px-3 py-1.5 text-xs font-semibold text-rose-400 ring-1 ring-rose-500/25 hover:bg-rose-500/10"
-                disabled={busy}
-              >
-                Remove image
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={openImageEditor}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 px-3 py-1.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 disabled:opacity-50"
+                  disabled={busy || editBusy || showMissing}
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2.414a2 2 0 01.586-1.414z"
+                    />
+                  </svg>
+                  {editBusy ? 'Loading…' : 'Edit image'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="rounded-xl px-3 py-1.5 text-xs font-semibold text-rose-400 ring-1 ring-rose-500/25 hover:bg-rose-500/10"
+                  disabled={busy}
+                >
+                  Remove image
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -208,6 +262,20 @@ export default function EditScheduledModal({ open, item, onClose, onSave }) {
 
         {error && <p className="text-xs font-medium text-rose-400">{error}</p>}
       </div>
+
+      {editOpen && imageFile && newPreviewUrl && (
+        <ImageEditModal
+          file={imageFile}
+          previewUrl={newPreviewUrl}
+          onClose={() => setEditOpen(false)}
+          onApply={(nextFile) => {
+            setImageRemoved(false)
+            setImageFile(nextFile)
+            setNewPreviewUrl(URL.createObjectURL(nextFile))
+            setEditOpen(false)
+          }}
+        />
+      )}
     </Modal>
   )
 }

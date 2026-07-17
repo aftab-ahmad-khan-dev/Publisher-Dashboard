@@ -4,6 +4,13 @@ import {
   requestNotificationPermission,
   subscribeSocket,
   simulateSocketPublish,
+  loadStoredNotifications,
+  notificationFromEvent,
+  browserPayloadFromItem,
+  prependNotification,
+  markNotificationRead as markNotifReadInList,
+  markAllNotificationsRead as markAllNotifReadInList,
+  clearNotifications as clearNotifList,
 } from '../lib/notifications'
 import { parseDatetimeLocal, datetimeLocalToISO } from '../lib/scheduleUtils'
 import { serializePostState, mergeDraftSave } from '../lib/draftUtils'
@@ -211,6 +218,7 @@ export function AppDataProvider({ children }) {
     status: 'unpaid',
     isAdmin: false,
   })
+  const [notifications, setNotifications] = useState(() => loadStoredNotifications())
   const [publishStatus, setPublishStatus] = useState('idle')
   const [uploadProgress, setUploadProgress] = useState(null)
   const [syncing, setSyncing] = useState(false)
@@ -380,24 +388,46 @@ export function AppDataProvider({ children }) {
     if (isAuthenticated) refreshFromServer()
   }, [isAuthenticated, refreshFromServer])
 
+  const pushInAppNotification = useCallback((event) => {
+    const item = notificationFromEvent(event)
+    if (!item) return null
+    setNotifications((prev) => prependNotification(prev, item))
+    return item
+  }, [])
+
   useEffect(() => {
     if (!live || !isAuthenticated) return undefined
     return subscribeRealtime((event) => {
-      if (event.type === 'POST_PUBLISHED') {
-        simulateSocketPublish({
-          type: 'POST_PUBLISHED',
-          title: event.title || 'Post Published',
-          body: event.body,
-          tag: event.id,
-          platforms: event.platforms,
-        })
-        refreshFromServer()
+      const item = pushInAppNotification(event)
+      if (item && apiConfig.notificationsEnabled) {
+        void notifyViaServiceWorker(browserPayloadFromItem(item))
       }
-      if (event.type === 'POST_SCHEDULED' || event.type === 'POST_FAILED') {
+      if (
+        event.type === 'POST_PUBLISHED' ||
+        event.type === 'POST_SCHEDULED' ||
+        event.type === 'POST_FAILED'
+      ) {
         refreshFromServer()
       }
     })
-  }, [live, isAuthenticated, refreshFromServer])
+  }, [live, isAuthenticated, refreshFromServer, pushInAppNotification, apiConfig.notificationsEnabled])
+
+  const unreadNotificationCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications],
+  )
+
+  const markNotificationRead = useCallback((id) => {
+    setNotifications((prev) => markNotifReadInList(prev, id))
+  }, [])
+
+  const markAllNotificationsRead = useCallback(() => {
+    setNotifications((prev) => markAllNotifReadInList(prev))
+  }, [])
+
+  const clearNotifications = useCallback(() => {
+    setNotifications(clearNotifList())
+  }, [])
 
   const saveApiConfig = useCallback(
     async (config) => {
@@ -639,15 +669,13 @@ export function AppDataProvider({ children }) {
 
   useEffect(() => {
     return subscribeSocket(async (detail) => {
-      if (detail.type === 'POST_PUBLISHED') {
-        await pushNotification({
-          title: detail.title || 'Post Published',
-          body: detail.body,
-          tag: detail.tag,
-        })
+      if (!detail?.type) return
+      const item = pushInAppNotification({ ...detail, at: detail.at || Date.now() })
+      if (item) {
+        await pushNotification(browserPayloadFromItem(item))
       }
     })
-  }, [pushNotification])
+  }, [pushNotification, pushInAppNotification])
 
   const publishNow = useCallback(
     async (rawState) => {
@@ -1415,6 +1443,11 @@ export function AppDataProvider({ children }) {
         refreshFromServer,
         refreshSubscription,
         requestNotificationPermission,
+        notifications,
+        unreadNotificationCount,
+        markNotificationRead,
+        markAllNotificationsRead,
+        clearNotifications,
         isLivePublishing,
         storageKeys: STORAGE_KEYS,
       }}

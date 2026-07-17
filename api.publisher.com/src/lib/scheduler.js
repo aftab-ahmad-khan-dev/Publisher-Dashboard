@@ -11,6 +11,52 @@ import { isMongoNetworkError, markDisconnected } from '../db.js'
 import { resetDbConnection } from './dbInit.js'
 
 let timer = null
+let lastCalendarSyncAt = 0
+const CALENDAR_SYNC_INTERVAL_MS = 2 * 60 * 1000
+
+async function syncCalendarBookingsTick() {
+  const now = Date.now()
+  if (now - lastCalendarSyncAt < CALENDAR_SYNC_INTERVAL_MS) return
+  lastCalendarSyncAt = now
+
+  const { ApiConfig } = await import('../models/ApiConfig.js')
+  const { refreshGmailTokenIfNeeded, getGmailAccessToken } = await import('./gmailOAuth.js')
+  const { syncMeetingsFromCalendar } = await import('./googleCalendar.js')
+
+  const configs = await ApiConfig.find({
+    $or: [
+      { 'gmail.refreshToken': { $exists: true, $nin: [null, ''] } },
+      { 'gmail.accessToken': { $exists: true, $nin: [null, ''] } },
+    ],
+  })
+    .select('workspaceId')
+    .limit(20)
+    .lean()
+
+  for (const cfg of configs) {
+    const workspaceId = cfg.workspaceId
+    if (!workspaceId) continue
+    try {
+      await refreshGmailTokenIfNeeded(workspaceId)
+      const { accessToken } = await getGmailAccessToken(workspaceId)
+      if (!accessToken) continue
+      const result = await syncMeetingsFromCalendar(workspaceId, accessToken)
+      if (result.guestsNotified || result.newlyScheduled) {
+        logger.info('Calendar booking sync', {
+          workspaceId,
+          guestsNotified: result.guestsNotified,
+          newlyScheduled: result.newlyScheduled,
+          updated: result.updated,
+        })
+      }
+    } catch (err) {
+      logger.warn('Calendar sync for workspace failed', {
+        workspaceId,
+        error: err.message,
+      })
+    }
+  }
+}
 
 function coerceScheduledImageData(postState = {}) {
   if (postState?.imageDataUrl) return postState
@@ -40,6 +86,21 @@ export function startScheduler() {
 
 export async function runDuePosts() {
   try {
+    // Pre-meeting reminders (5–10 min window) — same tick as publish scheduler
+    try {
+      const { runMeetingReminders } = await import('./meetingNotify.js')
+      await runMeetingReminders()
+    } catch (err) {
+      logger.warn('Meeting reminders tick failed', { error: err.message })
+    }
+
+    // Sync calendar bookings so guests get Meet link + confirmation without opening the UI
+    try {
+      await syncCalendarBookingsTick()
+    } catch (err) {
+      logger.warn('Calendar booking sync tick failed', { error: err.message })
+    }
+
     const due = await ScheduledPost.find({
       status: 'scheduled',
       scheduledAt: { $lte: new Date() },

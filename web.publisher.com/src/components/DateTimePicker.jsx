@@ -27,6 +27,16 @@ function labelFor(hour, minute) {
   return `${h12}:${String(minute).padStart(2, '0')} ${period}`
 }
 
+function pad2(n) {
+  return String(n).padStart(2, '0')
+}
+
+/**
+ * Date & time picker.
+ * - allowAnyTime (default true): free clock input — any hour/minute
+ * - allowAnyTime false: preset dropdown
+ * - minDate: optional; omit for any calendar day
+ */
 export default function DateTimePicker({
   value,
   onChange,
@@ -34,6 +44,9 @@ export default function DateTimePicker({
   hint,
   timezone,
   defaultScheduleTime = DEFAULT_SCHEDULE_TIME,
+  allowAnyTime = true,
+  label = 'Date & time',
+  compact = false,
 }) {
   const parsed = parseDatetimeLocal(value)
   const dateValue = value?.split('T')[0] || ''
@@ -41,8 +54,10 @@ export default function DateTimePicker({
   const timeKey = parsed
     ? `${parsed.getHours()}:${parsed.getMinutes()}`
     : `${defHour}:${defMinute}`
+  const timeInputValue = parsed
+    ? `${pad2(parsed.getHours())}:${pad2(parsed.getMinutes())}`
+    : `${pad2(defHour)}:${pad2(defMinute)}`
 
-  // Make sure the configured default time is always selectable in the dropdown.
   const TIME_OPTIONS = useMemo(() => {
     if (BASE_TIME_OPTIONS.some((t) => t.hour === defHour && t.minute === defMinute)) {
       return BASE_TIME_OPTIONS
@@ -58,47 +73,70 @@ export default function DateTimePicker({
   )
 
   const handleDateChange = (e) => {
-    const next = setDateOnDatetimeLocal(value || minDate, e.target.value)
+    const base = value || minDate || `${e.target.value}T${timeInputValue}`
+    const next = setDateOnDatetimeLocal(base, e.target.value)
     onChange(next)
   }
 
-  const handleTimeChange = (e) => {
+  const handleTimeSelect = (e) => {
     const [hour, minute] = e.target.value.split(':').map(Number)
-    const base = value || minDate
+    const base = value || minDate || `${dateValue || new Date().toISOString().slice(0, 10)}T00:00`
     onChange(setTimeOnDatetimeLocal(base, hour, minute))
   }
 
+  const handleTimeInput = (e) => {
+    const raw = e.target.value
+    if (!raw) return
+    const [hour, minute] = raw.split(':').map(Number)
+    const day = dateValue || new Date().toISOString().slice(0, 10)
+    const base = value || `${day}T${raw}`
+    onChange(setTimeOnDatetimeLocal(base, hour, minute || 0))
+  }
+
   return (
-    <div className="space-y-2">
-      <label className="field-label">Date & time</label>
-      <div className="datetime-picker group">
+    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+      {label ? <label className="field-label">{label}</label> : null}
+      <div className={`datetime-picker group ${compact ? '!gap-1.5' : ''}`}>
         <div className="relative flex-1">
           <input
             type="date"
             value={dateValue}
-            min={minDateOnly}
+            min={minDateOnly || undefined}
             onChange={handleDateChange}
-            className="datetime-input peer w-full"
+            className={`datetime-input peer w-full ${compact ? '!py-1.5 !text-[11px]' : ''}`}
           />
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 peer-focus:text-indigo-400">
             <CalendarIcon />
           </span>
         </div>
-        <div className="relative w-28 shrink-0 sm:w-[140px]">
-          <select
-            value={timeKey}
-            onChange={handleTimeChange}
-            className="datetime-input w-full appearance-none pr-8"
-          >
-            {TIME_OPTIONS.map((t) => (
-              <option key={t.label} value={`${t.hour}:${t.minute}`} className="bg-[#12151f]">
-                {t.label}
-              </option>
-            ))}
-          </select>
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
-            <ClockIcon />
-          </span>
+        <div className={`relative shrink-0 ${compact ? 'w-[7.5rem]' : 'w-28 sm:w-[140px]'}`}>
+          {allowAnyTime ? (
+            <input
+              type="time"
+              step={60}
+              value={timeInputValue}
+              onChange={handleTimeInput}
+              className={`datetime-input w-full ${compact ? '!py-1.5 !text-[11px]' : ''}`}
+              aria-label="Time"
+            />
+          ) : (
+            <>
+              <select
+                value={timeKey}
+                onChange={handleTimeSelect}
+                className="datetime-input w-full appearance-none pr-8"
+              >
+                {TIME_OPTIONS.map((t) => (
+                  <option key={t.label} value={`${t.hour}:${t.minute}`} className="bg-[#12151f]">
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+                <ClockIcon />
+              </span>
+            </>
+          )}
         </div>
       </div>
       {(hint || displayLabel) && (

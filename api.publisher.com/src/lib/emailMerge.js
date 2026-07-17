@@ -2,6 +2,7 @@
 
 import { containsForbiddenDash, sanitizePublishedText } from './contentSanitize.js'
 import { applyEmailContentShuffle, hashSeed } from './emailShuffle.js'
+import { buildNichePain, buildNichePainShort } from './nichePain.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -46,6 +47,9 @@ export function buildMergeData({ email, name = '', company = '', niche = '' }) {
     painOpener = `Many ${nicheTrim} businesses`
   }
 
+  const nichePain = buildNichePain({ industry: nicheTrim, company: companyTrim })
+  const nichePainShort = buildNichePainShort({ industry: nicheTrim })
+
   return {
     email,
     name: nameTrim,
@@ -59,6 +63,8 @@ export function buildMergeData({ email, name = '', company = '', niche = '' }) {
     businessLabel: business || 'your business',
     greeting,
     painOpener,
+    nichePain,
+    nichePainShort,
   }
 }
 

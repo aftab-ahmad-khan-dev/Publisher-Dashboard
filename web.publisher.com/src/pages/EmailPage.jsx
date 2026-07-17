@@ -17,6 +17,7 @@ import {
   listProcessedEmails,
   listEmailMeetings,
   updateEmailMeeting,
+  removeEmailMeetings,
   fetchEmailMailbox,
   fetchEmailMailboxMessage,
   moveMailboxToJunk,
@@ -35,8 +36,11 @@ import {
   SIGNATURE,
 } from '../lib/emailTemplates'
 import LeadSourcePanel from '../components/email/LeadSourcePanel'
+import ConfirmDialog from '../components/ConfirmDialog'
 import PageShell from '../components/PageShell'
 import PageHeader from '../components/PageHeader'
+import DateTimePicker from '../components/DateTimePicker'
+import { toDatetimeLocalValue } from '../lib/scheduleUtils'
 
 const TABS = [
   { id: 'mailbox', label: 'Mail Box' },
@@ -110,6 +114,54 @@ function inputClass() {
   return 'saas-input'
 }
 
+/** Free date + any time for Meet invites (no “today only” / preset-hour lock). */
+function MeetingInviteControls({
+  meeting,
+  inviting,
+  canInvite,
+  onInvite,
+  onScheduleBlur,
+}) {
+  const [when, setWhen] = useState(() =>
+    meeting.meetingScheduledAt
+      ? toDatetimeLocalValue(new Date(meeting.meetingScheduledAt))
+      : '',
+  )
+
+  useEffect(() => {
+    if (meeting.meetingScheduledAt) {
+      setWhen(toDatetimeLocalValue(new Date(meeting.meetingScheduledAt)))
+    }
+  }, [meeting.id, meeting.meetingScheduledAt])
+
+  return (
+    <div className="flex min-w-[220px] flex-col gap-1.5">
+      <DateTimePicker
+        value={when}
+        onChange={(next) => {
+          setWhen(next)
+        }}
+        allowAnyTime
+        label=""
+        compact
+        hint="Any day · any time"
+      />
+      <button
+        type="button"
+        className="rounded-lg bg-indigo-500/20 px-2 py-1 text-[10px] font-semibold text-indigo-200 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30 disabled:opacity-50"
+        disabled={inviting || !canInvite}
+        onClick={() => {
+          if (!when) return
+          onInvite(when)
+          if (when) onScheduleBlur?.(when)
+        }}
+      >
+        {inviting ? 'Inviting…' : 'Invite with Meet'}
+      </button>
+    </div>
+  )
+}
+
 export default function EmailPage() {
   const { apiConfig, showToast, runWithLoading } = useAppData()
   const live = isLivePublishing()
@@ -129,6 +181,10 @@ export default function EmailPage() {
   const [syncingCalendar, setSyncingCalendar] = useState(false)
   const [calendarAuthBroken, setCalendarAuthBroken] = useState(false)
   const [invitingId, setInvitingId] = useState(null)
+  const [unmatchedBookings, setUnmatchedBookings] = useState([])
+  const [confirmDialog, setConfirmDialog] = useState(null)
+  const [selectedMeetingIds, setSelectedMeetingIds] = useState(() => new Set())
+  const [meetingRemoveBusy, setMeetingRemoveBusy] = useState(false)
 
   const [folder, setFolder] = useState('sent')
   const [mailboxQuery, setMailboxQuery] = useState('')
@@ -185,15 +241,33 @@ export default function EmailPage() {
     }
   }, [live, showToast])
 
-  const loadMeetings = useCallback(async () => {
+  const loadMeetings = useCallback(async (opts = {}) => {
     if (!live) return
     try {
-      const data = await listEmailMeetings({ limit: 200 })
+      const data = await listEmailMeetings({
+        limit: 200,
+        sync: opts.sync !== false,
+      })
       setMeetings(data.meetings || [])
+      setSelectedMeetingIds((prev) => {
+        if (!prev.size) return prev
+        const nextIds = new Set((data.meetings || []).map((m) => m.id))
+        const kept = [...prev].filter((id) => nextIds.has(id))
+        return kept.length === prev.size ? prev : new Set(kept)
+      })
+      setUnmatchedBookings(data.unmatchedBookings || data.sync?.unmatchedBookings || [])
       if (data.meetingLink) setGlobalMeetingLink(data.meetingLink)
       if (data.calendarBookingUrl != null) setBookingUrlDraft(data.calendarBookingUrl || data.meetingLink || '')
       if (typeof data.calendarConnected === 'boolean') {
         setCalendarConnected(data.calendarConnected)
+      }
+      if (data.sync?.ok === false && data.sync?.error) {
+        const msg = data.sync.error
+        if (/Reconnect Gmail|session expired or revoked|missing Calendar permission/i.test(msg)) {
+          setCalendarAuthBroken(true)
+        }
+      } else if (data.sync?.ok !== false) {
+        setCalendarAuthBroken(false)
       }
     } catch (err) {
       showToast(err.message, 'error')
@@ -216,20 +290,30 @@ export default function EmailPage() {
     }
   }, [live, folder, mailboxQuery, showToast])
 
+  const REFRESH_MS = 5 * 60 * 1000 // mail status + meetings + calendar sync every 5 min
+
   const refreshAll = useCallback(async () => {
     await Promise.all([
       loadCampaigns(),
       loadProcessed(),
-      loadMeetings(),
+      // Pull booked Calendar slots so Meetings stay current without manual Sync
+      loadMeetings({ sync: true }),
       loadMailbox(),
     ])
   }, [loadCampaigns, loadProcessed, loadMeetings, loadMailbox])
 
   useEffect(() => {
     refreshAll()
-    const t = setInterval(refreshAll, 12000)
+    const t = setInterval(refreshAll, REFRESH_MS)
     return () => clearInterval(t)
   }, [refreshAll])
+
+  // When opening Meetings, sync Calendar immediately (don't wait for the 5 min tick).
+  useEffect(() => {
+    if (tab === 'meetings' && live) {
+      loadMeetings({ sync: true })
+    }
+  }, [tab, live, loadMeetings])
 
   useEffect(() => {
     if (!selectedId || !live || tab !== 'mailbox') {
@@ -311,17 +395,21 @@ export default function EmailPage() {
     try {
       const data = await syncEmailCalendar()
       setCalendarAuthBroken(false)
+      const unmatched = data.unmatchedBookings?.length || 0
       showToast(
         data.updated
           ? `Synced ${data.updated} meeting${data.updated === 1 ? '' : 's'} from Google Calendar.`
-          : `No new matches (${data.eventsScanned || 0} events scanned).`,
+          : unmatched
+            ? `Found ${unmatched} calendar booking${unmatched === 1 ? '' : 's'} (not matched to a lead email).`
+            : `No new matches (${data.eventsScanned || 0} events scanned).`,
         'success',
       )
-      await loadMeetings()
+      await loadMeetings({ sync: false })
+      if (data.unmatchedBookings) setUnmatchedBookings(data.unmatchedBookings)
     } catch (err) {
       const msg = err.message || 'Sync failed'
       showToast(msg, 'error')
-      if (/Reconnect Gmail|auth failed|invalid authentication/i.test(msg)) {
+      if (/Reconnect Gmail|session expired or revoked|missing Calendar permission/i.test(msg)) {
         setCalendarAuthBroken(true)
       }
     } finally {
@@ -337,14 +425,20 @@ export default function EmailPage() {
     setInvitingId(m.id)
     try {
       const startIso = new Date(startLocal).toISOString()
-      await createCalendarInvite({
+      const res = await createCalendarInvite({
         recipientId: m.id,
         startIso,
         durationMinutes: 30,
         summary: `Meeting with ${m.name || m.email}`,
       })
-      showToast('Google Meet invite sent and saved on this lead.', 'success')
-      await loadMeetings()
+      const link = res.meetingLink || res.meetLink || ''
+      showToast(
+        link
+          ? 'Meet created — link emailed to lead and admin. Saved on this row.'
+          : 'Calendar invite sent. Open the meeting link column after refresh.',
+        'success',
+      )
+      await loadMeetings({ sync: false })
     } catch (err) {
       showToast(err.message, 'error')
     } finally {
@@ -379,7 +473,7 @@ export default function EmailPage() {
         country: 'Sweden',
         region: 'Sweden',
         industry: 'SaaS',
-        fomoLine: 'Teams in Stockholm, Sweden are already moving on this',
+        fomoLine: 'Most teams in Stockholm, Sweden still lose weeks to agency handoffs and half-finished builds.',
         companyLabel: 'Acme',
       }),
       name: previewName || lead?.mergeData?.name || 'Alex',
@@ -471,14 +565,18 @@ export default function EmailPage() {
       return
     }
     if (action === 'delete') {
-      if (
-        !window.confirm(
-          `Delete ${ids.length} message${ids.length === 1 ? '' : 's'} forever? This cannot be undone.`,
-        )
-      ) {
-        return
-      }
+      setConfirmDialog({
+        title: 'Delete forever?',
+        message: `Delete ${ids.length} message${ids.length === 1 ? '' : 's'} forever? This cannot be undone.`,
+        confirmLabel: 'Delete forever',
+        onConfirm: () => executeBulkMailbox(ids, action),
+      })
+      return
     }
+    await executeBulkMailbox(ids, action)
+  }
+
+  const executeBulkMailbox = async (ids, action) => {
     setBulkBusy(true)
     try {
       const data = await bulkMailboxAction({ ids, action })
@@ -542,7 +640,7 @@ export default function EmailPage() {
               ? `Hi ${singleName.split(/\s+/).filter(Boolean)[0] || singleName.trim()}`
               : 'Hi there',
             meetingLink: workspaceBooking,
-            fomoLine: 'Teams in your market are already moving on this',
+            fomoLine: 'Most teams in your market still lose weeks to agency handoffs and half-finished builds.',
           },
         },
       ]
@@ -947,23 +1045,19 @@ export default function EmailPage() {
                             <button
                               type="button"
                               className="btn-danger px-2.5 py-1 text-[11px]"
-                              onClick={async () => {
-                                if (
-                                  !window.confirm(
-                                    'Delete this message forever? This cannot be undone.',
-                                  )
-                                ) {
-                                  return
-                                }
-                                try {
-                                  await deleteMailboxForever(detail.recipient.id)
-                                  showToast('Deleted forever', 'success')
-                                  setSelectedId(null)
-                                  setDetail(null)
-                                  await loadMailbox()
-                                } catch (err) {
-                                  showToast(err.message, 'error')
-                                }
+                              onClick={() => {
+                                setConfirmDialog({
+                                  title: 'Delete forever?',
+                                  message: 'Delete this message forever? This cannot be undone.',
+                                  confirmLabel: 'Delete forever',
+                                  onConfirm: async () => {
+                                    await deleteMailboxForever(detail.recipient.id)
+                                    showToast('Deleted forever', 'success')
+                                    setSelectedId(null)
+                                    setDetail(null)
+                                    await loadMailbox()
+                                  },
+                                })
                               }}
                             >
                               Delete forever
@@ -1026,7 +1120,7 @@ export default function EmailPage() {
                 <div>
                   <h3 className="text-sm font-semibold text-white">Lead source</h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    Upload Excel or link a Google Sheet, then start the campaign.
+                    Choose Excel file or paste an Excel / Google Sheets link, then start the campaign.
                   </p>
                 </div>
                 <div className="flex gap-1">
@@ -1558,22 +1652,18 @@ export default function EmailPage() {
                               <button
                                 type="button"
                                 className="rounded-lg bg-rose-500/15 px-2 py-1 text-[10px] font-semibold text-rose-300 hover:bg-rose-500/25"
-                                onClick={async () => {
-                                  if (
-                                    !window.confirm(
-                                      'Delete this message forever? This cannot be undone.',
-                                    )
-                                  ) {
-                                    return
-                                  }
-                                  try {
-                                    await deleteMailboxForever(r.id)
-                                    showToast('Deleted forever', 'success')
-                                    await loadProcessed()
-                                    await loadMailbox()
-                                  } catch (err) {
-                                    showToast(err.message, 'error')
-                                  }
+                                onClick={() => {
+                                  setConfirmDialog({
+                                    title: 'Delete forever?',
+                                    message: 'Delete this message forever? This cannot be undone.',
+                                    confirmLabel: 'Delete',
+                                    onConfirm: async () => {
+                                      await deleteMailboxForever(r.id)
+                                      showToast('Deleted forever', 'success')
+                                      await loadProcessed()
+                                      await loadMailbox()
+                                    },
+                                  })
                                 }}
                               >
                                 Delete
@@ -1692,40 +1782,148 @@ export default function EmailPage() {
                   </a>
                 )}
               </div>
+              <div className="mt-2 space-y-1.5 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-2.5 text-[11px] leading-relaxed text-sky-100/90">
+                <p className="font-semibold text-sky-50">
+                  “No availability” on the booking page is Google’s setting — not this dashboard.
+                </p>
+                <p>
+                  Connecting Calendar lets us create Meet invites and sync bookings. It does{' '}
+                  <span className="font-semibold">not</span> open Appointment Schedule slots.
+                  Open hours are only controlled inside Google Calendar.
+                </p>
+                <ol className="list-decimal space-y-1 pl-4 text-sky-100/80">
+                  <li>
+                    Open{' '}
+                    <a
+                      href="https://calendar.google.com/calendar/u/0/r/appointment"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-semibold text-sky-200 underline hover:text-white"
+                    >
+                      Google Calendar → Appointment schedules
+                    </a>
+                  </li>
+                  <li>Edit your “1:1 Meeting” schedule → Availability: every day, full hours (or Copy time to all)</li>
+                  <li>
+                    Turn off or loosen “Check calendars for availability” if busy events are blocking every slot
+                  </li>
+                  <li>
+                    Scheduling window: min notice near 0, max advance far enough (e.g. 60–120 days)
+                  </li>
+                </ol>
+                <p className="text-sky-100/70">
+                  From this Meetings table you can still Invite any date/time yourself (no Google availability
+                  limits). Guests using the public booking link only see what Google marks as open.
+                </p>
+              </div>
               <p className="mt-1.5 text-[10px] text-slate-600">
-                Google cannot create Appointment Schedule pages via API. Create one in{' '}
-                <a
-                  href="https://calendar.google.com/calendar/u/0/r/appointment"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-indigo-400 hover:underline"
-                >
-                  Google Calendar → Appointment schedules
-                </a>
-                , paste the public link here once, then every VorksPro campaign reuses it.
+                Paste the public booking link above once — every campaign reuses it. Google does not allow apps to
+                create or rewrite Appointment Schedule hours via API.
               </p>
             </div>
           </section>
 
           <div className="saas-table-wrap min-h-0 flex-1 overflow-hidden">
-            <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
               <h3 className="text-sm font-semibold text-white">Scheduled & meeting pipeline</h3>
-              <button
-                type="button"
-                className="btn-secondary px-3 py-1.5 text-xs"
-                onClick={loadMeetings}
-              >
-                Refresh
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {selectedMeetingIds.size > 0 && (
+                  <button
+                    type="button"
+                    className="rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs font-semibold text-rose-300 ring-1 ring-rose-500/30 hover:bg-rose-500/25 disabled:opacity-50"
+                    disabled={meetingRemoveBusy}
+                    onClick={() => {
+                      const count = selectedMeetingIds.size
+                      setConfirmDialog({
+                        title: 'Remove from meeting pipeline?',
+                        message: `Remove ${count} selected lead${count === 1 ? '' : 's'} from this pipeline? Campaign send history is kept; only meeting status is cleared.`,
+                        confirmLabel: meetingRemoveBusy ? 'Removing…' : 'Remove',
+                        onConfirm: async () => {
+                          setMeetingRemoveBusy(true)
+                          try {
+                            const res = await removeEmailMeetings([...selectedMeetingIds])
+                            setSelectedMeetingIds(new Set())
+                            await loadMeetings({ sync: false })
+                            showToast(
+                              `Removed ${res.removed ?? count} from meeting pipeline`,
+                              'success',
+                            )
+                          } finally {
+                            setMeetingRemoveBusy(false)
+                          }
+                        },
+                      })
+                    }}
+                  >
+                    Remove ({selectedMeetingIds.size})
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-1.5 text-xs"
+                  onClick={() => loadMeetings({ sync: true })}
+                >
+                  Refresh + sync
+                </button>
+              </div>
             </div>
+
+            {unmatchedBookings.length > 0 && (
+              <div className="border-b border-amber-500/20 bg-amber-500/[0.06] px-4 py-3">
+                <p className="text-xs font-semibold text-amber-100">
+                  Calendar bookings not matched to a lead email ({unmatchedBookings.length})
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {unmatchedBookings.slice(0, 8).map((b) => (
+                    <li key={b.eventId} className="text-[11px] text-amber-50/90">
+                      <span className="font-semibold text-white">{b.slotLabel || b.meetingScheduledAt}</span>
+                      {' · '}
+                      {b.summary}
+                      {b.guests?.length ? ` · ${b.guests.join(', ')}` : ''}
+                      {b.meetingLink ? (
+                        <>
+                          {' · '}
+                          <a href={b.meetingLink} target="_blank" rel="noreferrer" className="text-indigo-300 underline">
+                            Open
+                          </a>
+                        </>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="saas-scroll min-h-0 flex-1 overflow-auto">
-              <table className="saas-table w-full min-w-[1100px] text-left text-xs">
+              <table className="saas-table w-full min-w-[1240px] text-left text-xs">
                 <thead>
                   <tr>
+                    <th className="w-10 px-3 py-2.5">
+                      <label className="inline-flex cursor-pointer items-center gap-1.5" title="Select all">
+                        <input
+                          type="checkbox"
+                          className="h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-indigo-500"
+                          checked={
+                            meetings.length > 0 &&
+                            meetings.every((m) => selectedMeetingIds.has(m.id))
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedMeetingIds(new Set(meetings.map((m) => m.id)))
+                            } else {
+                              setSelectedMeetingIds(new Set())
+                            }
+                          }}
+                          aria-label="Select all"
+                        />
+                        <span className="sr-only">Select all</span>
+                      </label>
+                    </th>
                     <th className="px-3 py-2.5">Lead</th>
                     <th className="px-3 py-2.5">Company</th>
                     <th className="px-3 py-2.5">Campaign</th>
                     <th className="px-3 py-2.5">Meeting status</th>
+                    <th className="px-3 py-2.5">Booked slot</th>
                     <th className="px-3 py-2.5">Schedule / Meet</th>
                     <th className="px-3 py-2.5">Meeting link</th>
                     <th className="px-3 py-2.5">Notes</th>
@@ -1734,14 +1932,34 @@ export default function EmailPage() {
                 <tbody>
                   {meetings.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
-                        No meeting activity yet. Product campaigns mark leads as invited; Sync pulls
-                        booked Calendar events; Invite with Meet creates a 1:1.
+                      <td colSpan={9} className="px-3 py-8 text-center text-slate-500">
+                        No meeting activity yet. Open this tab to sync Calendar bookings, or click Sync now.
                       </td>
                     </tr>
                   )}
                   {meetings.map((m) => (
-                    <tr key={m.id} className="align-top">
+                    <tr
+                      key={m.id}
+                      className={`align-top ${
+                        selectedMeetingIds.has(m.id) ? 'bg-indigo-500/[0.06]' : ''
+                      }`}
+                    >
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          className="h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-indigo-500"
+                          checked={selectedMeetingIds.has(m.id)}
+                          onChange={(e) => {
+                            setSelectedMeetingIds((prev) => {
+                              const next = new Set(prev)
+                              if (e.target.checked) next.add(m.id)
+                              else next.delete(m.id)
+                              return next
+                            })
+                          }}
+                          aria-label={`Select ${m.name || m.email}`}
+                        />
+                      </td>
                       <td className="px-3 py-2">
                         <p className="font-medium text-slate-200">{m.name || '—'}</p>
                         <p className="text-slate-500">{m.email}</p>
@@ -1757,7 +1975,7 @@ export default function EmailPage() {
                           onChange={(e) => {
                             const meetingStatus = e.target.value
                             updateEmailMeeting(m.id, { meetingStatus })
-                              .then(() => loadMeetings())
+                              .then(() => loadMeetings({ sync: false }))
                               .catch((err) => showToast(err.message, 'error'))
                           }}
                         >
@@ -1769,41 +1987,37 @@ export default function EmailPage() {
                         </select>
                       </td>
                       <td className="px-3 py-2">
-                        <div className="flex flex-col gap-1.5">
-                          <input
-                            type="datetime-local"
-                            className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white"
-                            defaultValue={
-                              m.meetingScheduledAt
-                                ? new Date(m.meetingScheduledAt).toISOString().slice(0, 16)
-                                : ''
-                            }
-                            id={`meet-dt-${m.id}`}
-                            onBlur={(e) => {
-                              if (!e.target.value) return
-                              updateEmailMeeting(m.id, {
-                                meetingStatus: 'scheduled',
-                                meetingScheduledAt: new Date(e.target.value).toISOString(),
-                              })
-                                .then(() => loadMeetings())
-                                .catch((err) => showToast(err.message, 'error'))
-                            }}
-                          />
-                          <button
-                            type="button"
-                            className="rounded-lg bg-indigo-500/20 px-2 py-1 text-[10px] font-semibold text-indigo-200 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30 disabled:opacity-50"
-                            disabled={
-                              invitingId === m.id ||
-                              !(calendarConnected || apiConfig?.gmail?.hasRefreshToken)
-                            }
-                            onClick={() => {
-                              const el = document.getElementById(`meet-dt-${m.id}`)
-                              handleInviteMeet(m, el?.value)
-                            }}
-                          >
-                            {invitingId === m.id ? 'Inviting…' : 'Invite with Meet'}
-                          </button>
-                        </div>
+                        {m.slotLabel || m.meetingScheduledAt ? (
+                          <div>
+                            <p className="font-semibold text-emerald-300">
+                              {m.slotLabel ||
+                                new Date(m.meetingScheduledAt).toLocaleString(undefined, {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })}
+                            </p>
+                            <p className="mt-0.5 text-[10px] text-slate-500">From Google Calendar</p>
+                          </div>
+                        ) : (
+                          <span className="text-slate-600">Not booked yet</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <MeetingInviteControls
+                          meeting={m}
+                          inviting={invitingId === m.id}
+                          canInvite={calendarConnected || apiConfig?.gmail?.hasRefreshToken}
+                          onInvite={(when) => handleInviteMeet(m, when)}
+                          onScheduleBlur={(when) => {
+                            updateEmailMeeting(m.id, {
+                              meetingStatus: 'scheduled',
+                              meetingScheduledAt: new Date(when).toISOString(),
+                            }).catch(() => {})
+                          }}
+                        />
                       </td>
                       <td className="max-w-[200px] px-3 py-2">
                         {m.meetingLink ? (
@@ -1827,7 +2041,7 @@ export default function EmailPage() {
                           onBlur={(e) => {
                             if (e.target.value === (m.meetingNotes || '')) return
                             updateEmailMeeting(m.id, { meetingNotes: e.target.value })
-                              .then(() => loadMeetings())
+                              .then(() => loadMeetings({ sync: false }))
                               .catch((err) => showToast(err.message, 'error'))
                           }}
                         />
@@ -1840,6 +2054,24 @@ export default function EmailPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDialog)}
+        onClose={() => setConfirmDialog(null)}
+        onConfirm={async () => {
+          try {
+            await confirmDialog?.onConfirm?.()
+          } catch (err) {
+            showToast(err.message || 'Action failed', 'error')
+            throw err
+          }
+        }}
+        title={confirmDialog?.title || 'Are you sure?'}
+        message={confirmDialog?.message}
+        confirmLabel={confirmDialog?.confirmLabel || 'Confirm'}
+        cancelLabel="Cancel"
+        destructive
+      />
     </PageShell>
   )
 }

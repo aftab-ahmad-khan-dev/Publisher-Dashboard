@@ -13,6 +13,7 @@ import { enqueueLeadStatusUpdate } from './leadWriteback.js'
 import { getWorkspaceConfig } from './configStore.js'
 import { getCalendarBookingUrl, isBookingUrl } from './googleCalendar.js'
 import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from './meetingCta.js'
+import { buildNichePain, buildNichePainShort } from './nichePain.js'
 
 const TRANSPARENT_GIF = Buffer.from(
   'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
@@ -20,6 +21,9 @@ const TRANSPARENT_GIF = Buffer.from(
 )
 
 export { TRANSPARENT_GIF }
+
+/** Ignore duplicate open pings (Gmail prefetch + real view, or pixel + click). */
+const OPEN_DEBOUNCE_MS = 3 * 60 * 1000
 
 const activeSends = new Set()
 
@@ -54,12 +58,14 @@ export async function recordEmailClick(trackingId, clickedUrl = '') {
   if (!recipient) return null
 
   const wasFirstClick = !recipient.clickedAt
+  const wasFirstOpen = !recipient.openedAt
   recipient.clickCount = (recipient.clickCount || 0) + 1
   if (wasFirstClick) recipient.clickedAt = new Date()
-  if (!recipient.openedAt) {
+  if (wasFirstOpen) {
+    // Infer open from click — do not bump openCount again if pixel also fires
     recipient.openedAt = new Date()
     recipient.lastOpenedAt = recipient.openedAt
-    recipient.openCount = (recipient.openCount || 0) + 1
+    if (!recipient.openCount) recipient.openCount = 1
   } else {
     recipient.lastOpenedAt = new Date()
   }
@@ -113,6 +119,17 @@ export async function recordEmailClick(trackingId, clickedUrl = '') {
   }
 
   const campaign = await EmailCampaign.findById(recipient.campaignId)
+  if (wasFirstOpen && campaign) {
+    await EmailCampaign.updateOne(
+      { _id: recipient.campaignId },
+      { $inc: { 'stats.opened': 1 } },
+    )
+    broadcastEvent('EMAIL_OPENED', {
+      workspaceId: campaign.workspaceId,
+      campaignId: campaign._id.toString(),
+      email: recipient.email,
+    })
+  }
   if (wasFirstClick && campaign) {
     await EmailCampaign.updateOne(
       { _id: recipient.campaignId },
@@ -148,6 +165,13 @@ export async function recordEmailClick(trackingId, clickedUrl = '') {
 export async function recordEmailOpen(trackingId) {
   const recipient = await EmailRecipient.findOne({ trackingId })
   if (!recipient) return null
+
+  const now = Date.now()
+  const last = recipient.lastOpenedAt ? new Date(recipient.lastOpenedAt).getTime() : 0
+  if (last && now - last < OPEN_DEBOUNCE_MS) {
+    // Duplicate ping within debounce window (prefetch / double-fetch) — ignore
+    return recipient
+  }
 
   const wasFirst = !recipient.openedAt
   recipient.openCount = (recipient.openCount || 0) + 1
@@ -310,6 +334,25 @@ export async function runCampaignSend(campaignId, workspaceId) {
           firstName,
           greeting,
           meetingLink,
+          nichePain:
+            recipient.mergeData?.nichePain ||
+            buildNichePain({
+              industry: recipient.mergeData?.industry || recipient.niche || '',
+              niche: recipient.niche || recipient.mergeData?.niche || '',
+              company: recipient.company || recipient.mergeData?.company || '',
+              city: recipient.mergeData?.city || '',
+              country: recipient.mergeData?.country || '',
+            }),
+          nichePainShort:
+            recipient.mergeData?.nichePainShort ||
+            buildNichePainShort({
+              industry: recipient.mergeData?.industry || recipient.niche || '',
+            }),
+          nicheLabel:
+            recipient.mergeData?.nicheLabel ||
+            recipient.niche ||
+            recipient.mergeData?.industry ||
+            'your industry',
         }
 
         const pool = campaign.templates?.length

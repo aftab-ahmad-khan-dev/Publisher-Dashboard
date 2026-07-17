@@ -315,12 +315,17 @@ export async function listProcessedEmails(params = {}) {
 export async function listEmailMeetings(params = {}) {
   const qs = new URLSearchParams();
   if (params.limit) qs.set("limit", String(params.limit));
+  if (params.sync) qs.set("sync", "1");
   const q = qs.toString();
   return apiFetch(`/email/meetings${q ? `?${q}` : ""}`);
 }
 
 export async function updateEmailMeeting(id, body) {
   return apiFetch(`/email/meetings/${id}`, { method: "PATCH", body });
+}
+
+export async function removeEmailMeetings(ids) {
+  return apiFetch("/email/meetings/remove", { method: "POST", body: { ids } });
 }
 
 export async function saveDraftRemote(draft) {

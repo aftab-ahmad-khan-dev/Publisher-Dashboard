@@ -120,6 +120,11 @@ function preserveSecrets(existing = {}, incoming = {}, fields) {
   for (const field of fields) {
     const next = incoming[field]
     const prev = existing[field]
+    // Explicit wipe (used when Client ID changes and secret must be re-pasted)
+    if (next === '__CLEAR__') {
+      out[field] = ''
+      continue
+    }
     if ((next === undefined || next === null || String(next).trim() === '') && prev) {
       out[field] = prev
     }
@@ -238,9 +243,27 @@ function fillFromEnv(config) {
     },
     gmail: {
       clientId: config.gmail?.clientId || env.gmail.clientId,
-      clientSecret: config.gmail?.clientSecret || env.gmail.clientSecret,
-      accessToken: config.gmail?.accessToken || env.gmail.accessToken,
-      refreshToken: config.gmail?.refreshToken || env.gmail.refreshToken,
+      // Never attach env secret to a different Client ID saved in DB
+      clientSecret:
+        config.gmail?.clientSecret ||
+        (!config.gmail?.clientId || config.gmail.clientId === env.gmail.clientId
+          ? env.gmail.clientSecret
+          : ''),
+      // Tokens belong to the Client ID that issued them — never borrow env tokens across clients
+      accessToken:
+        config.gmail?.accessToken ||
+        (!config.gmail?.clientId ||
+        !env.gmail.clientId ||
+        config.gmail.clientId === env.gmail.clientId
+          ? env.gmail.accessToken
+          : ''),
+      refreshToken:
+        config.gmail?.refreshToken ||
+        (!config.gmail?.clientId ||
+        !env.gmail.clientId ||
+        config.gmail.clientId === env.gmail.clientId
+          ? env.gmail.refreshToken
+          : ''),
       tokenExpiresAt: config.gmail?.tokenExpiresAt || null,
       fromEmail: config.gmail?.fromEmail || env.gmail.fromEmail,
       calendarBookingUrl:
@@ -375,11 +398,69 @@ export async function saveLinkedInTokens(workspaceId, tokens) {
 }
 
 export async function saveGmailConfig(workspaceId, gmailPatch) {
-  const prev = await getWorkspaceConfig(workspaceId)
-  return saveWorkspaceConfig(workspaceId, {
-    ...prev,
-    gmail: { ...prev.gmail, ...gmailPatch },
-  })
+  // Use raw DB only — never merge fillFromEnv() values back into Mongo
+  // (that was pairing a new Client ID with an old .env secret).
+  const existing = await loadRawDoc(workspaceId)
+  const raw = existing?.toObject?.() || existing || null
+  const prev = docToConfig(raw) || { ...DEFAULT_CONFIG }
+
+  const nextId =
+    gmailPatch?.clientId != null ? String(gmailPatch.clientId).trim() : null
+  const prevId = String(prev.gmail?.clientId || '').trim()
+  const secretInPatch =
+    gmailPatch?.clientSecret != null && String(gmailPatch.clientSecret).trim() !== ''
+  let patch = { ...gmailPatch }
+
+  // New OAuth client → old tokens + old secret are invalid
+  if (nextId && prevId && nextId !== prevId) {
+    patch = {
+      ...patch,
+      accessToken: '__CLEAR__',
+      refreshToken: '__CLEAR__',
+      tokenExpiresAt: null,
+      connected: false,
+      sendReady: false,
+      ...(secretInPatch ? {} : { clientSecret: '__CLEAR__' }),
+    }
+  } else if (secretInPatch) {
+    const prevSecret = String(prev.gmail?.clientSecret || '').trim()
+    const nextSecret = String(gmailPatch.clientSecret).trim()
+    if (prevSecret && nextSecret && prevSecret !== nextSecret) {
+      patch = {
+        ...patch,
+        accessToken: '__CLEAR__',
+        refreshToken: '__CLEAR__',
+        tokenExpiresAt: null,
+        connected: false,
+        sendReady: false,
+      }
+    }
+  }
+
+  const nextGmail = mergeSection(prev.gmail, patch, GMAIL_SECRET_FIELDS)
+  // Normalize clear sentinels left in non-secret fields
+  if (nextGmail.accessToken === '__CLEAR__') nextGmail.accessToken = ''
+  if (nextGmail.refreshToken === '__CLEAR__') nextGmail.refreshToken = ''
+
+  await ApiConfig.findOneAndUpdate(
+    { workspaceId },
+    {
+      workspaceId,
+      gmail: nextGmail,
+      meta: prev.meta,
+      linkedin: prev.linkedin,
+      reddit: prev.reddit,
+      quora: prev.quora,
+      pinterest: prev.pinterest,
+      threads: prev.threads,
+      webhookUrl: prev.webhookUrl,
+      notificationsEnabled: prev.notificationsEnabled,
+      defaults: prev.defaults,
+    },
+    { upsert: true, new: true },
+  )
+
+  return getWorkspaceConfig(workspaceId)
 }
 
 export async function saveGmailTokens(workspaceId, tokens) {
