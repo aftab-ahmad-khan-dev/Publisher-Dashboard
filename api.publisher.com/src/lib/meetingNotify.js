@@ -56,7 +56,6 @@ export async function emailMeetLinkToParties({
   workspaceId = null,
   broadcast = true,
 }) {
-  if (!isMailerConfigured()) return { ok: false, reason: 'no-mailer' }
   if (!leadEmail && skipAdmin) return { ok: false, reason: 'no-recipient' }
 
   const joinUrl = String(meetLink || calendarHtmlLink || '').trim()
@@ -67,6 +66,20 @@ export async function emailMeetLinkToParties({
   const title = summary || 'Meeting'
   const hasMeet = isMeetJoinUrl(joinUrl)
   const joinLabel = hasMeet ? 'Join Google Meet' : 'Open meeting details'
+
+  // In-app / SW notification even when SMTP is down — booking confirmation must reach the dashboard
+  if (broadcast) {
+    broadcastEvent('MEETING_SCHEDULED', {
+      workspaceId: workspaceId || undefined,
+      title: 'Meeting scheduled',
+      body: `${leadEmail || 'Guest'}${when ? ` · ${when}` : ''}`,
+      meetLink: joinUrl,
+      email: leadEmail || undefined,
+      at: Date.now(),
+    })
+  }
+
+  if (!isMailerConfigured()) return { ok: false, reason: 'no-mailer', appNotified: true }
 
   const bodyFor = (who) =>
     [
@@ -146,17 +159,7 @@ export async function emailMeetLinkToParties({
     }
   }
 
-  if (broadcast) {
-    broadcastEvent('MEETING_SCHEDULED', {
-      workspaceId: workspaceId || undefined,
-      title: 'Meeting scheduled',
-      body: `${leadEmail || 'Guest'}${when ? ` · ${when}` : ''}`,
-      meetLink: joinUrl,
-      at: Date.now(),
-    })
-  }
-
-  return { ok: results.lead || results.admin, ...results }
+  return { ok: results.lead || results.admin, appNotified: broadcast, ...results }
 }
 
 /**

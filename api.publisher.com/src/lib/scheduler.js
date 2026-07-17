@@ -101,6 +101,14 @@ export async function runDuePosts() {
       logger.warn('Calendar booking sync tick failed', { error: err.message })
     }
 
+    // Resume bulk email campaigns after batch rest / serverless yield
+    try {
+      const { resumeSendingCampaigns } = await import('./emailWorker.js')
+      await resumeSendingCampaigns()
+    } catch (err) {
+      logger.warn('Email campaign resume tick failed', { error: err.message })
+    }
+
     const due = await ScheduledPost.find({
       status: 'scheduled',
       scheduledAt: { $lte: new Date() },

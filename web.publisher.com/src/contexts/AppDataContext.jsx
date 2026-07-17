@@ -418,8 +418,11 @@ export function AppDataProvider({ children }) {
       ) {
         refreshFromServer()
       }
+      if (event.type === 'MEETING_SCHEDULED' || event.type === 'MEETING_REMINDER') {
+        showToast(event.body || event.title || 'Meeting update', 'success')
+      }
     })
-  }, [live, isAuthenticated, refreshFromServer, pushInAppNotification, apiConfig.notificationsEnabled])
+  }, [live, isAuthenticated, refreshFromServer, pushInAppNotification, apiConfig.notificationsEnabled, showToast])
 
   const unreadNotificationCount = useMemo(
     () => notifications.filter((n) => !n.read).length,

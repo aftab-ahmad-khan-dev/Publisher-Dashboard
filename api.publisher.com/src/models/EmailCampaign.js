@@ -23,11 +23,15 @@ const emailCampaignSchema = new mongoose.Schema(
       default: 'draft',
     },
     trackOpens: { type: Boolean, default: true },
-    /** Legacy batch controls — superseded by cooldownMs for paced outreach */
-    batchSize: { type: Number, default: 1 },
+    /** Emails to send before a long rest (bulk). Default ~18 (clamped 15–20 in worker). */
+    batchSize: { type: Number, default: 18 },
     batchDelayMs: { type: Number, default: 480000 },
-    /** Minutes between individual sends (bulk). Default 8 min. */
+    /** Long rest after each batch (bulk). Default 8 min — not between every email. */
     cooldownMs: { type: Number, default: 8 * 60 * 1000 },
+    /** Sends completed in the current batch (resets after long rest). */
+    sendsSinceBreak: { type: Number, default: 0 },
+    /** When set, worker waits until this time before sending the next email. */
+    nextSendAt: { type: Date, default: null },
     /** Max sends in rolling 24h for this workspace (enforced in worker). */
     dailyCap: { type: Number, default: 200 },
     leadSourceId: { type: mongoose.Schema.Types.ObjectId, ref: 'LeadSource' },

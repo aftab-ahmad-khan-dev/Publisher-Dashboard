@@ -27,6 +27,7 @@ import {
   createCalendarInvite,
   syncEmailCalendar,
   saveCalendarSettings,
+  subscribeRealtime,
 } from '../lib/backendApi'
 import { mergeTemplate } from '../lib/emailParse'
 import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from '../lib/meetingCta'
@@ -206,6 +207,7 @@ export default function EmailPage() {
   const [htmlBody, setHtmlBody] = useState('')
   const [meetingLink, setMeetingLink] = useState('')
   const [cooldownMinutes, setCooldownMinutes] = useState(8)
+  const [batchSize, setBatchSize] = useState(18)
   const [dailyCap, setDailyCap] = useState(200)
   const [skipAlreadyEmailed, setSkipAlreadyEmailed] = useState(true)
   const [leadPayload, setLeadPayload] = useState(null)
@@ -315,6 +317,16 @@ export default function EmailPage() {
     }
   }, [tab, live, loadMeetings])
 
+  // Refresh meetings list when a booking is confirmed in realtime
+  useEffect(() => {
+    if (!live) return undefined
+    return subscribeRealtime((event) => {
+      if (event?.type === 'MEETING_SCHEDULED' || event?.type === 'MEETING_REMINDER') {
+        loadMeetings({ sync: false })
+      }
+    })
+  }, [live, loadMeetings])
+
   useEffect(() => {
     if (!selectedId || !live || tab !== 'mailbox') {
       if (tab !== 'mailbox') setDetail(null)
@@ -339,6 +351,7 @@ export default function EmailPage() {
           setCalendarConnected(s.calendarConnected)
         }
         if (s.defaults?.cooldownMinutes) setCooldownMinutes(s.defaults.cooldownMinutes)
+        if (s.defaults?.batchSize) setBatchSize(s.defaults.batchSize)
         if (s.defaults?.dailyCap) setDailyCap(s.defaults.dailyCap)
       })
       .catch(() => {})
@@ -501,12 +514,15 @@ export default function EmailPage() {
   const estFinish = useMemo(() => {
     const n = mode === 'single' ? 1 : leadPayload?.leads?.length || 0
     if (!n) return null
-    const mins = Math.max(cooldownMinutes, Math.ceil((24 * 60) / Math.max(dailyCap, 1)))
-    const totalMin = (n - 1) * mins
-    const hours = Math.floor(totalMin / 60)
-    const rem = totalMin % 60
+    const every = Math.min(20, Math.max(15, batchSize || 18))
+    const restMin = Math.max(1, cooldownMinutes || 8)
+    const avgGapSec = 15
+    const rests = Math.max(0, Math.ceil(n / every) - 1)
+    const totalSec = Math.max(0, n - 1) * avgGapSec + rests * restMin * 60
+    const hours = Math.floor(totalSec / 3600)
+    const rem = Math.round((totalSec % 3600) / 60)
     return hours > 0 ? `~${hours}h ${rem}m` : `~${rem}m`
-  }, [mode, leadPayload, cooldownMinutes, dailyCap])
+  }, [mode, leadPayload, cooldownMinutes, batchSize])
 
   const filteredProcessed = useMemo(() => {
     const q = processedQuery.trim().toLowerCase()
@@ -728,6 +744,7 @@ export default function EmailPage() {
             trackOpens: true,
             sendNow: true,
             cooldownMinutes: mode === 'single' ? 1 : cooldownMinutes,
+            batchSize: mode === 'single' ? 18 : batchSize,
             dailyCap,
           })
           await saveEmailTemplateDraft(subject, body, { meetingLink: booking, templateType })
@@ -737,7 +754,7 @@ export default function EmailPage() {
       showToast(
         mode === 'single'
           ? 'Email queued'
-          : `Campaign started · ${recipients.length} leads · ${cooldownMinutes} min cooldown`,
+          : `Campaign started · ${recipients.length} leads · 0–30s gaps · ${cooldownMinutes} min rest every ${batchSize}`,
       )
       setTab('processed')
       await refreshAll()
@@ -1255,34 +1272,55 @@ export default function EmailPage() {
               </div>
 
               {mode === 'bulk' && (
-                <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  <div>
-                    <label className="mb-1 block text-[11px] text-slate-400">Cooldown (min)</label>
-                    <input
-                      type="number"
-                      min={7}
-                      max={30}
-                      className={inputClass()}
-                      value={cooldownMinutes}
-                      onChange={(e) => setCooldownMinutes(Number(e.target.value) || 8)}
-                    />
+                <div className="mb-3 space-y-2">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div>
+                      <label className="mb-1 block text-[11px] text-slate-400">
+                        Rest every (emails)
+                      </label>
+                      <input
+                        type="number"
+                        min={15}
+                        max={20}
+                        className={inputClass()}
+                        value={batchSize}
+                        onChange={(e) => setBatchSize(Number(e.target.value) || 18)}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] text-slate-400">
+                        Rest duration (min)
+                      </label>
+                      <input
+                        type="number"
+                        min={5}
+                        max={30}
+                        className={inputClass()}
+                        value={cooldownMinutes}
+                        onChange={(e) => setCooldownMinutes(Number(e.target.value) || 8)}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] text-slate-400">Max / 24h</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={500}
+                        className={inputClass()}
+                        value={dailyCap}
+                        onChange={(e) => setDailyCap(Number(e.target.value) || 200)}
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <p className="text-[11px] text-slate-500">
+                        Est. {estFinish || '—'} · {leadPayload?.leads?.length || 0} leads
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <label className="mb-1 block text-[11px] text-slate-400">Max / 24h</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={500}
-                      className={inputClass()}
-                      value={dailyCap}
-                      onChange={(e) => setDailyCap(Number(e.target.value) || 200)}
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <p className="text-[11px] text-slate-500">
-                      Est. {estFinish || '—'} · {leadPayload?.leads?.length || 0} leads
-                    </p>
-                  </div>
+                  <p className="text-[10px] text-slate-600">
+                    Each email waits a random 0–30s. After every {batchSize} sends, the campaign
+                    pauses {cooldownMinutes} min, then continues automatically.
+                  </p>
                 </div>
               )}
 
@@ -1775,8 +1813,8 @@ export default function EmailPage() {
 
       {/* ─── Meetings tab ─── */}
       {tab === 'meetings' && (
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-          <section className="saas-panel space-y-4 p-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain lg:overflow-hidden">
+          <section className="saas-panel shrink-0 space-y-4 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-white">Google Calendar</h3>
@@ -1888,8 +1926,8 @@ export default function EmailPage() {
             </div>
           </section>
 
-          <div className="saas-table-wrap min-h-0 flex-1 overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
+          <div className="saas-table-wrap flex min-h-[20rem] shrink-0 flex-col overflow-hidden lg:min-h-0 lg:flex-1">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
               <h3 className="text-sm font-semibold text-white">Scheduled & meeting pipeline</h3>
               <div className="flex flex-wrap items-center gap-2">
                 {selectedMeetingIds.size > 0 && (
@@ -1959,7 +1997,7 @@ export default function EmailPage() {
               </div>
             )}
 
-            <div className="saas-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
+            <div className="saas-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain pb-24 lg:pb-0">
               {meetings.length === 0 ? (
                 <p className="px-4 py-8 text-center text-xs text-slate-500 md:hidden">
                   No meeting activity yet. Open this tab to sync Calendar bookings, or tap Refresh +

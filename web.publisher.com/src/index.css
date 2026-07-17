@@ -474,13 +474,13 @@ body {
   min-width: 0;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .mobile-data-cards {
     display: none;
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .saas-table--desktop-only {
     display: none !important;
   }

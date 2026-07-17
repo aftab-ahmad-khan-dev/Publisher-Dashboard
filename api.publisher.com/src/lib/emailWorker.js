@@ -216,26 +216,84 @@ async function countSentLast24h(workspaceId) {
   })
 }
 
+const INTER_EMAIL_MAX_MS = 30_000
+/** Soft cap so serverless invocations exit cleanly; scheduler resumes. */
+const WORKER_MAX_MS = Number(process.env.EMAIL_WORKER_MAX_MS || 50_000)
+
+/** Random 0–30s gap between individual emails. */
+function interEmailGapMs() {
+  return Math.floor(Math.random() * (INTER_EMAIL_MAX_MS + 1))
+}
+
+/** How many emails before the long rest (15–20). */
+function restEveryN(campaign) {
+  const n = Number(campaign?.batchSize)
+  if (Number.isFinite(n) && n > 0) return Math.min(20, Math.max(15, Math.round(n)))
+  return 18
+}
+
+/** Long rest duration after each batch (default 8 min). */
+function batchRestMs(campaign) {
+  const ms = Number(campaign?.cooldownMs)
+  if (Number.isFinite(ms) && ms > 0) return Math.min(Math.max(ms, 60_000), 60 * 60 * 1000)
+  return 8 * 60 * 1000
+}
+
+/** @deprecated kept for callers; long rest only — not per-email. */
 function effectiveCooldownMs(campaign) {
-  const dailyCap = Math.max(1, campaign.dailyCap || 200)
-  const minFromCap = Math.ceil((24 * 60 * 60 * 1000) / dailyCap)
-  const userCooldown = Math.max(campaign.cooldownMs || 8 * 60 * 1000, 60_000)
-  // Prefer explicit cooldown, but never go faster than dailyCap allows on average
-  return Math.max(userCooldown, minFromCap)
+  return batchRestMs(campaign)
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
+/**
+ * Resume bulk campaigns left in `sending` (after batch rest or serverless timeout).
+ * Called from the 30s scheduler / cron tick.
+ */
+export async function resumeSendingCampaigns() {
+  const now = new Date()
+  const campaigns = await EmailCampaign.find({
+    status: 'sending',
+    $or: [{ nextSendAt: null }, { nextSendAt: { $exists: false } }, { nextSendAt: { $lte: now } }],
+  })
+    .select('_id workspaceId nextSendAt')
+    .limit(8)
+    .lean()
+
+  for (const c of campaigns) {
+    const id = String(c._id)
+    if (activeSends.has(id)) continue
+    runCampaignSend(c._id, c.workspaceId).catch((err) => {
+      logger.warn('Resume campaign send failed', { campaignId: id, error: err.message })
+    })
+  }
+  return { resumed: campaigns.length }
 }
 
 export async function runCampaignSend(campaignId, workspaceId) {
   const key = String(campaignId)
   if (activeSends.has(key)) return
   activeSends.add(key)
+  const invocationStarted = Date.now()
 
   try {
     const campaign = await EmailCampaign.findOne({ _id: campaignId, workspaceId })
     if (!campaign) return
     if (campaign.status === 'paused' || campaign.status === 'cancelled') return
 
+    if (campaign.nextSendAt && Date.now() < new Date(campaign.nextSendAt).getTime()) {
+      logger.info('Email campaign waiting on batch rest', {
+        campaignId: key,
+        nextSendAt: campaign.nextSendAt,
+      })
+      return
+    }
+
     campaign.status = 'sending'
     if (!campaign.startedAt) campaign.startedAt = new Date()
+    if (campaign.nextSendAt) campaign.nextSendAt = null
     await campaign.save()
 
     let accessToken = null
@@ -261,23 +319,30 @@ export async function runCampaignSend(campaignId, workspaceId) {
     const useSmtp = !accessToken && isMailerConfigured()
     const workspaceConfig = await getWorkspaceConfig(workspaceId)
     const workspaceBooking = getCalendarBookingUrl(workspaceConfig)
-    const cooldown = effectiveCooldownMs(campaign)
+    const restMs = batchRestMs(campaign)
+    const everyN = restEveryN(campaign)
     const dailyCap = Math.max(1, campaign.dailyCap || 200)
     const apiBase = trackingApiBase()
 
     logger.info('Email campaign sending', {
       campaignId: key,
-      cooldownMs: cooldown,
+      interEmailMaxMs: INTER_EMAIL_MAX_MS,
+      restEvery: everyN,
+      batchRestMs: restMs,
       dailyCap,
       transport: useSmtp ? 'smtp' : 'gmail',
     })
 
-    // Send one-at-a-time with cooldown (bulk paced outreach)
+    // Send with 0–30s gaps; long rest every N emails (exit + scheduler resume)
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const fresh = await EmailCampaign.findById(campaignId)
       if (!fresh || fresh.status === 'paused' || fresh.status === 'cancelled') {
         logger.info('Email campaign stopped', { campaignId: key, status: fresh?.status })
+        return
+      }
+
+      if (fresh.nextSendAt && Date.now() < new Date(fresh.nextSendAt).getTime()) {
         return
       }
 
@@ -434,9 +499,41 @@ export async function runCampaignSend(campaignId, workspaceId) {
       }
 
       const stillQueued = await EmailRecipient.countDocuments({ campaignId, status: 'queued' })
-      if (stillQueued > 0) {
-        await new Promise((r) => setTimeout(r, cooldown))
+      if (stillQueued <= 0) break
+
+      const after = await EmailCampaign.findById(campaignId).select('sendsSinceBreak batchSize cooldownMs status')
+      if (!after || after.status !== 'sending') return
+
+      const sendsSince = (after.sendsSinceBreak || 0) + 1
+      const every = restEveryN(after)
+
+      if (sendsSince >= every) {
+        const pauseUntil = new Date(Date.now() + batchRestMs(after))
+        after.sendsSinceBreak = 0
+        after.nextSendAt = pauseUntil
+        await after.save()
+        logger.info('Email campaign batch rest', {
+          campaignId: key,
+          restEvery: every,
+          nextSendAt: pauseUntil,
+        })
+        // Exit — scheduler/cron resumes after nextSendAt (no 8‑min sleep in-process)
+        return
       }
+
+      after.sendsSinceBreak = sendsSince
+      after.nextSendAt = null
+      await after.save()
+
+      const gap = interEmailGapMs()
+      if (Date.now() - invocationStarted + gap > WORKER_MAX_MS) {
+        logger.info('Email campaign yielding (time budget)', {
+          campaignId: key,
+          sentInBurst: sendsSince,
+        })
+        return
+      }
+      await sleep(gap)
     }
 
     const updated = await EmailCampaign.findById(campaignId)
@@ -445,6 +542,8 @@ export async function runCampaignSend(campaignId, workspaceId) {
       updated.status = failed > 0 && updated.stats.sent === 0 ? 'failed' : 'completed'
       updated.completedAt = new Date()
       updated.error = undefined
+      updated.nextSendAt = null
+      updated.sendsSinceBreak = 0
       await updated.save()
 
       logger.success('Email campaign finished', {

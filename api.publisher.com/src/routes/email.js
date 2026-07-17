@@ -160,6 +160,13 @@ function normalizeCooldown(body) {
   return 8 * 60 * 1000
 }
 
+/** Emails before a long rest — clamped to 15–20. */
+function normalizeBatchSize(body) {
+  const n = Number(body?.batchSize ?? body?.restEvery)
+  if (Number.isFinite(n) && n > 0) return Math.min(20, Math.max(15, Math.round(n)))
+  return 18
+}
+
 function normalizeDailyCap(body) {
   const cap = Number(body?.dailyCap)
   if (Number.isFinite(cap) && cap > 0) return Math.min(Math.max(Math.round(cap), 1), 2000)
@@ -980,6 +987,7 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
 
     const cooldownMs = normalizeCooldown(req.body)
     const dailyCap = normalizeDailyCap(req.body)
+    const restEvery = normalizeBatchSize(req.body)
 
     const campaign = await EmailCampaign.create({
       workspaceId: req.workspaceId,
@@ -994,10 +1002,12 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
         process.env.FROM_EMAIL?.trim() ||
         process.env.SMTP_EMAIL?.trim(),
       trackOpens: trackOpens !== false,
-      batchSize: batchSize || 1,
+      batchSize: restEvery,
       batchDelayMs: batchDelayMs || cooldownMs,
       cooldownMs,
       dailyCap,
+      sendsSinceBreak: 0,
+      nextSendAt: null,
       leadSourceId: leadSourceId || undefined,
       meetingLink: safeBooking || '',
       status: sendNow ? 'sending' : 'draft',
@@ -1089,6 +1099,9 @@ router.post('/email/campaigns/:id/send', requirePlanFeature('email'), async (req
     if (req.body?.dailyCap != null) {
       campaign.dailyCap = normalizeDailyCap(req.body)
     }
+    if (req.body?.batchSize != null || req.body?.restEvery != null) {
+      campaign.batchSize = normalizeBatchSize(req.body)
+    }
 
     await EmailRecipient.updateMany(
       { campaignId: campaign._id, status: { $in: ['failed', 'cancelled'] } },
@@ -1099,6 +1112,7 @@ router.post('/email/campaigns/:id/send', requirePlanFeature('email'), async (req
     campaign.startedAt = campaign.startedAt || new Date()
     campaign.pausedAt = undefined
     campaign.error = undefined
+    campaign.nextSendAt = null
     await campaign.save()
 
     setImmediate(() => runCampaignSend(campaign._id, req.workspaceId))
@@ -1332,7 +1346,7 @@ router.post('/email/calendar/invite', requirePlanFeature('email'), async (req, r
           workspaceId: req.workspaceId,
           broadcast: true,
         })
-        if (recipient && mailed?.lead) {
+        if (recipient && (mailed?.lead || mailed?.appNotified)) {
           recipient.meetingConfirmSentAt = new Date()
           await recipient.save()
         }
@@ -1388,6 +1402,7 @@ router.get('/email/settings', async (req, res) => {
         '',
       defaults: {
         cooldownMinutes: 8,
+        batchSize: 18,
         dailyCap: 200,
       },
     })
