@@ -278,7 +278,7 @@ I ship production software across web, mobile, and desktop, plus AI workflows wh
 ::ease::Clear milestones and handoff — no freelancer juggling
 ::benefit::Faster delivery · Single accountable owner · Production-ready work
 ::trust::Trusted by founders worldwide — 97+ shipped projects · 5.0 feedback · clients in 14+ countries
-::offer::Web / MERN / Shopify|iOS & Android|Desktop apps|SaaS & AI
+::offer::Web / MERN / Shopify|iOS & Android|Desktop apps|SaaS · CRM · AI
 
 If {{company}} needs that kind of ownership, I am happy to share relevant work.
 
@@ -304,7 +304,7 @@ Most {{industry}} leaders do not need another slide deck. They need someone who 
 ::ease::You get one thread of communication and one delivery plan
 ::benefit::Less overhead · Faster decisions · Work that reaches production
 ::trust::Trusted delivery partner — 97+ projects · 5.0 feedback · 14+ countries
-::offer::Web platforms|Mobile apps|Desktop software|AI workflows
+::offer::Web platforms|Mobile apps|Desktop · SaaS|CRM & AI
 
 I can send a short case study relevant to {{company}}. If a quick call helps, choose a time that works for you.`,
     ctaLabel: 'See work & reviews',
@@ -350,7 +350,7 @@ I partner directly with founders on web platforms, mobile apps, desktop software
 ::ease::Simple engagement — scope, build, ship, support
 ::benefit::Speed to market · Clear accountability · Cross-platform coverage
 ::trust::Preferred by growing teams — 97+ projects · 5.0 feedback · 14+ countries
-::offer::Web · Mobile · Desktop|Shopify & SaaS|AI automation
+::offer::Web · Mobile · Desktop|Shopify · SaaS · CRM|AI automation
 
 Details and reviews: https://aftabahmadkhan.online
 
@@ -359,6 +359,96 @@ If {{company}} is evaluating a build, a short reply works. You can also schedule
     ctaUrl: SIGNATURE.site,
     secondaryCta: { label: 'Schedule a meeting', url: '{{meetingLink}}' },
     footerNote: 'Fiverr or Upwork starts are welcome.',
+  },
+  'outreach-saas': {
+    name: 'SaaS product',
+    subject: '{{company}}: SaaS / multi-tenant product engineering',
+    text: `{{greeting}},
+
+{{fomoLine}}
+
+I design and ship SaaS products end to end — multi-tenant architecture, billing-ready flows, admin panels, and the customer-facing app — without an agency stack between you and delivery.
+
+::pain::{{nichePain}}
+::solve::A senior builder who owns SaaS architecture, UX, and ship cycles
+::ease::Clear milestones from MVP to production tenants
+::benefit::Faster time-to-market · Clean multi-tenant foundation · Production-ready ops
+::trust::Trusted by founders shipping real SaaS — 97+ projects · 5.0 feedback
+::offer::SaaS / multi-tenant|Subscriptions & billing|Admin + CRM|API & webhooks
+
+If {{company}} is building or rebuilding a SaaS product, I am happy to walk through approach and timeline.
+
+Portfolio: https://aftabahmadkhan.online`,
+    ctaLabel: 'View portfolio',
+    ctaUrl: SIGNATURE.site,
+    secondaryCta: { label: 'Schedule a meeting', url: '{{meetingLink}}' },
+    footerNote: 'Custom SaaS and white-label builds welcome.',
+  },
+  'outreach-crm': {
+    name: 'CRM & ops',
+    subject: '{{company}}: CRM and operator tooling that fits your workflow',
+    text: `{{greeting}},
+
+{{fomoLine}}
+
+Generic CRMs force your team into someone else’s process. I build custom CRM and ops panels — pipeline, leads, follow-ups, and status write-back — shaped around how {{nicheLabel}} teams actually work.
+
+::pain::{{nichePain}}
+::solve::A custom CRM / admin tailored to your pipeline and roles
+::ease::Scope the workflows you already use — then ship the tool around them
+::benefit::Less spreadsheet chaos · Faster follow-up · Clear ownership
+::trust::Operator-first builds — 97+ shipped projects · 5.0 client feedback
+::offer::Custom CRM|Pipeline & leads|Admin panels|Sheets / API sync
+
+If {{company}} needs CRM or internal tooling that fits the business, a short call is enough to map the first version.`,
+    ctaLabel: 'See related work',
+    ctaUrl: SIGNATURE.site,
+    secondaryCta: { label: 'Schedule a meeting', url: '{{meetingLink}}' },
+    footerNote: 'Can connect to Google Sheets, Gmail, and your existing stack.',
+  },
+  'outreach-enterprise': {
+    name: 'Enterprise solutions',
+    subject: 'Enterprise delivery for {{company}} — web, mobile, desktop, AI',
+    text: `{{greeting}},
+
+{{fomoLine}}
+
+Enterprise teams do not need more vendors. They need accountable delivery across web platforms, mobile, desktop, CRM, and AI workflows — with clear ownership from scope to handoff.
+
+::pain::{{nichePain}}
+::solve::One senior product partner for enterprise-grade delivery
+::ease::Milestones, documentation, and a single thread of communication
+::benefit::Lower coordination tax · Faster decisions · Work that reaches production
+::trust::Trusted in 14+ countries — 97+ projects · 5.0 feedback
+::offer::Enterprise solutions|Custom platforms|CRM & SaaS|Web · Mobile · Desktop · AI
+
+Happy to share a relevant case study for {{company}}. Book a brief call when it suits you.`,
+    ctaLabel: 'Open portfolio',
+    ctaUrl: SIGNATURE.site,
+    secondaryCta: { label: 'Schedule a meeting', url: '{{meetingLink}}' },
+    footerNote: 'NDA-friendly engagements and phased rollouts available.',
+  },
+  'outreach-custom': {
+    name: 'Custom solution',
+    subject: '{{firstName}}, a custom build for {{company}}?',
+    text: `{{greeting}},
+
+{{fomoLine}}
+
+Off-the-shelf tools only go so far. I take custom briefs — SaaS, CRM, internal tools, marketplace, or niche platforms — and ship a tailored solution across web, mobile, and desktop when needed.
+
+::pain::{{nichePain}}
+::solve::A custom product scoped to {{company}} — not a forced template
+::ease::Discovery → build → ship → support, one accountable owner
+::benefit::Fit-for-purpose software · Faster iteration · Clear handoff
+::trust::Custom builds for founders worldwide — 97+ projects · 5.0 feedback
+::offer::Custom solutions|SaaS & CRM|Enterprise delivery|Web · Mobile · Desktop · AI
+
+If you have a brief, a short reply or a calendar slot works.`,
+    ctaLabel: 'View portfolio',
+    ctaUrl: SIGNATURE.site,
+    secondaryCta: { label: 'Schedule a meeting', url: '{{meetingLink}}' },
+    footerNote: 'Fixed-scope or retainer — whichever fits the work.',
   },
 }
 

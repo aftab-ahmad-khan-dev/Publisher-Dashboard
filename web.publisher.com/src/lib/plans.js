@@ -1,9 +1,9 @@
 import { isPlatformAdmin } from './admin'
 
 export const PLAN_PRICES = {
-  starter: 5,
-  growth: 10,
-  pro: 20,
+  starter: 19.99,
+  growth: 39.99,
+  pro: 49.99,
 }
 
 export const PLAN_META = {
@@ -16,31 +16,40 @@ export const PLAN_META = {
   starter: {
     id: 'starter',
     name: 'Starter',
-    price: 5,
-    blurb: 'Compose + Bulk upload',
-    features: ['Compose', 'Bulk Upload'],
+    price: 19.99,
+    blurb: 'Publish and bulk-schedule across your channels',
+    features: [
+      'Compose posts',
+      'Bulk upload & schedule',
+      'Multi-platform publish',
+      'Bank-transfer activation',
+    ],
   },
   growth: {
     id: 'growth',
     name: 'Growth',
-    price: 10,
-    blurb: 'Compose, Bulk, and Mail Box',
-    features: ['Compose', 'Bulk Upload', 'Mail Box'],
+    price: 39.99,
+    blurb: 'Publishing plus Mail Box outreach',
+    features: [
+      'Everything in Starter',
+      'Mail Box campaigns',
+      'Lead import & tracking',
+      'Meetings & calendar CTAs',
+      'Open / click insights',
+    ],
   },
   pro: {
     id: 'pro',
     name: 'Pro',
-    price: 20,
-    blurb: 'Full platform access',
+    price: 49.99,
+    blurb: 'Full Publisher Suite for operators who ship',
     features: [
-      'Compose',
-      'Bulk Upload',
-      'Mail Box',
-      'Drafts',
-      'Scheduled',
-      'Calendar',
-      'Integrations',
+      'Everything in Growth',
+      'Drafts & Scheduled queue',
+      'Content Calendar',
+      'Integrations hub',
       'Setup Guide',
+      'Priority activation support',
     ],
   },
 }

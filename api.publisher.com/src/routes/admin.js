@@ -16,7 +16,9 @@ const router = Router()
 function planLabel(plan) {
   const price = PLAN_PRICES[plan]
   const names = { starter: 'Starter', growth: 'Growth', pro: 'Pro' }
-  return `${names[plan] || plan}${price != null ? ` ($${price}/mo)` : ''}`
+  const formatted =
+    price != null && Number.isFinite(Number(price)) ? Number(price).toFixed(2) : null
+  return `${names[plan] || plan}${formatted != null ? ` ($${formatted}/mo)` : ''}`
 }
 
 async function sendSafeMail(payload) {

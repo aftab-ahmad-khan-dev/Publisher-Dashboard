@@ -40,7 +40,7 @@ The solution: One senior owns web, mobile, and desktop from scope to ship
 How easy it is: Clear milestones and handoff — no freelancer juggling
 What you get: Faster delivery · Single accountable owner · Production-ready work
 ${TRUST}
-Tech stack: Web / MERN / Shopify · iOS & Android · Desktop apps · SaaS & AI
+Tech stack: Web / MERN / Shopify · iOS & Android · Desktop apps · SaaS · CRM · AI
 
 If {{company}} needs that kind of ownership, I am happy to share relevant work.
 
@@ -66,7 +66,7 @@ The solution: One product engineer across stack — web, mobile, desktop, AI
 How easy it is: You get one thread of communication and one delivery plan
 What you get: Less overhead · Faster decisions · Work that reaches production
 Trusted delivery partner — 97+ projects · 5.0 feedback · 14+ countries
-Tech stack: Web platforms · Mobile apps · Desktop software · AI workflows
+Tech stack: Web platforms · Mobile apps · Desktop · SaaS · CRM & AI
 
 I can send a short case study relevant to {{company}}. If a quick call helps: {{meetingLink}}
 
@@ -114,11 +114,105 @@ The solution: Direct founder partnership with full-stack product ownership
 How easy it is: Simple engagement — scope, build, ship, support
 What you get: Speed to market · Clear accountability · Cross-platform coverage
 Preferred by growing teams — 97+ projects · 5.0 feedback · 14+ countries
-Tech stack: Web · Mobile · Desktop · Shopify & SaaS · AI automation
+Tech stack: Web · Mobile · Desktop · Shopify · SaaS · CRM · AI automation
 
 Details and reviews: https://aftabahmadkhan.online
 
 If {{company}} is evaluating a build, a short reply works. Or schedule a brief call: {{meetingLink}}
+
+${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
+  },
+  {
+    id: 'outreach-saas',
+    name: 'SaaS product',
+    type: 'outreach',
+    subject: '{{company}}: SaaS / multi-tenant product engineering',
+    body: `{{greeting}},
+
+{{fomoLine}}
+
+I design and ship SaaS products end to end — multi-tenant architecture, billing-ready flows, admin panels, and the customer-facing app — without an agency stack between you and delivery.
+
+The problem: {{nichePain}}
+The solution: A senior builder who owns SaaS architecture, UX, and ship cycles
+How easy it is: Clear milestones from MVP to production tenants
+What you get: Faster time-to-market · Clean multi-tenant foundation · Production-ready ops
+Trusted by founders shipping real SaaS — 97+ projects · 5.0 feedback
+Tech stack: SaaS / multi-tenant · Subscriptions & billing · Admin + CRM · API & webhooks
+
+If {{company}} is building or rebuilding a SaaS product, I am happy to walk through approach and timeline.
+
+Portfolio: https://aftabahmadkhan.online
+
+Schedule a meeting: {{meetingLink}}
+
+${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
+  },
+  {
+    id: 'outreach-crm',
+    name: 'CRM & ops',
+    type: 'outreach',
+    subject: '{{company}}: CRM and operator tooling that fits your workflow',
+    body: `{{greeting}},
+
+{{fomoLine}}
+
+Generic CRMs force your team into someone else’s process. I build custom CRM and ops panels — pipeline, leads, follow-ups, and status write-back — shaped around how {{nicheLabel}} teams actually work.
+
+The problem: {{nichePain}}
+The solution: A custom CRM / admin tailored to your pipeline and roles
+How easy it is: Scope the workflows you already use — then ship the tool around them
+What you get: Less spreadsheet chaos · Faster follow-up · Clear ownership
+Operator-first builds — 97+ shipped projects · 5.0 client feedback
+Tech stack: Custom CRM · Pipeline & leads · Admin panels · Sheets / API sync
+
+If {{company}} needs CRM or internal tooling that fits the business, a short call is enough to map the first version.
+
+Schedule a meeting: {{meetingLink}}
+
+${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
+  },
+  {
+    id: 'outreach-enterprise',
+    name: 'Enterprise solutions',
+    type: 'outreach',
+    subject: 'Enterprise delivery for {{company}} — web, mobile, desktop, AI',
+    body: `{{greeting}},
+
+{{fomoLine}}
+
+Enterprise teams do not need more vendors. They need accountable delivery across web platforms, mobile, desktop, CRM, and AI workflows — with clear ownership from scope to handoff.
+
+The problem: {{nichePain}}
+The solution: One senior product partner for enterprise-grade delivery
+How easy it is: Milestones, documentation, and a single thread of communication
+What you get: Lower coordination tax · Faster decisions · Work that reaches production
+Trusted in 14+ countries — 97+ projects · 5.0 feedback
+Tech stack: Enterprise solutions · Custom platforms · CRM & SaaS · Web · Mobile · Desktop · AI
+
+Happy to share a relevant case study for {{company}}. Book a brief call when it suits you: {{meetingLink}}
+
+${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
+  },
+  {
+    id: 'outreach-custom',
+    name: 'Custom solution',
+    type: 'outreach',
+    subject: '{{firstName}}, a custom build for {{company}}?',
+    body: `{{greeting}},
+
+{{fomoLine}}
+
+Off-the-shelf tools only go so far. I take custom briefs — SaaS, CRM, internal tools, marketplace, or niche platforms — and ship a tailored solution across web, mobile, and desktop when needed.
+
+The problem: {{nichePain}}
+The solution: A custom product scoped to {{company}} — not a forced template
+How easy it is: Discovery → build → ship → support, one accountable owner
+What you get: Fit-for-purpose software · Faster iteration · Clear handoff
+Custom builds for founders worldwide — 97+ projects · 5.0 feedback
+Tech stack: Custom solutions · SaaS & CRM · Enterprise delivery · Web · Mobile · Desktop · AI
+
+If you have a brief, a short reply or a calendar slot works: {{meetingLink}}
 
 ${formatSignature({ includeMeeting: true, meetingLink: '{{meetingLink}}'})}`,
   },

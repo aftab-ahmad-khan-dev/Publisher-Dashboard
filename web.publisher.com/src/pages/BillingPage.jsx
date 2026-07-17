@@ -343,10 +343,19 @@ export default function BillingPage() {
                 >
                   <p className="font-display text-base font-bold text-white">{t.name}</p>
                   <p className="mt-1 font-display text-2xl font-extrabold text-white">
-                    ${t.price}
+                    ${Number(t.price).toFixed(2)}
                     <span className="text-sm font-medium text-slate-500">/mo</span>
                   </p>
                   <p className="mt-2 text-xs text-slate-400">{t.blurb}</p>
+                  {Array.isArray(t.features) && t.features.length > 0 && (
+                    <ul className="mt-3 space-y-1">
+                      {t.features.slice(0, 4).map((f) => (
+                        <li key={f} className="text-[10px] leading-snug text-slate-500">
+                          · {f}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </button>
               )
             })}

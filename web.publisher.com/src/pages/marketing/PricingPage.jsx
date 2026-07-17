@@ -4,34 +4,46 @@ const TIERS = [
   {
     id: 'starter',
     name: 'Starter',
-    price: '$5',
+    price: '$19.99',
     cadence: 'per month',
-    blurb: 'Publish and bulk-schedule across your social channels.',
-    features: ['Compose', 'Bulk Upload', 'Bank-transfer activation'],
+    blurb: 'Publish once and bulk-schedule across your social channels.',
+    features: [
+      'Compose for LinkedIn, Meta, Reddit & more',
+      'Bulk upload & multi-day schedule',
+      'Image-ready posts',
+      'Bank-transfer activation',
+    ],
     cta: 'Get Starter',
     highlight: false,
   },
   {
     id: 'growth',
     name: 'Growth',
-    price: '$10',
+    price: '$39.99',
     cadence: 'per month',
-    blurb: 'Add Mail Box outreach on top of publishing.',
-    features: ['Everything in Starter', 'Mail Box campaigns', 'Meetings & calendar CTAs'],
+    blurb: 'Add Mail Box outreach, leads, and meeting CTAs on top of publishing.',
+    features: [
+      'Everything in Starter',
+      'Mail Box campaigns & templates',
+      'Lead import (Excel / Sheets)',
+      'Open, click & meeting tracking',
+      'Google Calendar booking CTAs',
+    ],
     cta: 'Get Growth',
     highlight: true,
   },
   {
     id: 'pro',
     name: 'Pro',
-    price: '$20',
+    price: '$49.99',
     cadence: 'per month',
-    blurb: 'Full Publisher Suite — drafts, schedule, calendar, integrations.',
+    blurb: 'Full Publisher Suite — drafts, calendar, integrations, and priority support.',
     features: [
       'Everything in Growth',
-      'Drafts & Scheduled',
+      'Drafts & Scheduled queue',
       'Content Calendar',
-      'Integrations & Setup Guide',
+      'Integrations hub & Setup Guide',
+      'Priority activation support',
     ],
     cta: 'Get Pro',
     highlight: false,
@@ -44,11 +56,11 @@ export default function PricingPage() {
       <div className="text-center">
         <p className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">Pricing</p>
         <h1 className="font-display mx-auto mt-3 max-w-2xl text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
-          Simple plans. Pay by bank transfer.
+          Plans that scale with how you ship.
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-base text-slate-400">
-          Choose Starter, Growth, or Pro. Transfer to JazzCash, UBL, NayaPay, or Meezan, upload your
-          receipt, and we activate your plan.
+          Starter $19.99 · Growth $39.99 · Pro $49.99. Pay by JazzCash, UBL, NayaPay, or Meezan —
+          upload your receipt and we activate your plan.
         </p>
       </div>
 
@@ -98,6 +110,57 @@ export default function PricingPage() {
           </div>
         ))}
       </div>
+
+      <div className="mt-10 rounded-3xl border border-white/[0.08] bg-white/[0.02] p-8 sm:p-10">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-amber-300/90">
+              Beyond SaaS plans
+            </p>
+            <h2 className="font-display mt-2 text-2xl font-extrabold text-white sm:text-3xl">
+              Custom · Enterprise · CRM · SaaS builds
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-slate-400">
+              Need a tailored product, internal CRM, multi-tenant SaaS, or enterprise delivery —
+              not just Publisher Suite seats? We design and ship custom software: web platforms,
+              mobile apps, desktop tools, AI workflows, and operator CRMs scoped to your niche.
+            </p>
+            <ul className="mt-4 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-300">
+              {[
+                'Custom solutions',
+                'Enterprise delivery',
+                'CRM & admin panels',
+                'SaaS / multi-tenant',
+                'Web · Mobile · Desktop · AI',
+              ].map((tag) => (
+                <li
+                  key={tag}
+                  className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1"
+                >
+                  {tag}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
+            <Link
+              to="/contact"
+              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-6 py-3 font-display text-sm font-bold text-white hover:opacity-90"
+            >
+              Talk enterprise / custom
+            </Link>
+            <a
+              href="https://aftabahmadkhan.online"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white hover:bg-white/5"
+            >
+              View portfolio
+            </a>
+          </div>
+        </div>
+      </div>
+
       <p className="mt-8 text-center text-[11px] text-slate-600">
         Manual bank transfer · no card required · plans activate after receipt review
       </p>

@@ -340,7 +340,7 @@ const COMPETITORS = {
     ["Email campaigns built in", [true, false, false, false]],
     ["Auto-publish scheduler", [true, true, true, true]],
     ["Isolated team workspaces", [true, false, true, false]],
-    ["From $5/mo", [true, true, false, true]],
+    ["From $19.99/mo", [true, true, false, true]],
   ],
 };
 
@@ -550,7 +550,7 @@ export default function LandingPage() {
               <p className='flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-500'>
                 <span className='text-emerald-400'>Bank transfer</span>
                 <span className='h-1 w-1 rounded-full bg-slate-600' />
-                From $5/mo
+                From $19.99/mo
                 <span className='h-1 w-1 rounded-full bg-slate-600' />
                 Set up in 5 minutes
               </p>
@@ -859,7 +859,7 @@ export default function LandingPage() {
         <div className='text-center'>
           <p className='text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>Pricing</p>
           <h2 className='font-display mt-3 text-3xl font-extrabold text-white sm:text-4xl'>
-            $5 · $10 · $20
+            $19.99 · $39.99 · $49.99
           </h2>
           <p className='mx-auto mt-3 max-w-lg text-sm text-slate-400'>
             Starter (Compose + Bulk), Growth (+ Mail Box), or Pro (full platform). Pay by bank
@@ -868,9 +868,9 @@ export default function LandingPage() {
         </div>
         <div className='mt-10 grid gap-4 sm:grid-cols-3'>
           {[
-            { name: 'Starter', price: '$5', detail: 'Compose + Bulk' },
-            { name: 'Growth', price: '$10', detail: '+ Mail Box', hot: true },
-            { name: 'Pro', price: '$20', detail: 'Full platform' },
+            { name: 'Starter', price: '$19.99', detail: 'Compose + Bulk' },
+            { name: 'Growth', price: '$39.99', detail: '+ Mail Box', hot: true },
+            { name: 'Pro', price: '$49.99', detail: 'Full platform' },
           ].map((t) => (
             <div
               key={t.name}
@@ -930,7 +930,7 @@ export default function LandingPage() {
             Create your workspace
           </Link>
           <p className='mt-4 text-xs text-slate-600'>
-            Bank transfer · From $5/mo · Activate after receipt review
+            Bank transfer · From $19.99/mo · Activate after receipt review
           </p>
         </div>
       </section>

@@ -1,9 +1,9 @@
 /** Server-side plan definitions and feature gates. */
 
 export const PLAN_PRICES = {
-  starter: 5,
-  growth: 10,
-  pro: 20,
+  starter: 19.99,
+  growth: 39.99,
+  pro: 49.99,
 }
 
 export const PLAN_FEATURES = {

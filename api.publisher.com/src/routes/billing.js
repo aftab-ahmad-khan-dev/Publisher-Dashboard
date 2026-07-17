@@ -19,10 +19,16 @@ import { requirePlatformAdmin } from '../middleware/admin.js'
 
 const router = Router()
 
+export function formatPlanPrice(amount) {
+  const n = Number(amount)
+  if (!Number.isFinite(n)) return String(amount ?? '')
+  return n.toFixed(2)
+}
+
 function planLabel(plan) {
   const price = PLAN_PRICES[plan]
   const names = { starter: 'Starter', growth: 'Growth', pro: 'Pro' }
-  return `${names[plan] || plan}${price != null ? ` ($${price}/mo)` : ''}`
+  return `${names[plan] || plan}${price != null ? ` ($${formatPlanPrice(price)}/mo)` : ''}`
 }
 
 async function sendSafeMail(payload) {
