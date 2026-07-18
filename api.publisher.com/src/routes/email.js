@@ -9,6 +9,7 @@ import {
   runCampaignSend,
   newTrackingId,
   countSentLast24h,
+  resetCampaignSend,
 } from '../lib/emailWorker.js'
 import {
   parseWorkbookBuffer,
@@ -1438,13 +1439,48 @@ router.post('/email/campaigns/:id/resume', async (req, res, next) => {
     if (campaign.status !== 'paused' && campaign.status !== 'failed') {
       return res.status(400).json({ ok: false, error: 'Only paused/failed campaigns can resume.' })
     }
+    const sent24h = await countSentLast24h(req.workspaceId)
+    const cap = Math.max(1, campaign.dailyCap || 200)
+    if (sent24h >= cap) {
+      return res.status(400).json({
+        ok: false,
+        error: `Daily cap still active (${sent24h}/${cap} in last 24h). It will auto-resume when the rolling window frees slots, or use Reset after raising the daily cap.`,
+        sent24h,
+        dailyCap: cap,
+      })
+    }
     campaign.status = 'sending'
     campaign.pausedAt = undefined
     campaign.error = undefined
+    campaign.nextSendAt = null
     await campaign.save()
     setImmediate(() => runCampaignSend(campaign._id, req.workspaceId))
     res.json({ ok: true, campaign: mapCampaign(campaign.toObject()), sending: true })
   } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/email/campaigns/:id/reset', async (req, res, next) => {
+  try {
+    const fromBeginning =
+      req.body?.fromBeginning === true ||
+      req.body?.fromBeginning === 'true' ||
+      req.query?.fromBeginning === 'true'
+    const result = await resetCampaignSend(req.params.id, req.workspaceId, {
+      fromBeginning,
+    })
+    res.json({
+      ok: true,
+      campaign: mapCampaign(result.campaign.toObject()),
+      queued: result.queued,
+      sending: result.sending,
+      fromBeginning: Boolean(result.fromBeginning),
+    })
+  } catch (err) {
+    if (err.message === 'Campaign not found') {
+      return res.status(404).json({ ok: false, error: err.message })
+    }
     next(err)
   }
 })

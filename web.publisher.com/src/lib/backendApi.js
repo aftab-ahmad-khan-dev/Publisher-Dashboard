@@ -196,6 +196,10 @@ export async function resumeEmailCampaign(id) {
   return apiFetch(`/email/campaigns/${id}/resume`, { method: "POST" });
 }
 
+export async function resetEmailCampaign(id, body = {}) {
+  return apiFetch(`/email/campaigns/${id}/reset`, { method: "POST", body });
+}
+
 export async function cancelEmailCampaign(id) {
   return apiFetch(`/email/campaigns/${id}/cancel`, { method: "POST" });
 }

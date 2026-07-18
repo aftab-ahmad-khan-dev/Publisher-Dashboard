@@ -9,6 +9,7 @@ import {
   listEmailCampaigns,
   pauseEmailCampaign,
   resumeEmailCampaign,
+  resetEmailCampaign,
   cancelEmailCampaign,
   downloadLeadSourceExport,
   getEmailSettings,
@@ -2073,16 +2074,72 @@ export default function EmailPage() {
                           </button>
                         )}
                         {c.status === 'paused' && (
+                          <>
+                            <button
+                              type="button"
+                              className="rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200"
+                              onClick={() =>
+                                resumeEmailCampaign(c.id)
+                                  .then(refreshAll)
+                                  .catch((e) => showToast(e.message, 'error'))
+                              }
+                            >
+                              Resume
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-lg bg-sky-500/15 px-2 py-1 text-[10px] font-semibold text-sky-200"
+                              onClick={() => {
+                                if (
+                                  !window.confirm(
+                                    'Restart this campaign from the beginning? Everyone (including already sent) will be queued again.',
+                                  )
+                                ) {
+                                  return
+                                }
+                                resetEmailCampaign(c.id, { fromBeginning: true })
+                                  .then((r) => {
+                                    showToast(
+                                      r.sending
+                                        ? `Restarted from beginning — ${r.queued || 0} queued`
+                                        : 'Restarted — nothing left to send',
+                                      'success',
+                                    )
+                                    return refreshAll()
+                                  })
+                                  .catch((e) => showToast(e.message, 'error'))
+                              }}
+                            >
+                              Restart from start
+                            </button>
+                          </>
+                        )}
+                        {['failed', 'cancelled', 'completed'].includes(c.status) && (
                           <button
                             type="button"
-                            className="rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200"
-                            onClick={() =>
-                              resumeEmailCampaign(c.id)
-                                .then(refreshAll)
+                            className="rounded-lg bg-sky-500/15 px-2 py-1 text-[10px] font-semibold text-sky-200"
+                            onClick={() => {
+                              if (
+                                !window.confirm(
+                                  'Restart this campaign from the beginning? Everyone (including already sent) will be queued again.',
+                                )
+                              ) {
+                                return
+                              }
+                              resetEmailCampaign(c.id, { fromBeginning: true })
+                                .then((r) => {
+                                  showToast(
+                                    r.sending
+                                      ? `Restarted from beginning — ${r.queued || 0} queued`
+                                      : 'Restarted — nothing left to send',
+                                    'success',
+                                  )
+                                  return refreshAll()
+                                })
                                 .catch((e) => showToast(e.message, 'error'))
-                            }
+                            }}
                           >
-                            Resume
+                            Restart from start
                           </button>
                         )}
                         {['sending', 'paused', 'draft'].includes(c.status) && (
@@ -2100,6 +2157,9 @@ export default function EmailPage() {
                         )}
                       </div>
                     </div>
+                    {c.error && (
+                      <p className="mt-2 text-[10px] leading-relaxed text-amber-200/90">{c.error}</p>
+                    )}
                     {c.meetingLink && (
                       <a
                         href={c.meetingLink}

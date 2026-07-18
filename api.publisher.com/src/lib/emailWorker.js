@@ -127,7 +127,6 @@ export async function recordEmailClick(trackingId, clickedUrl = '') {
   const isMeetingClick = clickKind === 'calendar'
 
   if (isMeetingClick) {
-    const firstMeetingClick = !recipient.meetingClickedAt
     if (recipient.meetingStatus === 'none' || recipient.meetingStatus === 'invited') {
       recipient.meetingStatus = 'link_clicked'
     }
@@ -141,31 +140,7 @@ export async function recordEmailClick(trackingId, clickedUrl = '') {
     }
 
     await recipient.save()
-
-    if (firstMeetingClick) {
-      try {
-        const { sendMail, isMailerConfigured } = await import('./mailer.js')
-        if (isMailerConfigured()) {
-          const admin = process.env.ADMIN_EMAIL?.trim() || 'aftabahmadkhan.dev@gmail.com'
-          await sendMail({
-            to: admin,
-            subject: `Calendar link clicked — ${recipient.email}`,
-            text: [
-              `${recipient.email} opened your Schedule a meeting / calendar booking link.`,
-              url ? `URL: ${url}` : '',
-              '',
-              'They will pick a free slot on your Google Calendar. You will get a calendar invite when they book.',
-              '',
-              '— Publisher Suite',
-            ]
-              .filter(Boolean)
-              .join('\n'),
-          }).catch(() => {})
-        }
-      } catch {
-        /* non-fatal */
-      }
-    }
+    // Admin Gmail: booked meetings only (no link-click noise). SSE still fires below.
   } else {
     await recipient.save()
   }
@@ -272,6 +247,26 @@ async function countSentLast24h(workspaceId) {
   })
 }
 
+/** When the oldest send in the rolling 24h window ages out (frees 1 daily-cap slot). */
+async function estimateDailyCapResetAt(workspaceId) {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const oldest = await EmailRecipient.findOne({
+    workspaceId,
+    status: { $in: ['sent', 'opened', 'clicked'] },
+    sentAt: { $gte: since },
+  })
+    .sort({ sentAt: 1 })
+    .select('sentAt')
+    .lean()
+  if (oldest?.sentAt) {
+    return new Date(new Date(oldest.sentAt).getTime() + 24 * 60 * 60 * 1000 + 60_000)
+  }
+  return new Date(Date.now() + 60 * 60 * 1000)
+}
+
+const DAILY_CAP_ERROR_RE = /Daily cap of \d+ emails reached/i
+
+
 const INTER_EMAIL_MAX_MS = 30_000
 /** Soft cap so serverless invocations exit cleanly; scheduler resumes. */
 const WORKER_MAX_MS = Number(process.env.EMAIL_WORKER_MAX_MS || 50_000)
@@ -326,6 +321,188 @@ export async function resumeSendingCampaigns() {
     })
   }
   return { resumed: campaigns.length }
+}
+
+/**
+ * Auto-resume campaigns paused only because the rolling 24h daily cap was hit.
+ * Previously they stayed paused forever even after the window rolled forward.
+ */
+export async function resumeDailyCapPausedCampaigns() {
+  const now = new Date()
+  const paused = await EmailCampaign.find({
+    status: 'paused',
+    error: DAILY_CAP_ERROR_RE,
+  })
+    .limit(12)
+    .lean()
+
+  let resumed = 0
+  for (const c of paused) {
+    const id = String(c._id)
+    if (activeSends.has(id)) continue
+    const cap = Math.max(1, c.dailyCap || 200)
+    const sent24h = await countSentLast24h(c.workspaceId)
+    if (sent24h >= cap) {
+      const resetAt = await estimateDailyCapResetAt(c.workspaceId)
+      if (!c.nextSendAt || new Date(c.nextSendAt).getTime() > resetAt.getTime() + 60_000) {
+        await EmailCampaign.updateOne(
+          { _id: c._id },
+          { $set: { nextSendAt: resetAt } },
+        )
+      }
+      continue
+    }
+    await EmailCampaign.updateOne(
+      { _id: c._id },
+      {
+        $set: { status: 'sending', nextSendAt: null },
+        $unset: { error: 1, pausedAt: 1 },
+      },
+    )
+    resumed += 1
+    runCampaignSend(c._id, c.workspaceId).catch((err) => {
+      logger.warn('Daily-cap auto-resume failed', { campaignId: id, error: err.message })
+    })
+  }
+
+  // Also pick up paused campaigns whose nextSendAt (cap reset) has elapsed
+  const due = await EmailCampaign.find({
+    status: 'paused',
+    nextSendAt: { $lte: now },
+    error: DAILY_CAP_ERROR_RE,
+  })
+    .limit(8)
+    .lean()
+
+  for (const c of due) {
+    const id = String(c._id)
+    if (activeSends.has(id)) continue
+    const cap = Math.max(1, c.dailyCap || 200)
+    const sent24h = await countSentLast24h(c.workspaceId)
+    if (sent24h >= cap) continue
+    await EmailCampaign.updateOne(
+      { _id: c._id },
+      {
+        $set: { status: 'sending', nextSendAt: null },
+        $unset: { error: 1, pausedAt: 1 },
+      },
+    )
+    resumed += 1
+    runCampaignSend(c._id, c.workspaceId).catch((err) => {
+      logger.warn('Daily-cap scheduled resume failed', { campaignId: id, error: err.message })
+    })
+  }
+
+  if (resumed) logger.info('Daily-cap campaigns auto-resumed', { resumed })
+  return { resumed }
+}
+
+/**
+ * Hard reset: clear pause/cap errors and start sending again.
+ * @param {{ fromBeginning?: boolean }} [opts]
+ *   fromBeginning=true → re-queue EVERY recipient (including already sent) and zero stats.
+ */
+export async function resetCampaignSend(campaignId, workspaceId, opts = {}) {
+  const fromBeginning = Boolean(opts.fromBeginning)
+  const campaign = await EmailCampaign.findOne({ _id: campaignId, workspaceId })
+  if (!campaign) throw new Error('Campaign not found')
+
+  if (fromBeginning) {
+    await EmailRecipient.updateMany(
+      { campaignId: campaign._id },
+      {
+        $set: {
+          status: 'queued',
+          openCount: 0,
+          clickCount: 0,
+          mailboxFolder: 'inbox',
+          meetingStatus: 'none',
+          nudgeAutoStage: '',
+          nudgeAutoStopped: false,
+          lastNudgeType: '',
+          lastClickKind: '',
+        },
+        $unset: {
+          error: 1,
+          sentAt: 1,
+          openedAt: 1,
+          lastOpenedAt: 1,
+          clickedAt: 1,
+          lastClickedUrl: 1,
+          clickEvents: 1,
+          meetingClickedAt: 1,
+          meetingScheduledAt: 1,
+          meetingLink: 1,
+          meetingTimeZone: 1,
+          meetingNotes: 1,
+          calendarEventId: 1,
+          meetingReminderSentAt: 1,
+          meetingConfirmSentAt: 1,
+          lastNudgeAt: 1,
+          nudgeEngagedAt: 1,
+          nudgeStatusSnapshot: 1,
+          gmailMessageId: 1,
+          renderedSubject: 1,
+          renderedText: 1,
+          renderedHtml: 1,
+        },
+      },
+    )
+    campaign.stats = {
+      total: campaign.stats?.total || 0,
+      sent: 0,
+      failed: 0,
+      opened: 0,
+      clicked: 0,
+    }
+    campaign.startedAt = new Date()
+  } else {
+    await EmailRecipient.updateMany(
+      {
+        campaignId: campaign._id,
+        status: { $in: ['failed', 'cancelled', 'sending'] },
+      },
+      { $set: { status: 'queued' }, $unset: { error: 1 } },
+    )
+  }
+
+  const total = await EmailRecipient.countDocuments({ campaignId: campaign._id })
+  if (!campaign.stats?.total || fromBeginning) {
+    campaign.stats = { ...(campaign.stats || {}), total }
+  }
+
+  const queued = await EmailRecipient.countDocuments({
+    campaignId: campaign._id,
+    status: 'queued',
+  })
+  if (queued === 0) {
+    campaign.status = 'completed'
+    campaign.completedAt = new Date()
+    campaign.error = undefined
+    campaign.pausedAt = undefined
+    campaign.nextSendAt = null
+    await campaign.save()
+    return { campaign, queued: 0, sending: false, fromBeginning }
+  }
+
+  campaign.status = 'sending'
+  campaign.pausedAt = undefined
+  campaign.error = undefined
+  campaign.nextSendAt = null
+  campaign.completedAt = undefined
+  if (!campaign.startedAt) campaign.startedAt = new Date()
+  await campaign.save()
+
+  setImmediate(() => {
+    runCampaignSend(campaign._id, workspaceId).catch((err) => {
+      logger.warn('Reset campaign send failed', {
+        campaignId: String(campaignId),
+        error: err.message,
+      })
+    })
+  })
+
+  return { campaign, queued, sending: true, fromBeginning }
 }
 
 export async function runCampaignSend(campaignId, workspaceId) {
@@ -404,14 +581,23 @@ export async function runCampaignSend(campaignId, workspaceId) {
 
       const sent24h = await countSentLast24h(workspaceId)
       if (sent24h >= dailyCap) {
+        const resetAt = await estimateDailyCapResetAt(workspaceId)
         fresh.status = 'paused'
         fresh.pausedAt = new Date()
-        fresh.error = `Daily cap of ${dailyCap} emails reached. Resume tomorrow or raise the cap.`
+        fresh.nextSendAt = resetAt
+        fresh.error = `Daily cap of ${dailyCap} emails reached. Auto-resumes after ${resetAt.toISOString()} (rolling 24h window).`
         await fresh.save()
         broadcastEvent('EMAIL_CAMPAIGN_PAUSED', {
           workspaceId,
           campaignId: key,
           reason: 'daily_cap',
+          resumeAt: resetAt.toISOString(),
+        })
+        logger.info('Email campaign paused on daily cap', {
+          campaignId: key,
+          sent24h,
+          dailyCap,
+          resumeAt: resetAt.toISOString(),
         })
         return
       }

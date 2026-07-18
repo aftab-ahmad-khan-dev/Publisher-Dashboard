@@ -282,23 +282,8 @@ export async function sendMeetingReminder(recipient, { auto = false, force = fal
     }
   }
 
-  const admin = adminEmail()
-  if (
-    isMailerConfigured() &&
-    admin &&
-    admin.toLowerCase() !== String(recipient.email || '').toLowerCase()
-  ) {
-    try {
-      await sendMail({
-        to: admin,
-        subject: `${auto ? '[Auto] ' : ''}Starting soon — ${recipient.email} (${when})`,
-        text,
-        html,
-      })
-    } catch (err) {
-      logger.warn('Meeting reminder email to admin failed', { error: err.message })
-    }
-  }
+  // Admin Gmail: booked-meeting confirmations only (see emailMeetLinkToParties).
+  // Reminders notify admin via in-app / push (MEETING_REMINDER SSE), not SMTP.
 
   await EmailRecipient.updateOne(
     { _id: recipient._id },
