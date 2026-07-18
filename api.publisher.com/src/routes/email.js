@@ -10,6 +10,7 @@ import {
   newTrackingId,
   countSentLast24h,
   resetCampaignSend,
+  kickQueuedCampaigns,
 } from '../lib/emailWorker.js'
 import {
   parseWorkbookBuffer,
@@ -777,7 +778,7 @@ router.get('/email/processed', async (req, res, next) => {
       filter.$and = [...(filter.$and || []), textMatch]
     }
 
-    const [pipelineTotal, processedDone, meetingsBooked, recipients, filteredTotal] =
+    const [pipelineTotal, processedDone, meetingsBooked, recipients, filteredTotal, sent24h] =
       await Promise.all([
         EmailRecipient.countDocuments(base),
         EmailRecipient.countDocuments(doneFilter),
@@ -791,6 +792,7 @@ router.get('/email/processed', async (req, res, next) => {
           .limit(limit)
           .lean(),
         EmailRecipient.countDocuments(filter),
+        countSentLast24h(req.workspaceId),
       ])
 
     const campaignIds = [...new Set(recipients.map((r) => String(r.campaignId)))]
@@ -801,6 +803,15 @@ router.get('/email/processed', async (req, res, next) => {
     const defaultLink = await resolveBookingUrl(req.workspaceId)
 
     const { isNudgeEligible } = await import('../lib/nudgeEmails.js')
+
+    const activeCapDoc = await EmailCampaign.findOne({
+      workspaceId: req.workspaceId,
+      status: { $in: ['sending', 'paused'] },
+    })
+      .sort({ updatedAt: -1 })
+      .select('dailyCap')
+      .lean()
+    const dailyCapLimit = Math.max(1, activeCapDoc?.dailyCap || 200)
 
     res.json({
       ok: true,
@@ -813,6 +824,8 @@ router.get('/email/processed', async (req, res, next) => {
         total: pipelineTotal,
         meetingsBooked,
         filtered: filteredTotal,
+        sent24h,
+        dailyCap: dailyCapLimit,
       },
       rows: recipients.map((r) => {
         const c = byId[String(r.campaignId)]
@@ -1134,10 +1147,14 @@ router.get('/email/campaigns', async (req, res, next) => {
       filter.$or = [{ name: rx }, { subject: rx }]
     }
 
-    const [total, campaigns] = await Promise.all([
+    const [total, campaigns, sent24h] = await Promise.all([
       EmailCampaign.countDocuments(filter),
       EmailCampaign.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      countSentLast24h(req.workspaceId),
     ])
+
+    const caps = campaigns.map((c) => Math.max(1, c.dailyCap || 200))
+    const dailyCap = caps.length ? Math.max(...caps) : 200
 
     res.json({
       ok: true,
@@ -1145,6 +1162,8 @@ router.get('/email/campaigns', async (req, res, next) => {
       limit,
       total,
       totalPages: Math.max(1, Math.ceil(total / limit)),
+      sent24h,
+      dailyCap,
       campaigns: campaigns.map(mapCampaign),
     })
   } catch (err) {
@@ -1456,6 +1475,51 @@ router.post('/email/campaigns/:id/resume', async (req, res, next) => {
     await campaign.save()
     setImmediate(() => runCampaignSend(campaign._id, req.workspaceId))
     res.json({ ok: true, campaign: mapCampaign(campaign.toObject()), sending: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/email/campaigns/kick-queued', async (req, res, next) => {
+  try {
+    const result = await kickQueuedCampaigns()
+    // Also force-resume this workspace's paused/sending campaigns with a queue
+    const camps = await EmailCampaign.find({
+      workspaceId: req.workspaceId,
+      status: { $in: ['paused', 'failed', 'sending'] },
+    })
+      .select('_id status dailyCap error')
+      .lean()
+
+    let started = 0
+    for (const c of camps) {
+      const queued = await EmailRecipient.countDocuments({
+        campaignId: c._id,
+        status: 'queued',
+      })
+      if (queued <= 0) continue
+      if (c.status === 'paused' || c.status === 'failed') {
+        const sent24h = await countSentLast24h(req.workspaceId)
+        const cap = Math.max(1, c.dailyCap || 200)
+        if (sent24h >= cap) continue
+        await EmailCampaign.updateOne(
+          { _id: c._id },
+          {
+            $set: { status: 'sending', nextSendAt: null },
+            $unset: { error: 1, pausedAt: 1 },
+          },
+        )
+      } else {
+        await EmailCampaign.updateOne(
+          { _id: c._id },
+          { $set: { nextSendAt: null } },
+        )
+      }
+      started += 1
+      setImmediate(() => runCampaignSend(c._id, req.workspaceId))
+    }
+
+    res.json({ ok: true, kicked: result.kicked, started })
   } catch (err) {
     next(err)
   }

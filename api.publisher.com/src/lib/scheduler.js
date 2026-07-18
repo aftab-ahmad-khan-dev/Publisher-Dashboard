@@ -103,10 +103,10 @@ export async function runDuePosts() {
 
     // Resume bulk email campaigns after batch rest / serverless yield
     try {
-      const { resumeSendingCampaigns, resumeDailyCapPausedCampaigns } = await import(
-        './emailWorker.js'
-      )
+      const { resumeSendingCampaigns, resumeDailyCapPausedCampaigns, kickQueuedCampaigns } =
+        await import('./emailWorker.js')
       await resumeDailyCapPausedCampaigns()
+      await kickQueuedCampaigns()
       await resumeSendingCampaigns()
     } catch (err) {
       logger.warn('Email campaign resume tick failed', { error: err.message })

@@ -10,6 +10,7 @@ import {
   pauseEmailCampaign,
   resumeEmailCampaign,
   resetEmailCampaign,
+  kickQueuedEmailCampaigns,
   cancelEmailCampaign,
   downloadLeadSourceExport,
   getEmailSettings,
@@ -109,6 +110,66 @@ function StatusChip({ status }) {
     >
       {String(status || '').replace(/_/g, ' ')}
     </span>
+  )
+}
+
+/** Green progress for rolling 24h send limit (sent24h / dailyCap). */
+function DailyCapBar({ sent = 0, cap = 200, compact = false }) {
+  const limit = Math.max(1, Number(cap) || 200)
+  const used = Math.max(0, Number(sent) || 0)
+  const pct = Math.min(100, Math.round((used / limit) * 1000) / 10)
+  const full = used >= limit
+  return (
+    <div
+      className={`rounded-xl border px-3 py-2.5 ${
+        full
+          ? 'border-amber-500/30 bg-amber-500/[0.08]'
+          : 'border-emerald-500/25 bg-emerald-500/[0.06]'
+      }`}
+      title="Emails sent in the last 24 hours vs your Max / 24h limit"
+    >
+      <div className="mb-1.5 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p
+            className={`text-[10px] font-semibold uppercase tracking-wide ${
+              full ? 'text-amber-300/90' : 'text-emerald-400/80'
+            }`}
+          >
+            Daily send limit
+          </p>
+          {!compact && (
+            <p className="mt-0.5 text-[10px] text-slate-500">Rolling last 24 hours</p>
+          )}
+        </div>
+        <p className="text-sm font-semibold tabular-nums text-white">
+          {used.toLocaleString()}
+          <span className="text-slate-500"> / </span>
+          <span className={full ? 'text-amber-200' : 'text-emerald-200'}>
+            {limit.toLocaleString()}
+          </span>
+          <span className="ml-1.5 text-[10px] font-medium text-slate-500">{pct}%</span>
+        </p>
+      </div>
+      <div className="h-2.5 overflow-hidden rounded-full bg-black/40 ring-1 ring-white/[0.06]">
+        <div
+          className={`h-full rounded-full transition-[width] duration-500 ease-out ${
+            full
+              ? 'bg-gradient-to-r from-amber-500 to-amber-300'
+              : 'bg-gradient-to-r from-emerald-600 to-emerald-400'
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {full ? (
+        <p className="mt-1.5 text-[10px] text-amber-200/90">
+          Cap reached — sending pauses until the 24h window frees slots.
+        </p>
+      ) : (
+        <p className="mt-1.5 text-[10px] text-slate-500">
+          {(limit - used).toLocaleString()} remaining today
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -518,6 +579,8 @@ export default function EmailPage() {
         limit: 80,
       })
       setCampaigns(data.campaigns || [])
+      if (typeof data.sent24h === 'number') setSent24h(data.sent24h)
+      if (data.dailyCap) setDailyCap(data.dailyCap)
     } catch {
       /* ignore */
     }
@@ -587,6 +650,8 @@ export default function EmailPage() {
         meetingsBooked: data.counts?.meetingsBooked ?? 0,
         filtered: data.counts?.filtered ?? data.total ?? 0,
       })
+      if (typeof data.counts?.sent24h === 'number') setSent24h(data.counts.sent24h)
+      if (data.counts?.dailyCap) setDailyCap(data.counts.dailyCap)
     } catch (err) {
       showToast(err.message, 'error')
     }
@@ -1375,11 +1440,8 @@ export default function EmailPage() {
                 </button>
               ))}
             </nav>
-            <div className="border-t border-white/[0.06] p-3 text-[10px] text-slate-500">
-              <p>
-                Sent last 24h:{' '}
-                <span className="text-slate-300">{sent24h}</span>
-              </p>
+            <div className="border-t border-white/[0.06] p-3">
+              <DailyCapBar sent={sent24h} cap={dailyCap} compact />
             </div>
           </aside>
 
@@ -1952,6 +2014,11 @@ export default function EmailPage() {
                         onChange={(e) => setDailyCap(Number(e.target.value) || 200)}
                       />
                     </div>
+                    <div className="flex items-end sm:col-span-2 lg:col-span-1">
+                      <div className="w-full">
+                        <DailyCapBar sent={sent24h} cap={dailyCap} compact />
+                      </div>
+                    </div>
                     <div className="flex items-end">
                       <p className="text-[11px] text-slate-500">
                         Est. {estFinish || '—'} · {leadPayload?.leads?.length || 0} leads
@@ -1959,7 +2026,7 @@ export default function EmailPage() {
                     </div>
                   </div>
                   <p className="text-[10px] text-slate-600">
-                    Each email waits a random 0–30s. After every {batchSize} sends, the campaign
+                    Each email waits a random 0–8s. After every {batchSize} sends, the campaign
                     pauses {cooldownMinutes} min, then continues automatically.
                   </p>
                 </div>
@@ -2009,6 +2076,23 @@ export default function EmailPage() {
             <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <h3 className="mr-auto text-sm font-semibold text-white">Campaigns</h3>
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-1.5 text-xs"
+                  onClick={() =>
+                    kickQueuedEmailCampaigns()
+                      .then((r) => {
+                        showToast(
+                          `Sending kicked · ${r.started || r.kicked || 0} campaign(s)`,
+                          'success',
+                        )
+                        return refreshAll()
+                      })
+                      .catch((e) => showToast(e.message, 'error'))
+                  }
+                >
+                  Kick queued sends
+                </button>
                 <input
                   className={`${inputClass()} !h-[2.125rem] max-w-[11rem] !py-0 text-xs`}
                   placeholder="Search campaigns…"
@@ -2028,6 +2112,10 @@ export default function EmailPage() {
                   <option value="failed">Failed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
+              </div>
+
+              <div className="mb-3">
+                <DailyCapBar sent={sent24h} cap={dailyCap} />
               </div>
 
               {showCampaignBuckets ? (
@@ -2277,6 +2365,42 @@ export default function EmailPage() {
             </p>
           </div>
         </div>
+
+        <div className="mb-3">
+          <DailyCapBar sent={sent24h} cap={dailyCap} />
+        </div>
+
+        {processedCounts.processed < processedCounts.total && (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2.5">
+            <p className="text-[11px] leading-relaxed text-amber-100/90">
+              <span className="font-semibold text-amber-50">
+                {(processedCounts.total - processedCounts.processed).toLocaleString()} still
+                queued
+              </span>
+              {' — '}
+              Processed = already sent. Queued rows wait until the campaign is{' '}
+              <span className="font-semibold">Sending</span>. Open Campaigns → Resume / Restart,
+              or kick sending below.
+            </p>
+            <button
+              type="button"
+              className="btn-primary shrink-0 px-3 py-1.5 text-xs"
+              onClick={() =>
+                kickQueuedEmailCampaigns()
+                  .then((r) => {
+                    showToast(
+                      `Sending kicked · ${r.started || r.kicked || 0} campaign(s)`,
+                      'success',
+                    )
+                    return refreshAll()
+                  })
+                  .catch((e) => showToast(e.message, 'error'))
+              }
+            >
+              Kick sending now
+            </button>
+          </div>
+        )}
 
         <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
           <h3 className="mb-2 text-sm font-semibold text-white">Auto nudge timing</h3>

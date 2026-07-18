@@ -267,7 +267,7 @@ async function estimateDailyCapResetAt(workspaceId) {
 const DAILY_CAP_ERROR_RE = /Daily cap of \d+ emails reached/i
 
 
-const INTER_EMAIL_MAX_MS = 30_000
+const INTER_EMAIL_MAX_MS = 8_000
 /** Soft cap so serverless invocations exit cleanly; scheduler resumes. */
 const WORKER_MAX_MS = Number(process.env.EMAIL_WORKER_MAX_MS || 50_000)
 
@@ -310,17 +310,74 @@ export async function resumeSendingCampaigns() {
     $or: [{ nextSendAt: null }, { nextSendAt: { $exists: false } }, { nextSendAt: { $lte: now } }],
   })
     .select('_id workspaceId nextSendAt')
-    .limit(8)
+    .limit(12)
     .lean()
 
+  let resumed = 0
   for (const c of campaigns) {
     const id = String(c._id)
     if (activeSends.has(id)) continue
+    const queued = await EmailRecipient.countDocuments({
+      campaignId: c._id,
+      status: 'queued',
+    })
+    if (queued <= 0) continue
+    resumed += 1
     runCampaignSend(c._id, c.workspaceId).catch((err) => {
       logger.warn('Resume campaign send failed', { campaignId: id, error: err.message })
     })
   }
-  return { resumed: campaigns.length }
+  return { resumed }
+}
+
+/**
+ * Kick any campaign that still has a queue but is stuck paused/failed (not cancelled).
+ * Used when users see thousands queued and only a handful processed.
+ */
+export async function kickQueuedCampaigns() {
+  const stuck = await EmailCampaign.find({
+    status: { $in: ['paused', 'failed', 'sending'] },
+  })
+    .select('_id workspaceId status dailyCap error nextSendAt')
+    .limit(20)
+    .lean()
+
+  let kicked = 0
+  for (const c of stuck) {
+    const id = String(c._id)
+    if (activeSends.has(id)) continue
+    const queued = await EmailRecipient.countDocuments({
+      campaignId: c._id,
+      status: 'queued',
+    })
+    if (queued <= 0) continue
+
+    if (c.status === 'paused' || c.status === 'failed') {
+      const cap = Math.max(1, c.dailyCap || 200)
+      const sent24h = await countSentLast24h(c.workspaceId)
+      if (sent24h >= cap && DAILY_CAP_ERROR_RE.test(String(c.error || ''))) {
+        continue
+      }
+      await EmailCampaign.updateOne(
+        { _id: c._id },
+        {
+          $set: { status: 'sending', nextSendAt: null },
+          $unset: { error: 1, pausedAt: 1 },
+        },
+      )
+    } else if (c.nextSendAt && new Date(c.nextSendAt).getTime() > Date.now() + 60_000) {
+      // Don't interrupt a deliberate long batch rest unless it's been > 20 min overdue intent
+      const restMs = 20 * 60 * 1000
+      if (new Date(c.nextSendAt).getTime() - Date.now() < restMs) continue
+    }
+
+    kicked += 1
+    runCampaignSend(c._id, c.workspaceId).catch((err) => {
+      logger.warn('Kick queued campaign failed', { campaignId: id, error: err.message })
+    })
+  }
+  if (kicked) logger.info('Kicked queued campaigns', { kicked })
+  return { kicked }
 }
 
 /**
@@ -774,9 +831,13 @@ export async function runCampaignSend(campaignId, workspaceId) {
 
       const gap = interEmailGapMs()
       if (Date.now() - invocationStarted + gap > WORKER_MAX_MS) {
+        // Yield quickly so the next cron tick continues the queue (don't look "stuck").
+        after.nextSendAt = new Date(Date.now() + 2_000)
+        await after.save()
         logger.info('Email campaign yielding (time budget)', {
           campaignId: key,
           sentInBurst: sendsSince,
+          nextSendAt: after.nextSendAt,
         })
         return
       }
