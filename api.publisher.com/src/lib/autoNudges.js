@@ -25,8 +25,9 @@ const REASON_AFTER_FINAL_MS = (hours) => hours * 3600_000
 const FOLLOW_UP_AFTER_REASON_MS = (hours) => hours * 3600_000
 
 async function resolveBookingUrl(workspaceId, override) {
-  const { getCalendarBookingUrl } = await import('./googleCalendar.js')
-  if (String(override || '').trim()) return String(override).trim()
+  const { getCalendarBookingUrl, isBookingUrl } = await import('./googleCalendar.js')
+  const explicit = String(override || '').trim()
+  if (explicit && isBookingUrl(explicit)) return explicit
   const config = await getWorkspaceConfig(workspaceId)
   return getCalendarBookingUrl(config)
 }

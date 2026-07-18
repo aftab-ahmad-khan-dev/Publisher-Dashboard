@@ -11,7 +11,7 @@ import { logger } from './logger.js'
 import { apiPublicBase } from './publicUrl.js'
 import { enqueueLeadStatusUpdate } from './leadWriteback.js'
 import { getWorkspaceConfig } from './configStore.js'
-import { getCalendarBookingUrl, isBookingUrl } from './googleCalendar.js'
+import { getCalendarBookingUrl, isBookingUrl, isCalendarBookingIntent, resolveLiveBookingUrl } from './googleCalendar.js'
 import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from './meetingCta.js'
 import { buildNichePain, buildNichePainShort } from './nichePain.js'
 import { classifyClickUrl, appendClickEvent } from './clickClassify.js'
@@ -33,13 +33,56 @@ function trackingApiBase() {
   return `${apiPublicBase()}/api/email`
 }
 
-export function rewriteLinksForTracking(html, clickBase, trackingId) {
+export function rewriteLinksForTracking(html, clickBase, trackingId, bookingUrl = '') {
   if (!html || !trackingId) return html
+  const booking = String(bookingUrl || '').trim()
   return html.replace(
     /href=(["'])(https?:\/\/[^"']+)\1/gi,
-    (_m, quote, url) =>
-      `href=${quote}${clickBase}/${trackingId}?u=${encodeURIComponent(url)}${quote}`,
+    (_m, quote, url) => {
+      // Calendar booking CTAs use a stable /meeting path (no ?u=).
+      // The redirect always resolves the live workspace booking URL so
+      // stale, truncated, or admin Calendar links in old emails stop breaking bookings.
+      if (
+        (booking && (url === booking || isBookingUrl(url))) ||
+        isCalendarBookingIntent(url)
+      ) {
+        return `href=${quote}${clickBase}/${trackingId}/meeting${quote}`
+      }
+      return `href=${quote}${clickBase}/${trackingId}?u=${encodeURIComponent(url)}${quote}`
+    },
   )
+}
+
+/**
+ * Resolve where a tracked click should land. Calendar intents always use the
+ * live workspace booking URL (fixes broken Google Appointment pages).
+ */
+export async function resolveTrackedClickDestination(trackingId, requestedUrl = '') {
+  const requested = String(requestedUrl || '').trim()
+  let workspaceId = ''
+  let override = ''
+  try {
+    const recipient = await EmailRecipient.findOne({ trackingId })
+      .select('workspaceId meetingLink mergeData')
+      .lean()
+    if (recipient) {
+      workspaceId = recipient.workspaceId || ''
+      override =
+        recipient.meetingLink ||
+        recipient.mergeData?.meetingLink ||
+        ''
+    }
+  } catch {
+    /* fall through to defaults */
+  }
+
+  const live = await resolveLiveBookingUrl(workspaceId, override)
+
+  // Missing target, or any calendar/admin booking intent → live public booking page
+  if (!requested || isCalendarBookingIntent(requested) || !/^https?:\/\//i.test(requested)) {
+    return live
+  }
+  return requested
 }
 
 function pushLeadWriteback(recipient, campaign, patch) {
@@ -459,7 +502,12 @@ export async function runCampaignSend(campaignId, workspaceId) {
 
         let outHtml = html
         if (campaign.trackOpens && recipient.trackingId) {
-          outHtml = rewriteLinksForTracking(outHtml, `${apiBase}/click`, recipient.trackingId)
+          outHtml = rewriteLinksForTracking(
+            outHtml,
+            `${apiBase}/click`,
+            recipient.trackingId,
+            meetingLink,
+          )
           outHtml = injectTrackingPixel(outHtml, `${apiBase}/open/${recipient.trackingId}.gif`)
         }
 

@@ -870,10 +870,25 @@ export default function EmailPage() {
   }, [live, meetingLink, globalMeetingLink])
 
   const DEFAULT_CALENDAR_BOOKING = 'https://calendar.app.google/eKcZV6Cy9SuCgA878'
-  const isCalendarBookingUrl = (u) =>
-    /calendar\.app\.google|calendar\.google\.com|appointments|calendly\.com|cal\.com\//i.test(
-      String(u || ''),
-    )
+  const isCalendarBookingUrl = (u) => {
+    const s = String(u || '').trim()
+    if (!/^https?:\/\//i.test(s)) return false
+    try {
+      const { hostname, pathname } = new URL(s)
+      const host = hostname.toLowerCase()
+      const path = pathname || ''
+      if (host === 'calendar.app.google' && path.length > 2) return true
+      if (host === 'calendar.google.com') {
+        if (/\/u\/\d+\/r\b/i.test(path) || /\/r\/appointment/i.test(path)) return false
+        return /\/calendar\/appointments\/(?:schedules\/)?[A-Za-z0-9_-]{8,}/i.test(path)
+      }
+      if (host === 'calendly.com' || host.endsWith('.calendly.com')) return true
+      if (host === 'cal.com' || host.endsWith('.cal.com')) return true
+      return false
+    } catch {
+      return false
+    }
+  }
 
   const rawBooking = (globalMeetingLink || meetingLink || bookingUrlDraft || '').trim()
   const workspaceBooking = isCalendarBookingUrl(rawBooking)
@@ -882,12 +897,9 @@ export default function EmailPage() {
 
   const saveWorkspaceBooking = async () => {
     const url = bookingUrlDraft.trim()
-    if (
-      url &&
-      !/calendar\.app\.google|calendar\.google\.com|appointments|calendly\.com|cal\.com\//i.test(url)
-    ) {
+    if (url && !isCalendarBookingUrl(url)) {
       showToast(
-        'Use a Google Calendar booking / Calendly / Cal.com link — not your product site.',
+        'Paste the public booking page link (calendar.app.google/…), not the Appointment schedules admin page.',
         'error',
       )
       return
@@ -2851,7 +2863,7 @@ export default function EmailPage() {
                   className={`${inputClass()} min-w-0 flex-1`}
                   value={bookingUrlDraft}
                   onChange={(e) => setBookingUrlDraft(e.target.value)}
-                  placeholder="https://calendar.google.com/calendar/appointments/..."
+                  placeholder="https://calendar.app.google/…"
                 />
                 <button
                   type="button"
@@ -2914,8 +2926,11 @@ export default function EmailPage() {
                 </div>
               </details>
               <p className="mt-1.5 text-[10px] text-slate-600">
-                Paste the public booking link above once — every campaign reuses it. Google does not allow apps to
-                create or rewrite Appointment Schedule hours via API.
+                Paste the <span className="font-semibold text-slate-400">public booking page</span>{' '}
+                link (Share → Booking page / calendar.app.google/…). Do{' '}
+                <span className="font-semibold text-slate-400">not</span> paste the Appointment
+                schedules admin URL (/r/appointment) — guests get Google’s error page and cannot
+                book. Every campaign reuses this link.
               </p>
             </div>
           </section>

@@ -63,7 +63,8 @@ function displayCampaignName(campaign) {
 }
 
 async function resolveBookingUrl(workspaceId, override) {
-  if (String(override || '').trim()) return String(override).trim()
+  const explicit = String(override || '').trim()
+  if (explicit && isBookingUrl(explicit)) return explicit
   const config = await getWorkspaceConfig(workspaceId)
   return getCalendarBookingUrl(config)
 }
@@ -1727,7 +1728,7 @@ router.put('/email/settings/calendar', async (req, res, next) => {
       return res.status(400).json({
         ok: false,
         error:
-          'Booking link must be a Google Calendar / Calendly / Cal.com URL — not your product or portfolio site.',
+          'Use the public booking page link (calendar.app.google/… or …/appointments/schedules/…). Do not paste the Appointment schedules admin page (/r/appointment).',
       })
     }
     const next = await saveGmailConfig(req.workspaceId, { calendarBookingUrl })

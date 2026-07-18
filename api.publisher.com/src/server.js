@@ -8,7 +8,7 @@ import routes from "./routes.js";
 import healthRoutes from "./routes/health.js";
 import { startScheduler } from "./lib/scheduler.js";
 import { collectHealthStatus } from "./lib/healthStatus.js";
-import { recordEmailOpen, recordEmailClick, TRANSPARENT_GIF } from "./lib/emailWorker.js";
+import { recordEmailOpen, recordEmailClick, TRANSPARENT_GIF, resolveTrackedClickDestination } from "./lib/emailWorker.js";
 import { Media } from "./models/Media.js";
 import { logger, requestLogger } from "./lib/logger.js";
 import { apiPublicBase } from "./lib/publicUrl.js";
@@ -55,16 +55,31 @@ app.get("/api/email/open/:trackingId.gif", async (req, res) => {
 });
 
 /** Click tracking redirect — no auth (recipients' clicks hit this, then forward). */
-app.get("/api/email/click/:trackingId", async (req, res) => {
-  const target = typeof req.query.u === "string" ? req.query.u : "";
+app.get("/api/email/click/:trackingId/meeting", async (req, res) => {
+  let target = DEFAULT_CALENDAR_BOOKING_URL;
   try {
     await ensureDbConnected();
+    target = await resolveTrackedClickDestination(req.params.trackingId, "");
+    await recordEmailClick(req.params.trackingId, target);
+  } catch {
+    /* still redirect even if recording fails */
+  }
+  return res.redirect(302, target || DEFAULT_CALENDAR_BOOKING_URL);
+});
+
+app.get("/api/email/click/:trackingId", async (req, res) => {
+  const requested = typeof req.query.u === "string" ? req.query.u : "";
+  let target = DEFAULT_CALENDAR_BOOKING_URL;
+  try {
+    await ensureDbConnected();
+    // Calendar / admin / truncated booking URLs in ?u= are replaced with the
+    // live workspace booking link so recipients stop hitting Google's error page.
+    target = await resolveTrackedClickDestination(req.params.trackingId, requested);
     await recordEmailClick(req.params.trackingId, target);
   } catch {
     /* still redirect even if recording fails */
   }
   if (/^https?:\/\//i.test(target)) return res.redirect(302, target);
-  // Never dump recipients onto the product dashboard when the tracked URL is missing.
   return res.redirect(302, DEFAULT_CALENDAR_BOOKING_URL);
 });
 

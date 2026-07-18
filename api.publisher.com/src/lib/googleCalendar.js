@@ -16,31 +16,62 @@ const PRODUCT_OR_PLATFORM_HOSTS = [
 ]
 
 /**
- * True when URL is a real booking page (Calendar / Calendly), not a product site.
+ * True when URL is a real public booking page guests can open.
+ * Rejects Google Calendar admin pages (e.g. /u/0/r/appointment) that show
+ * “There was an error loading this appointment page” for recipients.
  */
 export function isBookingUrl(url) {
   const u = String(url || '').trim()
   if (!/^https?:\/\//i.test(u)) return false
   try {
-    const host = new URL(u).hostname.toLowerCase()
+    const parsed = new URL(u)
+    const host = parsed.hostname.toLowerCase()
+    const path = parsed.pathname || ''
+
     if (PRODUCT_OR_PLATFORM_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))) {
       return false
     }
+
+    // Short Google booking links (preferred)
+    if (host === 'calendar.app.google' && path.length > 2) return true
+
+    // Public Appointment Schedule pages only — not Calendar UI / admin
+    if (host === 'calendar.google.com' || host.endsWith('.calendar.google.com')) {
+      if (/\/u\/\d+\/r\b/i.test(path) || /\/r\/appointment/i.test(path)) return false
+      if (/\/calendar\/appointments\/schedules\/[A-Za-z0-9_-]{8,}/i.test(path)) return true
+      if (/\/calendar\/appointments\/[A-Za-z0-9_-]{8,}/i.test(path)) return true
+      return false
+    }
+
+    if (/appointments\.google/i.test(host)) return true
+    if (host === 'calendly.com' || host.endsWith('.calendly.com')) return true
+    if (host === 'cal.com' || host.endsWith('.cal.com')) return true
+    return false
   } catch {
     return false
   }
+}
+
+/**
+ * Broader match for click redirects: admin/paste mistakes and any calendar booking intent.
+ * Used so we can swap a bad tracked `?u=` for the live workspace booking URL.
+ */
+export function isCalendarBookingIntent(url) {
+  const u = String(url || '').trim()
+  if (!u) return false
+  if (isBookingUrl(u)) return true
   return (
     /calendar\.app\.google/i.test(u) ||
     /calendar\.google\.com/i.test(u) ||
     /appointments\.google/i.test(u) ||
     /calendly\.com/i.test(u) ||
-    /cal\.com\//i.test(u)
+    /(?:^|\/\/)(?:www\.)?cal\.com\//i.test(u)
   )
 }
 
 /**
  * Resolve booking URL: explicit override → workspace config → env default.
- * Rejects product/platform URLs so "Schedule a meeting" never opens the product site.
+ * Rejects product/platform URLs and admin Calendar pages.
  */
 export function getCalendarBookingUrl(configOrLink) {
   const candidates = []
@@ -57,6 +88,20 @@ export function getCalendarBookingUrl(configOrLink) {
     if (c && isBookingUrl(c)) return c
   }
   return DEFAULT_CALENDAR_BOOKING_URL
+}
+
+/**
+ * Live booking URL for a recipient click (workspace → recipient → default).
+ * Always prefer a valid public booking page over a stale tracked `?u=` value.
+ */
+export async function resolveLiveBookingUrl(workspaceId, override = '') {
+  const explicit = String(override || '').trim()
+  if (explicit && isBookingUrl(explicit)) return explicit
+  if (workspaceId) {
+    const config = await getWorkspaceConfig(workspaceId)
+    return getCalendarBookingUrl(config)
+  }
+  return getCalendarBookingUrl()
 }
 
 function extractMeetLink(event) {

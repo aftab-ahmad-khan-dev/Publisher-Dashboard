@@ -1,7 +1,7 @@
 /**
  * Classify tracked email link clicks: calendar booking vs portfolio vs other.
  */
-import { isBookingUrl } from './googleCalendar.js'
+import { isBookingUrl, isCalendarBookingIntent } from './googleCalendar.js'
 
 const PORTFOLIO_HOSTS = [
   'aftabahmadkhan.online',
@@ -27,12 +27,7 @@ export function classifyClickUrl(url, recipient = null) {
   const u = String(url || '').trim()
   if (!u) return 'other'
 
-  if (isBookingUrl(u)) return 'calendar'
-  if (
-    /calendar\.google\.com|calendar\.app\.google|appointments|calendly\.com|cal\.com\//i.test(u)
-  ) {
-    return 'calendar'
-  }
+  if (isBookingUrl(u) || isCalendarBookingIntent(u)) return 'calendar'
   const meeting = String(recipient?.meetingLink || '').trim()
   if (meeting && meeting.length >= 12 && u.includes(meeting.slice(0, 40))) {
     return 'calendar'
