@@ -64,3 +64,4 @@ Scheduled posts on Vercel use **Cron** (`/api/cron/run-scheduler` every minute).
 **Security:** Never commit `.env`. Rotate MongoDB credentials if they were exposed in chat or git history.
 
 See [`web.publisher.com/README.md`](./web.publisher.com/README.md) and [`api.publisher.com/README.md`](./api.publisher.com/README.md) for details.
+Updated Calendar
