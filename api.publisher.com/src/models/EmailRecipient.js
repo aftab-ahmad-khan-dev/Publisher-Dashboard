@@ -1,15 +1,48 @@
 import mongoose from 'mongoose'
 
+const PIPELINE_STAGES = [
+  '',
+  'new',
+  'proposal',
+  'deposit',
+  'follow_up_ongoing',
+  'meeting_follow_up',
+  'won',
+  'lost',
+]
+
+const CRM_MEETING_OUTCOMES = [
+  '',
+  'show',
+  'no_show',
+  'rescheduled_us',
+  'rescheduled_them',
+  'cancel',
+  'dq',
+]
+
+const SALE_TYPES = ['', 'one_call', 'follow_up']
+
+const LOSS_REASONS = [
+  '',
+  'price',
+  'timing',
+  'partner_spouse',
+  'competitor',
+  'ghosted',
+  'not_qualified',
+]
+
 const emailRecipientSchema = new mongoose.Schema(
   {
     workspaceId: { type: String, required: true, index: true },
     campaignId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'EmailCampaign',
-      required: true,
+      required: false,
       index: true,
     },
-    email: { type: String, required: true },
+    email: { type: String, default: '' },
     name: { type: String, default: '' },
     company: { type: String, default: '' },
     niche: { type: String, default: '' },
@@ -98,6 +131,47 @@ const emailRecipientSchema = new mongoose.Schema(
       default: 'inbox',
       index: true,
     },
+
+    /* ── Sales CRM fields ─────────────────────────────────────────────── */
+    /** Empty = not on Sales board */
+    pipelineStage: {
+      type: String,
+      enum: PIPELINE_STAGES,
+      default: '',
+      index: true,
+    },
+    phone: { type: String, default: '' },
+    source: { type: String, default: '' },
+    setterName: { type: String, default: '' },
+    closerName: { type: String, default: '' },
+    firstContactAt: Date,
+    meetingBookedAt: Date,
+    meetingDateAt: Date,
+    lastTouchAt: Date,
+    crmMeetingOutcome: {
+      type: String,
+      enum: CRM_MEETING_OUTCOMES,
+      default: '',
+    },
+    offerMade: { type: Boolean, default: false },
+    saleType: {
+      type: String,
+      enum: SALE_TYPES,
+      default: '',
+    },
+    lossReason: {
+      type: String,
+      enum: LOSS_REASONS,
+      default: '',
+    },
+    depositAmount: { type: Number, default: 0 },
+    totalDealValue: { type: Number, default: 0 },
+    cashCollected: { type: Number, default: 0 },
+    datePaidInFull: Date,
+    refundAmount: { type: Number, default: 0 },
+    commissionPercent: { type: Number, default: 0 },
+    /** When deposit was first recorded (for unpaid aging) */
+    depositAt: Date,
   },
   { timestamps: true },
 )
@@ -107,5 +181,14 @@ emailRecipientSchema.index({ workspaceId: 1, status: 1, sentAt: -1 })
 emailRecipientSchema.index({ workspaceId: 1, meetingStatus: 1 })
 emailRecipientSchema.index({ workspaceId: 1, createdAt: -1 })
 emailRecipientSchema.index({ workspaceId: 1, mailboxFolder: 1 })
+emailRecipientSchema.index({ workspaceId: 1, pipelineStage: 1 })
+emailRecipientSchema.index({ workspaceId: 1, setterName: 1 })
+emailRecipientSchema.index({ workspaceId: 1, closerName: 1 })
+emailRecipientSchema.index({ workspaceId: 1, lastTouchAt: 1 })
+
+export const PIPELINE_STAGE_VALUES = PIPELINE_STAGES.filter(Boolean)
+export const CRM_MEETING_OUTCOME_VALUES = CRM_MEETING_OUTCOMES.filter(Boolean)
+export const SALE_TYPE_VALUES = SALE_TYPES.filter(Boolean)
+export const LOSS_REASON_VALUES = LOSS_REASONS.filter(Boolean)
 
 export const EmailRecipient = mongoose.model('EmailRecipient', emailRecipientSchema)

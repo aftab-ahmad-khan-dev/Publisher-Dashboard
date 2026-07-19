@@ -9,6 +9,7 @@ import emailRoutes from './routes/email.js'
 import mediaRoutes from './routes/media.js'
 import adminRoutes from './routes/admin.js'
 import billingRoutes from './routes/billing.js'
+import salesRoutes from './routes/sales.js'
 
 const router = Router()
 
@@ -21,6 +22,7 @@ router.use(authRoutes)
 router.use(cronRoutes)
 router.use(bulkRoutes)
 router.use(emailRoutes)
+router.use(salesRoutes)
 router.use(mediaRoutes)
 
 export default router

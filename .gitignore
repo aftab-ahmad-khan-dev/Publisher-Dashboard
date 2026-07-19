@@ -152,6 +152,16 @@ dev-dist/
 # Vercel
 .vercel
 
+# OS junk
+.DS_Store
+**/.DS_Store
+
+# Local asset dumps (keep out of git — too large)
+web.publisher.com/public/Catalouges/
+api.publisher.com/scripts/meta-catalog/*.json
+api.publisher.com/scripts/meta-catalog/*.csv
+api.publisher.com/scripts/meta-catalog/cloudinary-cache.json
+
 # Legacy root artifacts (use web.publisher.com / api.publisher.com instead)
 /node_modules
 /dist

@@ -71,6 +71,23 @@ function Icon({ name, className = "h-6 w-6" }) {
       </>
     ),
     bolt: <path d='M13 2 3 14h7l-1 8 10-12h-7l1-8Z' />,
+    sales: (
+      <>
+        <path d='M3 3v18h18' />
+        <path d='M7 14v4M12 9v9M17 5v13' />
+      </>
+    ),
+    funnel: (
+      <>
+        <path d='M3 4h18l-7 8v6l-4 2v-8L3 4Z' />
+      </>
+    ),
+    chart: (
+      <>
+        <path d='M3 3v18h18' />
+        <path d='M7 15l4-4 3 3 5-7' />
+      </>
+    ),
   };
   return (
     <svg
@@ -126,7 +143,7 @@ const PLATFORMS = [
   { key: "reddit", label: "Reddit", solid: "#FF4500", blurb: "Subreddit posts" },
   { key: "pinterest", label: "Pinterest", solid: "#E60023", blurb: "Image Pins" },
   { key: "threads", label: "Threads", solid: "#101010", blurb: "Text posts" },
-  { key: "gmail", label: "Gmail", solid: "#EA4335", blurb: "Email campaigns" },
+  { key: "gmail", label: "Gmail", solid: "#EA4335", blurb: "Mail Box + CRM" },
 ];
 
 /** App-icon style tile: the platform's real logo in its brand-colored squircle. */
@@ -171,38 +188,38 @@ const FEATURES = [
   {
     icon: "compose",
     title: "Compose once, publish everywhere",
-    body: "Write a single post and push it to LinkedIn, Meta, and Reddit, each formatted natively, with live previews per platform.",
-    tag: "Core",
+    body: "Write a single post and push it to LinkedIn, Meta, Reddit, Pinterest, and Threads — formatted natively, with live previews per platform.",
+    tag: "Publish",
   },
   {
     icon: "schedule",
     title: "Schedule & auto-publish",
-    body: "Queue posts for the perfect time. The built-in scheduler fires automatically, no manual posting, no missed windows.",
+    body: "Queue posts for the perfect time. The built-in scheduler fires automatically — no manual posting, no missed windows.",
     tag: "Automation",
   },
   {
-    icon: "preview",
-    title: "Pixel-accurate previews",
-    body: "See exactly how your post looks on each network before it ships, Facebook, Instagram, LinkedIn, and Reddit.",
-    tag: "Confidence",
+    icon: "email",
+    title: "Mail Box outreach",
+    body: "Import leads, run Gmail campaigns with open/click tracking, sync meeting bookings, and nudge follow-ups from one inbox workflow.",
+    tag: "Outreach",
   },
   {
-    icon: "email",
-    title: "Email campaigns",
-    body: "Run merge-tagged email blasts with open tracking and batching, straight from your own inbox. Newsletters without the SaaS tax.",
-    tag: "Email",
+    icon: "sales",
+    title: "Sales Tracker CRM",
+    body: "Kanban pipeline for setters and closers — drag leads through New → Won, auto-calculate revenue, commissions, aging leaks, and forecasts.",
+    tag: "CRM",
+  },
+  {
+    icon: "chart",
+    title: "Visibility & projection",
+    body: "Setter dials, show-up rates, close rates, deposit-to-PIF, and best/expected/worst end-of-month revenue — all from the same lead cards.",
+    tag: "Analytics",
   },
   {
     icon: "bulk",
-    title: "Bulk upload",
-    body: "Drop a CSV or a folder of images and schedule a month of content in minutes, one post per day, fully automated.",
+    title: "Bulk upload & calendar",
+    body: "Drop images, schedule a month of content, and manage the queue from Drafts, Scheduled, and the content calendar.",
     tag: "Scale",
-  },
-  {
-    icon: "workspace",
-    title: "Isolated workspaces",
-    body: "Every team gets its own workspace with separate connections, drafts, and history. Your data never bleeds across tenants.",
-    tag: "Multi-tenant",
   },
 ];
 
@@ -218,14 +235,14 @@ const PAINS = [
     body: "Manually posting means you miss the windows that actually drive reach.",
   },
   {
-    icon: "scattered",
-    title: "Scattered drafts",
-    body: "Notes here, images there, nothing in one place you can schedule.",
+    icon: "funnel",
+    title: "Leads vanish in spreadsheets",
+    body: "Meetings booked in email never make it into a real sales pipeline or forecast.",
   },
   {
     icon: "inbox",
-    title: "Email lives elsewhere",
-    body: "Your newsletter tool is yet another subscription, disconnected from social.",
+    title: "Tools don't talk",
+    body: "Social, outreach, and CRM live in three products — so nothing auto-calculates.",
   },
 ];
 
@@ -287,32 +304,32 @@ const TESTIMONIALS = [
 ];
 
 const STATS = [
-  ["6", "networks in one place"],
-  ["3,000+", "creators & teams"],
-  ["1M+", "posts published"],
-  ["~10 min", "saved per post"],
+  ["7", "channels connected"],
+  ["CRM", "sales pipeline built in"],
+  ["1 card", "feeds every metric"],
+  ["Growth+", "Mail Box & Sales"],
 ];
 
 const PLATFORM_SEO = [
   {
     key: "linkedin",
     h: "Schedule LinkedIn posts & articles",
-    p: "Plan a week of LinkedIn content, preview it exactly as your network will see it, and auto-publish at peak engagement times, no manual posting.",
+    p: "Plan a week of LinkedIn content, preview it exactly as your network will see it, and auto-publish at peak engagement times.",
   },
   {
     key: "facebook",
     h: "Publish to your Facebook Page",
-    p: "Push updates to your Facebook Page feed with image previews and scheduling, from the same composer you use for every other channel.",
+    p: "Push updates to your Facebook Page feed with image previews and scheduling from the same composer.",
   },
   {
     key: "instagram",
     h: "Plan Instagram feed posts",
-    p: "Draft Instagram captions and visuals, see a pixel-accurate feed preview, and queue posts on your content calendar.",
+    p: "Draft Instagram captions and visuals, see a feed preview, and queue posts on your content calendar.",
   },
   {
     key: "reddit",
     h: "Auto-post to Reddit subreddits",
-    p: "Share to the subreddits that matter with built-in community-content checks that keep your posts compliant and ban-safe.",
+    p: "Share to the subreddits that matter with community-content checks that keep posts compliant.",
   },
   {
     key: "pinterest",
@@ -326,32 +343,36 @@ const PLATFORM_SEO = [
   },
   {
     key: "gmail",
-    h: "Send email campaigns from Gmail",
-    p: "Run merge-tagged email blasts with open tracking and batching from your own inbox, newsletters without another subscription.",
+    h: "Mail Box + Sales Tracker",
+    p: "Run outreach from Gmail, sync meetings, then import booked leads onto a Kanban CRM with revenue, aging alerts, and forecasts.",
   },
 ];
 
 const COMPETITORS = {
-  cols: ["Publisher Suite", "Buffer", "Hootsuite", "Later"],
+  cols: ["Publisher Suite", "Buffer", "Hootsuite", "HubSpot"],
   rows: [
-    ["LinkedIn, Facebook & Instagram", [true, true, true, true]],
-    ["Reddit posting", [true, false, false, false]],
-    ["Per-platform live previews", [true, true, true, true]],
-    ["Email campaigns built in", [true, false, false, false]],
-    ["Auto-publish scheduler", [true, true, true, true]],
-    ["Isolated team workspaces", [true, false, true, false]],
-    ["From $19.99/mo", [true, true, false, true]],
+    ["Social publish & schedule", [true, true, true, true]],
+    ["Reddit + Threads + Pinterest", [true, false, false, false]],
+    ["Gmail outreach + meeting sync", [true, false, false, true]],
+    ["Sales Kanban for setters/closers", [true, false, false, true]],
+    ["Revenue projection from pipeline", [true, false, false, true]],
+    ["Per-platform live previews", [true, true, true, false]],
+    ["From $19.99/mo", [true, true, false, false]],
   ],
 };
 
 const FAQS = [
   {
     q: "Which platforms does Publisher Suite support?",
-    a: "LinkedIn, Facebook & Instagram (Meta), Reddit, Pinterest, and Threads for posts, plus Gmail for email campaigns. Connect each in a couple of clicks from your workspace settings.",
+    a: "LinkedIn, Facebook & Instagram (Meta), Reddit, Pinterest, and Threads for posts, plus Gmail for Mail Box outreach and the Sales Tracker CRM (Growth+).",
   },
   {
-    q: "Do I need separate accounts for my team?",
-    a: "No. Each workspace supports your whole team. Invite members, switch between workspaces, and keep every client or brand fully isolated.",
+    q: "What is Sales Tracker?",
+    a: "A Kanban CRM for your sales team. Each lead is one card with contact, meeting outcomes, money, and commissions. The Lead Log, Visibility Dashboard, and Projection module all auto-calculate from those cards — nothing is entered twice.",
+  },
+  {
+    q: "Do Mail Box meetings show on the sales board automatically?",
+    a: "No — by design. Use Import meetings on the Sales board (or Add to Sales in Mail Box) so only intentional pipeline leads appear. That keeps outreach volume separate from active deals.",
   },
   {
     q: "Is scheduling really automatic?",
@@ -360,10 +381,6 @@ const FAQS = [
   {
     q: "How are my credentials stored?",
     a: "Platform tokens live encrypted against your workspace in the database, scoped to your tenant only. Authentication is handled by Clerk.",
-  },
-  {
-    q: "Can I try it before committing?",
-    a: "Absolutely, create a free account, connect a platform, and publish your first post in under five minutes.",
   },
 ];
 
@@ -500,18 +517,18 @@ export default function LandingPage() {
         <div className='pointer-events-none absolute -right-24 top-32 h-80 w-80 rounded-full bg-indigo-600/15 blur-[100px]' />
         <div data-hero className='relative'>
           <span className='inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-xs font-semibold text-slate-300'>
-            One composer for every channel
+            Publish · Outreach · Sales CRM
           </span>
           <h1 className='font-display mt-7 text-[2.6rem] font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl'>
-            Publish once.
+            Publish everywhere.
             <span className='mt-1 block bg-gradient-to-r from-sky-400 via-indigo-400 to-indigo-300 bg-clip-text text-transparent'>
-              Reach everywhere.
+              Close what you book.
             </span>
           </h1>
           <p className='mx-auto mt-6 max-w-xl text-base leading-relaxed text-slate-400 sm:text-lg'>
-            Publisher Suite unifies LinkedIn, Meta, Reddit, Pinterest, Threads, and
-            email into a single workspace, compose, preview, schedule, and
-            auto-publish across every channel from one screen.
+            Publisher Suite combines social publishing, Gmail Mail Box outreach, and a
+            Sales Tracker CRM — one workspace from compose to close, with metrics that
+            auto-calculate from your lead cards.
           </p>
           <div className='mt-9 flex flex-col items-center gap-5'>
             <Link
@@ -617,7 +634,7 @@ export default function LandingPage() {
           The old way is exhausting
         </p>
         <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
-          Five tabs, five logins, five formats, for one idea.
+          Five social tabs, a separate CRM, and a spreadsheet for meetings.
         </h2>
         <div className='mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4'>
           {PAINS.map((p) => (
@@ -647,7 +664,7 @@ export default function LandingPage() {
             Everything included
           </p>
           <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
-            One workspace for your entire publishing workflow.
+            Publish, outreach, and sales pipeline — in one product.
           </h2>
           <div className='mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
             {FEATURES.map((f) => (
@@ -670,6 +687,44 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Sales Tracker spotlight */}
+      <section id='sales' className='mx-auto max-w-5xl px-6 py-24'>
+        <div className='overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-indigo-500/[0.12] via-[#0b0d16] to-sky-500/[0.08] p-8 sm:p-12'>
+          <p className='text-xs font-bold uppercase tracking-[0.12em] text-indigo-300'>
+            Growth+ · Sales Tracker
+          </p>
+          <h2 className='font-display mt-3 max-w-2xl text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
+            A Kanban CRM that never asks you to enter the same data twice.
+          </h2>
+          <p className='mt-4 max-w-2xl text-sm leading-relaxed text-slate-400 sm:text-base'>
+            Import Mail Box meetings onto the board. Drag cards through New, Proposal,
+            Deposit, Follow-Up, Meeting Follow-Up, Won, and Lost. Lead Log, setter/closer
+            metrics, leak alerts, and end-of-month projections all flow from those cards.
+          </p>
+          <div className='mt-8 grid gap-3 sm:grid-cols-3'>
+            {[
+              ['Board', 'Drag-and-drop stages with aging & deposit leak flags'],
+              ['Visibility', 'Show-up, offer, close rates & commissions per rep'],
+              ['Projection', 'Best / expected / worst revenue from your pipeline'],
+            ].map(([t, b]) => (
+              <div
+                key={t}
+                className='rounded-2xl border border-white/[0.08] bg-black/20 px-4 py-4'
+              >
+                <p className='font-display text-sm font-bold text-white'>{t}</p>
+                <p className='mt-1 text-xs leading-relaxed text-slate-400'>{b}</p>
+              </div>
+            ))}
+          </div>
+          <Link
+            to='/sign-up'
+            className='mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-display text-sm font-bold text-[#0a0c14] transition hover:-translate-y-0.5'
+          >
+            Get Growth with Sales Tracker
+          </Link>
         </div>
       </section>
 
@@ -761,7 +816,7 @@ export default function LandingPage() {
             How we compare
           </p>
           <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
-            The Buffer & Hootsuite alternative with more in the box.
+            Scheduler + outreach + CRM — without stacking three tools.
           </h2>
           <div className='mt-12 overflow-x-auto rounded-2xl border border-white/[0.08]'>
             <table className='w-full min-w-[360px] border-collapse text-xs sm:text-sm'>

@@ -118,6 +118,7 @@ export const NAV_ITEMS = [
   { path: '/overview', label: 'Overview', icon: 'overview' },
   { path: '/compose', label: 'Compose', icon: 'compose' },
   { path: '/email', label: 'Mail Box', icon: 'email' },
+  { path: '/sales', label: 'Sales', icon: 'sales' },
   { path: '/bulk', label: 'Bulk Upload', icon: 'bulk' },
   { path: '/drafts', label: 'Drafts', icon: 'drafts' },
   { path: '/scheduled', label: 'Scheduled', icon: 'scheduled' },
@@ -148,6 +149,7 @@ export const NAV_GROUPS = [
       { path: '/compose', label: 'Compose', icon: 'compose', description: 'Write & publish' },
       { path: '/bulk', label: 'Bulk Upload', icon: 'bulk', description: 'Multi-post days' },
       { path: '/email', label: 'Mail Box', icon: 'email', description: 'Outreach & campaigns' },
+      { path: '/sales', label: 'Sales', icon: 'sales', description: 'Pipeline & CRM' },
     ],
   },
   {

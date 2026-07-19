@@ -33,6 +33,7 @@ import {
   subscribeRealtime,
   sendEmailNudge,
   sendMeetingReminder,
+  promoteSalesLeads,
 } from '../lib/backendApi'
 import { mergeTemplate } from '../lib/emailParse'
 import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from '../lib/meetingCta'
@@ -796,6 +797,20 @@ export default function EmailPage() {
       showToast(err.message || 'Failed to send reminder', 'error')
     } finally {
       setNudgeBusyId(null)
+    }
+  }
+
+  const handlePromoteToSales = async (ids) => {
+    const recipientIds = Array.isArray(ids) ? ids : [ids]
+    if (!recipientIds.length) return
+    try {
+      const res = await promoteSalesLeads(recipientIds)
+      showToast(
+        `Added ${res.count ?? recipientIds.length} lead${recipientIds.length === 1 ? '' : 's'} to Sales board`,
+        'success',
+      )
+    } catch (err) {
+      showToast(err.message || 'Failed to add to Sales', 'error')
     }
   }
 
@@ -2666,6 +2681,13 @@ export default function EmailPage() {
                                   : 'Send reminder'}
                             </button>
                           )}
+                          <button
+                            type="button"
+                            className="mt-1.5 block w-full rounded-lg bg-indigo-500/15 px-2 py-1 text-[10px] font-semibold text-indigo-200"
+                            onClick={() => handlePromoteToSales([r.id])}
+                          >
+                            Add to Sales
+                          </button>
                         </span>
                       </div>
                       {(r.lastNudgeType || r.nudgeAutoStopped) && (
@@ -2833,6 +2855,13 @@ export default function EmailPage() {
                                 : 'Send reminder'}
                           </button>
                         )}
+                        <button
+                          type="button"
+                          className="mt-1.5 block w-full rounded-lg bg-indigo-500/15 px-2 py-1 text-[10px] font-semibold text-indigo-200 hover:bg-indigo-500/25"
+                          onClick={() => handlePromoteToSales([r.id])}
+                        >
+                          Add to Sales
+                        </button>
                         {r.nudgeAutoStopped ? (
                           <p className="mt-0.5 text-[9px] text-slate-600">Auto stopped</p>
                         ) : r.lastNudgeType ? (
@@ -3148,36 +3177,46 @@ export default function EmailPage() {
                   <option value="no_show">No show</option>
                 </select>
                 {selectedMeetingIds.size > 0 && (
-                  <button
-                    type="button"
-                    className="rounded-lg bg-rose-500/15 px-3 text-xs font-semibold text-rose-300 ring-1 ring-rose-500/30 hover:bg-rose-500/25 disabled:opacity-50"
-                    style={{ height: '2.125rem' }}
-                    disabled={meetingRemoveBusy}
-                    onClick={() => {
-                      const count = selectedMeetingIds.size
-                      setConfirmDialog({
-                        title: 'Remove from meeting pipeline?',
-                        message: `Remove ${count} selected lead${count === 1 ? '' : 's'} from this pipeline? Campaign send history is kept; only meeting status is cleared.`,
-                        confirmLabel: meetingRemoveBusy ? 'Removing…' : 'Remove',
-                        onConfirm: async () => {
-                          setMeetingRemoveBusy(true)
-                          try {
-                            const res = await removeEmailMeetings([...selectedMeetingIds])
-                            setSelectedMeetingIds(new Set())
-                            await loadMeetings({ sync: false })
-                            showToast(
-                              `Removed ${res.removed ?? count} from meeting pipeline`,
-                              'success',
-                            )
-                          } finally {
-                            setMeetingRemoveBusy(false)
-                          }
-                        },
-                      })
-                    }}
-                  >
-                    Remove ({selectedMeetingIds.size})
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-indigo-500/15 px-3 text-xs font-semibold text-indigo-200 ring-1 ring-indigo-500/30 hover:bg-indigo-500/25"
+                      style={{ height: '2.125rem' }}
+                      onClick={() => handlePromoteToSales([...selectedMeetingIds])}
+                    >
+                      Add to Sales ({selectedMeetingIds.size})
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-rose-500/15 px-3 text-xs font-semibold text-rose-300 ring-1 ring-rose-500/30 hover:bg-rose-500/25 disabled:opacity-50"
+                      style={{ height: '2.125rem' }}
+                      disabled={meetingRemoveBusy}
+                      onClick={() => {
+                        const count = selectedMeetingIds.size
+                        setConfirmDialog({
+                          title: 'Remove from meeting pipeline?',
+                          message: `Remove ${count} selected lead${count === 1 ? '' : 's'} from this pipeline? Campaign send history is kept; only meeting status is cleared.`,
+                          confirmLabel: meetingRemoveBusy ? 'Removing…' : 'Remove',
+                          onConfirm: async () => {
+                            setMeetingRemoveBusy(true)
+                            try {
+                              const res = await removeEmailMeetings([...selectedMeetingIds])
+                              setSelectedMeetingIds(new Set())
+                              await loadMeetings({ sync: false })
+                              showToast(
+                                `Removed ${res.removed ?? count} from meeting pipeline`,
+                                'success',
+                              )
+                            } finally {
+                              setMeetingRemoveBusy(false)
+                            }
+                          },
+                        })
+                      }}
+                    >
+                      Remove ({selectedMeetingIds.size})
+                    </button>
+                  </>
                 )}
                 <button
                   type="button"
@@ -3289,6 +3328,13 @@ export default function EmailPage() {
                                   : 'Send reminder'}
                             </button>
                           )}
+                          <button
+                            type="button"
+                            className="mt-1.5 block w-full rounded-lg bg-indigo-500/15 px-2 py-1 text-[10px] font-semibold text-indigo-200"
+                            onClick={() => handlePromoteToSales([m.id])}
+                          >
+                            Add to Sales
+                          </button>
                         </span>
                       </div>
                       <div className="mt-3 border-t border-white/[0.06] pt-3">
@@ -3420,6 +3466,13 @@ export default function EmailPage() {
                                 : 'Send reminder'}
                           </button>
                         )}
+                        <button
+                          type="button"
+                          className="mt-1.5 block w-full rounded-lg bg-indigo-500/15 px-2 py-1 text-[10px] font-semibold text-indigo-200 hover:bg-indigo-500/25"
+                          onClick={() => handlePromoteToSales([m.id])}
+                        >
+                          Add to Sales
+                        </button>
                       </td>
                       <td className="px-3 py-2">
                         <MeetingBookingBlock

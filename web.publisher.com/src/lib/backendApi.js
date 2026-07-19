@@ -455,3 +455,101 @@ export async function scheduleBulkRemote(payload) {
 export async function uploadMediaRemote(imageDataUrl) {
   return apiFetch("/media/upload", { method: "POST", body: { imageDataUrl } });
 }
+
+/* ── Sales Tracker CRM ─────────────────────────────────────────────────── */
+
+export async function listSalesLeads(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.stage) qs.set("stage", params.stage);
+  if (params.setter) qs.set("setter", params.setter);
+  if (params.closer) qs.set("closer", params.closer);
+  if (params.source) qs.set("source", params.source);
+  if (params.q) qs.set("q", params.q);
+  if (params.sort) qs.set("sort", params.sort);
+  if (params.dir) qs.set("dir", params.dir);
+  const q = qs.toString();
+  return apiFetch(`/sales/leads${q ? `?${q}` : ""}`);
+}
+
+export async function createSalesLead(body) {
+  return apiFetch("/sales/leads", { method: "POST", body });
+}
+
+export async function updateSalesLead(id, body) {
+  return apiFetch(`/sales/leads/${id}`, { method: "PATCH", body });
+}
+
+export async function touchSalesLead(id) {
+  return apiFetch(`/sales/leads/${id}/touch`, { method: "POST", body: {} });
+}
+
+export async function deleteSalesLead(id, { hard = false } = {}) {
+  return apiFetch(`/sales/leads/${id}${hard ? "?hard=1" : ""}`, { method: "DELETE" });
+}
+
+export async function promoteSalesLeads(recipientIds) {
+  return apiFetch("/sales/leads/promote", {
+    method: "POST",
+    body: { recipientIds },
+  });
+}
+
+export async function fetchSalesImportable() {
+  return apiFetch("/sales/importable");
+}
+
+export async function importSalesMeetings(limit = 500) {
+  return apiFetch("/sales/leads/import-meetings", {
+    method: "POST",
+    body: { limit },
+  });
+}
+
+export async function fetchSalesMetrics(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  if (params.setter) qs.set("setter", params.setter);
+  if (params.closer) qs.set("closer", params.closer);
+  if (params.source) qs.set("source", params.source);
+  const q = qs.toString();
+  return apiFetch(`/sales/metrics${q ? `?${q}` : ""}`);
+}
+
+export async function fetchSalesProjection(params = {}) {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
+  });
+  const q = qs.toString();
+  return apiFetch(`/sales/projection${q ? `?${q}` : ""}`);
+}
+
+export async function fetchSalesTeam() {
+  return apiFetch("/sales/team");
+}
+
+export async function updateSalesTeam(body) {
+  return apiFetch("/sales/team", { method: "PUT", body });
+}
+
+export async function inviteSalesTeamMember(body) {
+  return apiFetch("/sales/team/invite", { method: "POST", body });
+}
+
+export async function acceptSalesTeamInvite(token) {
+  return apiFetch("/sales/team/accept", { method: "POST", body: { token } });
+}
+
+export async function fetchSalesActivity(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  if (params.setter) qs.set("setter", params.setter);
+  const q = qs.toString();
+  return apiFetch(`/sales/activity${q ? `?${q}` : ""}`);
+}
+
+export async function upsertSalesActivity(body) {
+  return apiFetch("/sales/activity", { method: "PUT", body });
+}

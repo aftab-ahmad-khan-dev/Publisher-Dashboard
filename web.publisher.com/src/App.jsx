@@ -23,6 +23,7 @@ import ApiConfigPage from './pages/ApiConfigPage'
 import GuidePage from './pages/GuidePage'
 import BulkUploadPage from './pages/BulkUploadPage'
 import EmailPage from './pages/EmailPage'
+import SalesPage from './pages/SalesPage'
 import OverviewPage from './pages/OverviewPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import BillingPage from './pages/BillingPage'
@@ -88,6 +89,7 @@ function AppRoutes() {
               <Route path="compose" element={<ComposePage />} />
               <Route path="bulk" element={<BulkUploadPage />} />
               <Route path="email" element={<EmailPage />} />
+              <Route path="sales" element={<SalesPage />} />
               <Route path="drafts" element={<DraftsPage />} />
               <Route path="scheduled" element={<ScheduledPage />} />
               <Route path="calendar" element={<CalendarPage />} />
