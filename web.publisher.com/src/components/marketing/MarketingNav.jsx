@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import BrandLogo from '../BrandLogo'
 
 const NAV_LINKS = [
@@ -11,8 +11,15 @@ const NAV_LINKS = [
   ['FAQ', '/#faq'],
 ]
 
+function linkActive(pathname, href) {
+  if (href.startsWith('/#')) return pathname === '/'
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
 export default function MarketingNav() {
   const [open, setOpen] = useState(false)
+  const { pathname } = useLocation()
+
   return (
     <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#05060a]/85 backdrop-blur-2xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-4 sm:px-8">
@@ -22,12 +29,21 @@ export default function MarketingNav() {
         </Link>
 
         {/* Desktop links */}
-        <div className="hidden items-center gap-7 lg:flex">
-          {NAV_LINKS.map(([label, href]) => (
-            <Link key={label} to={href} className="text-sm font-medium text-slate-400 transition hover:text-white">
-              {label}
-            </Link>
-          ))}
+        <div className="hidden items-center gap-6 xl:gap-7 lg:flex">
+          {NAV_LINKS.map(([label, href]) => {
+            const active = linkActive(pathname, href) && !href.startsWith('/#')
+            return (
+              <Link
+                key={label}
+                to={href}
+                className={`text-sm font-medium transition ${
+                  active ? 'text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {label}
+              </Link>
+            )
+          })}
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
@@ -57,16 +73,21 @@ export default function MarketingNav() {
       {/* Mobile menu */}
       {open && (
         <div className="border-t border-white/[0.07] px-5 py-3 lg:hidden">
-          {NAV_LINKS.map(([label, href]) => (
-            <Link
-              key={label}
-              to={href}
-              onClick={() => setOpen(false)}
-              className="block py-2 text-sm font-medium text-slate-300 hover:text-white"
-            >
-              {label}
-            </Link>
-          ))}
+          {NAV_LINKS.map(([label, href]) => {
+            const active = linkActive(pathname, href) && !href.startsWith('/#')
+            return (
+              <Link
+                key={label}
+                to={href}
+                onClick={() => setOpen(false)}
+                className={`block py-2 text-sm font-medium ${
+                  active ? 'text-white' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                {label}
+              </Link>
+            )
+          })}
         </div>
       )}
     </nav>

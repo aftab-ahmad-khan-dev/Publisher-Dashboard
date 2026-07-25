@@ -1,132 +1,183 @@
+import { useMemo, useState } from 'react'
+
 const PORTFOLIO = 'https://www.aftabahmadkhan.online'
 const PORTFOLIO_PROJECTS = `${PORTFOLIO}/projects`
+
+/** @typedef {'products' | 'open-source' | 'about'} ProductCategory */
+
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'products', label: 'Products' },
+  { id: 'open-source', label: 'Open source' },
+  { id: 'about', label: 'About' },
+]
 
 const PRODUCTS = [
   {
     id: 'vorkspro',
     name: 'VorksPro',
-    tagline: 'All-in-one operations platform — projects, CRM, HR, payroll & invoicing.',
-    description:
-      'Unify project management, client CRM, employees, payroll, PDF invoicing, attendance, leave, follow-ups, to-dos, knowledge base, and a credentials vault in one role-based workspace.',
-    tags: ['SaaS', 'Business Ops', 'CRM', 'HR'],
+    blurb: 'Projects, CRM, HR, payroll & invoicing in one workspace.',
+    category: /** @type {ProductCategory} */ ('products'),
+    badge: 'SaaS',
     image: '/products/vorkspro.png',
-    imageAlt: 'VorksPro operations platform preview',
-    liveUrl: 'https://vorkspro.com',
-    detailsUrl: PORTFOLIO_PROJECTS,
+    imageAlt: 'VorksPro operations platform',
+    href: 'https://vorkspro.com',
+    cta: 'Open live',
     featured: true,
   },
   {
     id: 'encoded-by-aftab',
     name: 'Encoded by Aftab',
-    tagline: 'Code Crafters — frontend challenges with solutions.',
-    description:
-      'Practice HTML, CSS, and JavaScript through guided challenges — conference tickets, password generators, multi-step forms, and more — with live previews and progressive difficulty.',
-    tags: ['Learning', 'Frontend', 'Challenges'],
+    blurb: 'Frontend coding challenges with live previews & solutions.',
+    category: /** @type {ProductCategory} */ ('products'),
+    badge: 'Learning',
     image: '/products/code-crafters.jpg',
-    imageAlt: 'Code Crafters challenge preview',
-    liveUrl: 'https://code-crafters.vercel.app/',
-    detailsUrl: PORTFOLIO_PROJECTS,
+    imageAlt: 'Code Crafters challenges',
+    href: 'https://code-crafters.vercel.app/',
+    cta: 'Open live',
   },
   {
     id: 'pet-corner',
     name: 'Pet Corner',
-    tagline: 'Veterinary & pet care management for modern clinics.',
-    description:
-      'Streamline pet records, appointments, clinic and wholesale inventory, invoices, receipts, clinic finance, and staff access in one veterinary workflow.',
-    tags: ['SaaS', 'Veterinary', 'Clinic'],
+    blurb: 'Clinic workflows — patients, appointments, inventory & billing.',
+    category: /** @type {ProductCategory} */ ('products'),
+    badge: 'Clinic',
     image: '/products/pet-corner.jpg',
-    imageAlt: 'Pet Corner clinic dashboard preview',
-    liveUrl: 'https://pet-corner-omega.vercel.app/',
-    detailsUrl: PORTFOLIO_PROJECTS,
+    imageAlt: 'Pet Corner veterinary platform',
+    href: 'https://pet-corner-omega.vercel.app/',
+    cta: 'Open live',
   },
   {
     id: 'npm-dashboard',
     name: 'npm Packages Dashboard',
-    tagline: 'Live overview of your published npm & pub.dev packages.',
-    description:
-      'Discover packages under your username, aggregate downloads via serverless workers, and track metadata and updates across npm and Flutter/Dart pub.dev packages.',
-    tags: ['Open Source', 'Developer Tools', 'npm'],
+    blurb: 'Track downloads & metadata for your npm and pub.dev packages.',
+    category: /** @type {ProductCategory} */ ('open-source'),
+    badge: 'Open source',
     image: '/products/npm-dashboard.png',
-    imageAlt: 'npm Packages Dashboard preview',
-    liveUrl: 'https://npm-dashboard-eta.vercel.app/',
-    githubUrl: 'https://github.com/aftab-ahmad-khan-dev/NPM_Dashboard',
-    detailsUrl: PORTFOLIO_PROJECTS,
-  },
-  {
-    id: 'about-me',
-    name: 'About Me',
-    tagline: 'Solo full-stack developer — MERN, Shopify & AI.',
-    description:
-      'Portfolio of 97+ production projects across web, mobile, desktop, Shopify, and AI automation. Hire directly for scoped product builds and end-to-end delivery.',
-    tags: ['Portfolio', 'Freelance', 'Full-stack'],
-    image: '/products/portfolio.png',
-    imageAlt: 'Aftab Ahmad Khan portfolio preview',
-    liveUrl: PORTFOLIO,
-    detailsUrl: PORTFOLIO,
-    primaryLabel: 'Visit portfolio',
+    imageAlt: 'npm Packages Dashboard',
+    href: 'https://npm-dashboard-eta.vercel.app/',
+    cta: 'Open live',
   },
   {
     id: 'discord-generator',
     name: 'Discord Server Generator',
-    tagline: 'Config-driven Discord.js v14 bot that builds a full server in one command.',
-    description:
-      'Admin-only /setup creates roles, categories, channels, and permissions from config — plus welcome, verify, tickets, suggestions, reaction roles, logs, and live member counters.',
-    tags: ['Open Source', 'Discord', 'Bot'],
+    blurb: 'One /setup command builds roles, channels, tickets & more.',
+    category: /** @type {ProductCategory} */ ('open-source'),
+    badge: 'Open source',
     image: '/products/discord-generator.png',
-    imageAlt: 'Discord Server Generator repository preview',
-    githubUrl: 'https://github.com/aftab-ahmad-khan-dev/discord-generator',
-    detailsUrl: PORTFOLIO_PROJECTS,
+    imageAlt: 'Discord Server Generator',
+    href: 'https://github.com/aftab-ahmad-khan-dev/discord-generator',
+    cta: 'View on GitHub',
   },
   {
     id: 'ai-guardrails',
     name: 'AI Dev Guardrails',
-    tagline: 'Reusable AI coding rules & skills for Cursor, Claude, Copilot & more.',
-    description:
-      'Installable Agent Skills pack with SRS task board, Rules.md standards, and ~25 lifecycle skills from spec through TDD, review, and ship. One command: npx skills add aftab-ahmad-khan-dev/ai-dev-guardrails.',
-    tags: ['Open Source', 'AI', 'Cursor Skills'],
+    blurb: 'Installable skills & rules for Cursor, Claude, Copilot & more.',
+    category: /** @type {ProductCategory} */ ('open-source'),
+    badge: 'Open source',
     image: '/products/ai-guardrails.jpg',
-    imageAlt: 'AI Dev Guardrails skills banner',
-    githubUrl: 'https://github.com/aftab-ahmad-khan-dev/ai-dev-guardrails',
-    detailsUrl: PORTFOLIO_PROJECTS,
+    imageAlt: 'AI Dev Guardrails',
+    href: 'https://github.com/aftab-ahmad-khan-dev/ai-dev-guardrails',
+    cta: 'View on GitHub',
   },
   {
     id: 'api-boilerplate',
     name: 'API Boilerplates',
-    tagline: 'Server-side starters — Rust, Nest + Fastify, Express + Redis.',
-    description:
-      'Three aligned API implementations of the same surface: Express (reference), NestJS with Fastify adapter, and Rust (Axum + MongoDB). Shared routes for auth, email, payments, files, and more.',
-    tags: ['Open Source', 'Boilerplate', 'Backend'],
+    blurb: 'Rust · Nest + Fastify · Express + Redis — same API surface.',
+    category: /** @type {ProductCategory} */ ('open-source'),
+    badge: 'Open source',
     image: '/products/api-boilerplate.png',
-    imageAlt: 'API Boilerplate monorepo preview',
-    githubUrl: 'https://github.com/aftab-ahmad-khan-dev/api.boilerplate.com',
-    detailsUrl: PORTFOLIO_PROJECTS,
+    imageAlt: 'API Boilerplate monorepo',
+    href: 'https://github.com/aftab-ahmad-khan-dev/api.boilerplate.com',
+    cta: 'View on GitHub',
+  },
+  {
+    id: 'about-me',
+    name: 'About Me',
+    blurb: 'Solo full-stack engineer — 97+ shipped projects & case studies.',
+    category: /** @type {ProductCategory} */ ('about'),
+    badge: 'Portfolio',
+    image: '/products/portfolio.png',
+    imageAlt: 'Aftab Ahmad Khan portfolio',
+    href: PORTFOLIO,
+    cta: 'Visit portfolio',
   },
 ]
 
 function ExternalIcon({ className = 'h-3.5 w-3.5' }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5M15 3h6m0 0v6m0-6L10.5 13.5" />
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5M15 3h6m0 0v6m0-6L10.5 13.5"
+      />
     </svg>
   )
 }
 
-function ProductCard({ product }) {
-  const primaryHref = product.liveUrl || product.githubUrl
-  const primaryLabel = product.primaryLabel || (product.liveUrl ? 'Open live' : 'View on GitHub')
-  const showGithubSecondary = Boolean(product.githubUrl && product.liveUrl)
-  const showDetails = product.detailsUrl && product.detailsUrl !== product.liveUrl
-
+function FeaturedCard({ product }) {
   return (
-    <article
-      className={`group flex flex-col overflow-hidden rounded-3xl border transition duration-300 hover:-translate-y-1 ${
-        product.featured
-          ? 'border-indigo-500/40 bg-gradient-to-b from-indigo-600/10 to-transparent hover:border-indigo-400/50'
-          : 'border-white/[0.08] bg-white/[0.02] hover:border-indigo-500/30'
-      }`}
-    >
+    <article className="overflow-hidden rounded-3xl border border-indigo-500/35 bg-gradient-to-br from-indigo-600/[0.12] via-transparent to-sky-500/[0.06]">
+      <div className="grid lg:grid-cols-2">
+        <a
+          href={product.href}
+          target="_blank"
+          rel="noreferrer"
+          className="relative block min-h-[220px] overflow-hidden bg-[#0b0d16] lg:min-h-[320px]"
+        >
+          <img
+            src={product.image}
+            alt={product.imageAlt}
+            className="h-full w-full object-cover object-top"
+          />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#05060a]/40 max-lg:bg-gradient-to-t max-lg:from-[#05060a]/70 max-lg:to-transparent" />
+        </a>
+
+        <div className="flex flex-col justify-center p-7 sm:p-10">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              Featured
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-semibold text-slate-400">
+              {product.badge}
+            </span>
+          </div>
+          <h2 className="font-display mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+            {product.name}
+          </h2>
+          <p className="mt-3 max-w-md text-base leading-relaxed text-slate-400">{product.blurb}</p>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <a
+              href={product.href}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-5 py-2.5 font-display text-sm font-bold text-white transition hover:opacity-90"
+            >
+              {product.cta}
+              <ExternalIcon className="h-4 w-4" />
+            </a>
+            <a
+              href={PORTFOLIO_PROJECTS}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/5"
+            >
+              More details
+              <ExternalIcon className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function ProductCard({ product }) {
+  return (
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] transition duration-300 hover:-translate-y-0.5 hover:border-indigo-500/30">
       <a
-        href={primaryHref}
+        href={product.href}
         target="_blank"
         rel="noreferrer"
         className="relative block aspect-[16/10] overflow-hidden bg-[#0b0d16]"
@@ -137,62 +188,33 @@ function ProductCard({ product }) {
           loading="lazy"
           className="h-full w-full object-cover object-top transition duration-500 group-hover:scale-[1.03]"
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05060a]/80 via-transparent to-transparent" />
-        {product.featured && (
-          <span className="absolute left-3 top-3 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
-            Featured
-          </span>
-        )}
+        <span className="absolute left-3 top-3 rounded-full border border-white/10 bg-[#05060a]/75 px-2.5 py-1 text-[10px] font-semibold text-slate-200 backdrop-blur-sm">
+          {product.badge}
+        </span>
       </a>
 
-      <div className="flex flex-1 flex-col p-6 sm:p-7">
-        <div className="flex flex-wrap gap-1.5">
-          {product.tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[10px] font-semibold text-slate-400"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
+      <div className="flex flex-1 flex-col p-5">
+        <h3 className="font-display text-lg font-bold tracking-tight text-white">{product.name}</h3>
+        <p className="mt-1.5 flex-1 text-sm leading-relaxed text-slate-400">{product.blurb}</p>
 
-        <h2 className="font-display mt-3 text-xl font-bold tracking-tight text-white">{product.name}</h2>
-        <p className="mt-1.5 text-sm font-medium text-slate-300">{product.tagline}</p>
-        <p className="mt-3 flex-1 text-sm leading-relaxed text-slate-500">{product.description}</p>
-
-        <div className="mt-6 flex flex-wrap gap-2">
-          {primaryHref && (
+        <div className="mt-5 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
+          <a
+            href={product.href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 font-display text-sm font-bold text-sky-400 transition hover:text-sky-300"
+          >
+            {product.cta}
+            <ExternalIcon />
+          </a>
+          {product.category !== 'about' && (
             <a
-              href={primaryHref}
+              href={PORTFOLIO_PROJECTS}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-4 py-2 font-display text-xs font-bold text-white transition hover:opacity-90"
-            >
-              {primaryLabel}
-              <ExternalIcon />
-            </a>
-          )}
-          {showGithubSecondary && (
-            <a
-              href={product.githubUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/5"
-            >
-              GitHub
-              <ExternalIcon />
-            </a>
-          )}
-          {showDetails && (
-            <a
-              href={product.detailsUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:bg-white/5 hover:text-white"
+              className="text-xs font-medium text-slate-500 transition hover:text-slate-300"
             >
               More details
-              <ExternalIcon />
             </a>
           )}
         </div>
@@ -202,71 +224,90 @@ function ProductCard({ product }) {
 }
 
 export default function ProductsPage() {
+  const [filter, setFilter] = useState('all')
+
+  const { featured, rest } = useMemo(() => {
+    const filtered =
+      filter === 'all' ? PRODUCTS : PRODUCTS.filter((p) => p.category === filter)
+
+    const featuredItem = filter === 'all' || filter === 'products' ? filtered.find((p) => p.featured) : null
+    const restItems = featuredItem ? filtered.filter((p) => p.id !== featuredItem.id) : filtered
+
+    return { featured: featuredItem, rest: restItems }
+  }, [filter])
+
   return (
     <section className="relative overflow-hidden">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-32 top-10 h-72 w-72 rounded-full bg-sky-600/10 blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-24 top-40 h-80 w-80 rounded-full bg-indigo-600/10 blur-3xl"
-      />
+      <div aria-hidden className="pointer-events-none absolute -left-28 top-8 h-64 w-64 rounded-full bg-sky-600/10 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -right-20 top-36 h-72 w-72 rounded-full bg-indigo-600/10 blur-3xl" />
 
-      <div className="relative mx-auto max-w-6xl px-6 py-24">
-        <div className="text-center">
+      <div className="relative mx-auto max-w-6xl px-6 py-16 sm:py-20">
+        <header className="max-w-2xl">
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">Products</p>
-          <h1 className="font-display mx-auto mt-3 max-w-2xl text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
-            Built products, open source & portfolio work.
+          <h1 className="font-display mt-3 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+            Pick a product. Open it. Dig deeper on the portfolio.
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-slate-400">
-            SaaS platforms, developer tools, and side projects from the same builder behind Publisher
-            Suite. Open a live demo, browse the repo, or jump to the portfolio for deeper case notes.
+          <p className="mt-4 text-base leading-relaxed text-slate-400">
+            Live apps, open-source tools, and portfolio work — each card has one clear next step.
+            Case studies live on aftabahmadkhan.online.
           </p>
+        </header>
+
+        <div
+          className="mt-8 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          role="tablist"
+          aria-label="Filter products"
+        >
+          {FILTERS.map((f) => {
+            const active = filter === f.id
+            return (
+              <button
+                key={f.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setFilter(f.id)}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  active
+                    ? 'bg-white text-[#05060a]'
+                    : 'border border-white/10 bg-white/[0.03] text-slate-400 hover:border-white/20 hover:text-white'
+                }`}
+              >
+                {f.label}
+              </button>
+            )
+          })}
         </div>
 
-        <div className="mt-16 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {PRODUCTS.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+        <div className="mt-10 space-y-8">
+          {featured && <FeaturedCard product={featured} />}
+
+          {rest.length > 0 && (
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {rest.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="mt-14 rounded-3xl border border-white/[0.08] bg-white/[0.02] p-8 sm:p-10">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
-                Want the full story?
-              </p>
-              <h2 className="font-display mt-2 text-2xl font-extrabold text-white sm:text-3xl">
-                Case studies live on the portfolio.
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-slate-400">
-                Problem, solution, stack, and outcomes for these builds — plus 97+ other shipped
-                projects — are on aftabahmadkhan.online.
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
-              <a
-                href={PORTFOLIO_PROJECTS}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-6 py-3 font-display text-sm font-bold text-white hover:opacity-90"
-              >
-                Browse projects
-                <ExternalIcon className="h-4 w-4" />
-              </a>
-              <a
-                href={PORTFOLIO}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white hover:bg-white/5"
-              >
-                About Aftab
-                <ExternalIcon className="h-4 w-4" />
-              </a>
-            </div>
+        <aside className="mt-14 flex flex-col items-start justify-between gap-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-6 py-6 sm:flex-row sm:items-center sm:px-8">
+          <div>
+            <p className="font-display text-lg font-bold text-white">Need the full case study?</p>
+            <p className="mt-1 text-sm text-slate-400">
+              Stack, problem, and outcomes for these builds — plus 97+ more projects.
+            </p>
           </div>
-        </div>
+          <a
+            href={PORTFOLIO_PROJECTS}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-5 py-2.5 font-display text-sm font-bold text-white hover:opacity-90"
+          >
+            Browse portfolio
+            <ExternalIcon className="h-4 w-4" />
+          </a>
+        </aside>
       </div>
     </section>
   )
