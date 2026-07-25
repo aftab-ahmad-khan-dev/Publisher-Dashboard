@@ -9,7 +9,7 @@ const PHASE_TITLES = {
   publish: 'Publishing…',
 }
 
-const MARKETING_PATHS = ['/', '/pricing', '/about', '/privacy', '/terms', '/contact']
+const MARKETING_PATHS = ['/', '/pricing', '/products', '/about', '/privacy', '/terms', '/contact']
 
 /** Compact corner chip — not a full-screen blocker */
 function SoftProcessChip({ message }) {

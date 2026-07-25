@@ -16,6 +16,7 @@ const FOOTER_COLS = [
     title: 'Product',
     links: [
       ['Features', '/#features'],
+      ['Products', '/products'],
       ['Compare', '/#compare'],
       ['Reviews', '/#reviews'],
       ['FAQ', '/#faq'],

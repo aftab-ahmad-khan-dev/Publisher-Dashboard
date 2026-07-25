@@ -5,6 +5,7 @@ import BrandLogo from '../BrandLogo'
 const NAV_LINKS = [
   ['Features', '/#features'],
   ['Platforms', '/#platforms'],
+  ['Products', '/products'],
   ['Pricing', '/pricing'],
   ['Reviews', '/#reviews'],
   ['FAQ', '/#faq'],

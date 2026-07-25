@@ -13,6 +13,7 @@ import AboutPage from './pages/marketing/AboutPage'
 import PrivacyPage from './pages/marketing/PrivacyPage'
 import TermsPage from './pages/marketing/TermsPage'
 import ContactPage from './pages/marketing/ContactPage'
+import ProductsPage from './pages/marketing/ProductsPage'
 import LoginPage from './pages/LoginPage'
 import SignUpPage from './pages/SignUpPage'
 import ComposePage from './pages/ComposePage'
@@ -37,7 +38,7 @@ const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY?.trim()
 
 /** Group routes into sections so we crossfade between landing/auth/app — but NOT
  *  between dashboard pages (those animate inside DashboardLayout to keep the shell). */
-const MARKETING_PATHS = ['/', '/pricing', '/about', '/privacy', '/terms', '/contact']
+const MARKETING_PATHS = ['/', '/pricing', '/products', '/about', '/privacy', '/terms', '/contact']
 
 function sectionKey(pathname) {
   if (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')) return 'auth'
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route element={<MarketingLayout />}>
           <Route path="/" element={<LandingPage />} />
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/products" element={<ProductsPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
