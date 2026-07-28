@@ -36,8 +36,6 @@ bower_components
 
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
-.env
-.env.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -126,12 +124,9 @@ dist
 .vscode-test
 
 #Emv
-.env.development
 .env.example
-.env.local
 .env.production.example
 .env.dev
-.env
 # pnpm
 .pnpm-store
 # yarn v3
@@ -166,3 +161,7 @@ api.publisher.com/scripts/meta-catalog/cloudinary-cache.json
 /node_modules
 /dist
 /dev-dist
+config.bat
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
