@@ -3,6 +3,7 @@ import BrandLogo from '../BrandLogo'
 import { SOCIALS } from '../../data/links'
 import { WHATSAPP_DISPLAY, whatsappSupportUrl } from '../../data/billing'
 import { WhatsAppIcon } from './WhatsAppFab'
+import { SOCIAL_ICONS } from './SocialIcons'
 
 const FOOTER_COLS = [
   {
@@ -69,15 +70,17 @@ export default function MarketingFooter() {
             <div className="mt-4 flex flex-wrap gap-2">
               {SOCIALS.map((s) => {
                 const external = !s.href.startsWith('mailto:')
+                const Icon = SOCIAL_ICONS[s.id]
                 return (
                   <a
                     key={s.id}
                     href={s.href}
                     target={external ? '_blank' : undefined}
                     rel={external ? 'noreferrer' : undefined}
-                    className="inline-flex items-center rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-medium text-slate-400 transition hover:border-white/25 hover:text-slate-200"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-medium text-slate-400 transition hover:border-white/25 hover:text-slate-200"
                   >
-                    {s.label}
+                    {Icon ? <Icon size={11} /> : null}
+                    <span>{s.label}</span>
                   </a>
                 )
               })}
