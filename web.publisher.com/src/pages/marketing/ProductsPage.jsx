@@ -80,7 +80,7 @@ const PRODUCTS = [
     badge: 'Learning',
     image: '/products/code-crafters-dashboard.jpg',
     imageAlt: 'Code Crafters challenges',
-    href: 'https://code-crafters.vercel.app/',
+    href: 'https://coded-by-aftab.vercel.app/',
     cta: 'Open live',
   },
   {
