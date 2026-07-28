@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom'
 import BrandLogo from '../BrandLogo'
+import { SOCIALS } from '../../data/links'
+import { WHATSAPP_DISPLAY, whatsappSupportUrl } from '../../data/billing'
+import { WhatsAppIcon } from './WhatsAppFab'
 
 const FOOTER_COLS = [
   {
@@ -28,6 +31,7 @@ const FOOTER_COLS = [
     links: [
       ['Create free account', '/sign-up'],
       ['Sign in', '/sign-in'],
+      ['WhatsApp support', whatsappSupportUrl(), true],
     ],
   },
   {
@@ -54,18 +58,56 @@ export default function MarketingFooter() {
             <p className="mt-3 max-w-[220px] text-xs leading-relaxed text-slate-500">
               Publish once, reach everywhere. The all-in-one social media scheduler for LinkedIn, Meta, Reddit & email.
             </p>
+            <a
+              href={whatsappSupportUrl()}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300"
+            >
+              <WhatsAppIcon size={14} /> WhatsApp {WHATSAPP_DISPLAY}
+            </a>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {SOCIALS.map((s) => {
+                const external = !s.href.startsWith('mailto:')
+                return (
+                  <a
+                    key={s.id}
+                    href={s.href}
+                    target={external ? '_blank' : undefined}
+                    rel={external ? 'noreferrer' : undefined}
+                    className="inline-flex items-center rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-medium text-slate-400 transition hover:border-white/25 hover:text-slate-200"
+                  >
+                    {s.label}
+                  </a>
+                )
+              })}
+            </div>
           </div>
           {FOOTER_COLS.map((col) => (
             <div key={col.title}>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{col.title}</p>
               <ul className="mt-3 space-y-2">
-                {col.links.map(([label, href]) => (
-                  <li key={label}>
-                    <Link to={href} className="text-xs text-slate-500 transition hover:text-slate-300">
-                      {label}
-                    </Link>
-                  </li>
-                ))}
+                {col.links.map((row) => {
+                  const [label, href, external] = row
+                  return (
+                    <li key={label}>
+                      {external ? (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-slate-500 transition hover:text-slate-300"
+                        >
+                          {label}
+                        </a>
+                      ) : (
+                        <Link to={href} className="text-xs text-slate-500 transition hover:text-slate-300">
+                          {label}
+                        </Link>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           ))}
