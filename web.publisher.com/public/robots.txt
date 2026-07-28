@@ -1,0 +1,28 @@
+User-agent: *
+Allow: /
+
+Disallow: /overview
+Disallow: /compose
+Disallow: /bulk
+Disallow: /email
+Disallow: /sales
+Disallow: /drafts
+Disallow: /scheduled
+Disallow: /calendar
+Disallow: /api-config
+Disallow: /guide
+Disallow: /billing
+Disallow: /admin
+Disallow: /sign-in
+Disallow: /sign-up
+
+Sitemap: https://publisher-dashboard.vercel.app/sitemap.xml
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Bingbot
+Allow: /

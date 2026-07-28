@@ -917,8 +917,8 @@ export default function LandingPage() {
             $19.99 · $39.99 · $49.99
           </h2>
           <p className='mx-auto mt-3 max-w-lg text-sm text-slate-400'>
-            Starter (Compose + Bulk), Growth (+ Mail Box), or Pro (full platform). Pay by bank
-            transfer and upload your receipt.
+            Starter (Compose + Bulk), Growth (+ Mail Box), or Pro (full platform). Pay by JazzCash,
+            UBL, NayaPay, or Meezan — send your receipt on WhatsApp to activate.
           </p>
         </div>
         <div className='mt-10 grid gap-4 sm:grid-cols-3'>
@@ -947,7 +947,7 @@ export default function LandingPage() {
             to='/pricing'
             className='inline-flex rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/5'
           >
-            See full pricing
+            See pricing, banks & WhatsApp
           </Link>
         </div>
       </section>
@@ -985,7 +985,7 @@ export default function LandingPage() {
             Create your workspace
           </Link>
           <p className='mt-4 text-xs text-slate-600'>
-            Bank transfer · From $19.99/mo · Activate after receipt review
+            Bank transfer · WhatsApp receipt · From $19.99/mo
           </p>
         </div>
       </section>

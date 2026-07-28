@@ -1,4 +1,10 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  BANK_ACCOUNTS,
+  WHATSAPP_DISPLAY,
+  whatsappUrlForPlan,
+} from '../../data/billing'
 
 const TIERS = [
   {
@@ -13,7 +19,7 @@ const TIERS = [
       'Image-ready posts',
       'Bank-transfer activation',
     ],
-    cta: 'Get Starter',
+    cta: 'WhatsApp Starter',
     highlight: false,
   },
   {
@@ -29,7 +35,7 @@ const TIERS = [
       'Open, click & meeting tracking',
       'Google Calendar booking CTAs',
     ],
-    cta: 'Get Growth',
+    cta: 'WhatsApp Growth',
     highlight: true,
   },
   {
@@ -45,12 +51,29 @@ const TIERS = [
       'Integrations hub & Setup Guide',
       'Priority activation support',
     ],
-    cta: 'Get Pro',
+    cta: 'WhatsApp Pro',
     highlight: false,
   },
 ]
 
+function WhatsAppIcon({ className = 'h-4 w-4' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  )
+}
+
 export default function PricingPage() {
+  const [copied, setCopied] = useState('')
+
+  function copyText(id, value) {
+    navigator.clipboard?.writeText(value).then(() => {
+      setCopied(id)
+      window.setTimeout(() => setCopied(''), 1600)
+    })
+  }
+
   return (
     <section className="mx-auto max-w-5xl px-6 py-24">
       <div className="text-center">
@@ -60,7 +83,7 @@ export default function PricingPage() {
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-base text-slate-400">
           Starter $19.99 · Growth $39.99 · Pro $49.99. Pay by JazzCash, UBL, NayaPay, or Meezan —
-          upload your receipt and we activate your plan.
+          send your receipt on WhatsApp {WHATSAPP_DISPLAY} and we activate your plan.
         </p>
       </div>
 
@@ -97,18 +120,85 @@ export default function PricingPage() {
                 </li>
               ))}
             </ul>
-            <Link
-              to={`/sign-up?plan=${t.id}`}
-              className={`mt-8 inline-flex items-center justify-center rounded-full px-6 py-3 font-display text-sm font-bold transition ${
+            <a
+              href={whatsappUrlForPlan(t.name)}
+              target="_blank"
+              rel="noreferrer"
+              className={`mt-8 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-display text-sm font-bold transition ${
                 t.highlight
-                  ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white hover:opacity-90'
+                  ? 'bg-[#25D366] text-white hover:brightness-105'
                   : 'border border-white/15 text-white hover:bg-white/5'
               }`}
             >
-              {t.cta}
+              <WhatsAppIcon /> {t.cta}
+            </a>
+            <Link
+              to={`/sign-up?plan=${t.id}`}
+              className="mt-3 text-center text-xs font-medium text-slate-500 hover:text-slate-300"
+            >
+              Or create an account first
             </Link>
           </div>
         ))}
+      </div>
+
+      <div id="pay" className="mt-16">
+        <div className="text-center">
+          <h2 className="font-display text-2xl font-extrabold text-white sm:text-3xl">
+            Pay by bank transfer
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm text-slate-400">
+            Transfer, then send your receipt on WhatsApp {WHATSAPP_DISPLAY}. We activate your plan —
+            no card required.
+          </p>
+          <a
+            href={whatsappUrlForPlan('Growth')}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(37,211,102,0.35)] transition hover:brightness-105"
+          >
+            <WhatsAppIcon /> WhatsApp {WHATSAPP_DISPLAY}
+          </a>
+        </div>
+
+        <div className="mx-auto mt-10 grid max-w-4xl gap-3 sm:grid-cols-2">
+          {BANK_ACCOUNTS.map((acct) => (
+            <div
+              key={acct.id}
+              className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4"
+            >
+              <p className="text-sm font-semibold text-white">{acct.label}</p>
+              <p className="mt-1 text-xs text-slate-500">Name: {acct.name}</p>
+              <p className="text-xs text-slate-500">
+                {acct.iban ? 'Account' : 'Number'}: {acct.number}
+              </p>
+              {acct.iban && (
+                <p className="break-all text-[11px] text-slate-500">IBAN: {acct.iban}</p>
+              )}
+              {acct.branch && (
+                <p className="text-[11px] text-slate-500">Branch: {acct.branch}</p>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => copyText(acct.id, acct.number)}
+                  className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] font-medium text-slate-300 hover:bg-white/5"
+                >
+                  {copied === acct.id ? 'Copied' : 'Copy number'}
+                </button>
+                {acct.iban && (
+                  <button
+                    type="button"
+                    onClick={() => copyText(`${acct.id}-iban`, acct.iban)}
+                    className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] font-medium text-slate-300 hover:bg-white/5"
+                  >
+                    {copied === `${acct.id}-iban` ? 'Copied' : 'Copy IBAN'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="mt-10 rounded-3xl border border-white/[0.08] bg-white/[0.02] p-8 sm:p-10">
@@ -122,25 +212,8 @@ export default function PricingPage() {
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
               Need a tailored product, internal CRM, multi-tenant SaaS, or enterprise delivery —
-              not just Publisher Suite seats? We design and ship custom software: web platforms,
-              mobile apps, desktop tools, AI workflows, and operator CRMs scoped to your niche.
+              not just Publisher Suite seats? We design and ship custom software scoped to your niche.
             </p>
-            <ul className="mt-4 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-300">
-              {[
-                'Custom solutions',
-                'Enterprise delivery',
-                'CRM & admin panels',
-                'SaaS / multi-tenant',
-                'Web · Mobile · Desktop · AI',
-              ].map((tag) => (
-                <li
-                  key={tag}
-                  className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1"
-                >
-                  {tag}
-                </li>
-              ))}
-            </ul>
           </div>
           <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
             <Link
@@ -162,7 +235,7 @@ export default function PricingPage() {
       </div>
 
       <p className="mt-8 text-center text-[11px] text-slate-600">
-        Manual bank transfer · no card required · plans activate after receipt review
+        Manual bank transfer · no card required · plans activate after WhatsApp receipt review
       </p>
     </section>
   )
