@@ -1,6 +1,10 @@
+# robots.txt — enriched for search discovery
+# Site: https://publisher-dashboard.vercel.app
+# Updated: 2026-07-28
+# Marketing pages only. Authenticated dashboard routes are disallowed.
+
 User-agent: *
 Allow: /
-
 Disallow: /overview
 Disallow: /compose
 Disallow: /bulk
@@ -13,16 +17,55 @@ Disallow: /api-config
 Disallow: /guide
 Disallow: /billing
 Disallow: /admin
+Disallow: /admin/
 Disallow: /sign-in
 Disallow: /sign-up
 
-Sitemap: https://publisher-dashboard.vercel.app/sitemap.xml
+# ── Major search engines ──
+User-agent: Googlebot
+Allow: /
 
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Googlebot-News
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckGo-Favicons-Bot
+Allow: /
+
+# ── AI / discovery crawlers (brand reach) ──
 User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
 Allow: /
 
 User-agent: Google-Extended
 Allow: /
 
-User-agent: Bingbot
+User-agent: ClaudeBot
 Allow: /
+
+User-agent: Anthropic-AI
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+Sitemap: https://publisher-dashboard.vercel.app/sitemap.xml
+Sitemap: https://publisher-dashboard.vercel.app/sitemap-index.xml
+Host: publisher-dashboard.vercel.app
+
