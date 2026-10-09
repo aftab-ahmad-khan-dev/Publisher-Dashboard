@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -17,6 +17,10 @@ function ChartTooltip({ active, payload, label }) {
       <div className="mt-1 space-y-0.5">
         {payload.map((p) => (
           <p key={p.dataKey} className="text-xs tabular-nums text-zinc-200">
+            <span
+              className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full"
+              style={{ background: p.color }}
+            />
             {p.name}: <span className="font-medium text-white">{p.value}</span>
           </p>
         ))}
@@ -34,8 +38,20 @@ export default function MailActivityChart({ series = [], onDownload }) {
 
   const empty = data.every((d) => !d.sent && !d.opened && !d.clicked)
 
+  const peak = useMemo(() => {
+    if (!data.length) return null
+    let best = data[0]
+    for (const row of data) {
+      if ((row.sent || 0) > (best.sent || 0)) best = row
+    }
+    if (!best?.sent) return null
+    const avg = data.reduce((a, r) => a + (r.sent || 0), 0) / data.length
+    const lift = avg > 0 ? Math.round(((best.sent - avg) / avg) * 100) : 0
+    return { ...best, lift }
+  }, [data])
+
   return (
-    <section className="saas-content-card flex h-full min-h-[280px] flex-col">
+    <section className="saas-content-card flex h-full min-h-[300px] flex-col">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="saas-section-title">Mail activity</h3>
@@ -61,14 +77,24 @@ export default function MailActivityChart({ series = [], onDownload }) {
 
       <div className="relative min-h-0 flex-1">
         {empty ? (
-          <div className="flex h-[220px] items-center justify-center rounded-md border border-dashed border-white/[0.08]">
+          <div className="flex h-[240px] items-center justify-center rounded-md border border-dashed border-white/[0.08]">
             <p className="max-w-xs text-center text-xs text-zinc-500">
-              Activity appears here after campaigns start sending.
+              Activity chart fills in after campaigns start sending.
             </p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={data} margin={{ top: 12, right: 8, left: -12, bottom: 0 }}>
+              <defs>
+                <linearGradient id="mail-sent-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#a1a1aa" stopOpacity={0.28} />
+                  <stop offset="100%" stopColor="#a1a1aa" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="mail-opened-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#fafafa" stopOpacity={0.2} />
+                  <stop offset="100%" stopColor="#fafafa" stopOpacity={0} />
+                </linearGradient>
+              </defs>
               <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
               <XAxis
                 dataKey="label"
@@ -83,27 +109,42 @@ export default function MailActivityChart({ series = [], onDownload }) {
                 allowDecimals={false}
               />
               <Tooltip content={<ChartTooltip />} />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="sent"
                 name="Sent"
                 stroke="#a1a1aa"
-                strokeWidth={1.75}
-                dot={false}
-                activeDot={{ r: 3.5, strokeWidth: 0, fill: '#fafafa' }}
+                strokeWidth={2}
+                fill="url(#mail-sent-fill)"
+                activeDot={{ r: 4, strokeWidth: 0, fill: '#d4d4d8' }}
               />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="opened"
                 name="Opened"
                 stroke="#fafafa"
-                strokeWidth={1.75}
-                dot={false}
-                activeDot={{ r: 3.5, strokeWidth: 0, fill: '#fafafa' }}
+                strokeWidth={2}
+                fill="url(#mail-opened-fill)"
+                activeDot={{ r: 4, strokeWidth: 0, fill: '#fafafa' }}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         )}
+
+        {peak?.lift > 0 ? (
+          <div className="pointer-events-none absolute right-[14%] top-2 hidden rounded-md border border-white/10 bg-[#111113]/95 px-2 py-1 text-[10px] font-medium text-zinc-300 sm:block">
+            Peak +{peak.lift}% · {peak.label}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-white/[0.06] pt-3 text-[11px] text-zinc-500">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" /> Sent
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-zinc-100" /> Opened
+        </span>
       </div>
     </section>
   )

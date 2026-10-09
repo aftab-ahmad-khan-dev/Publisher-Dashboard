@@ -2,7 +2,7 @@
 export function Skeleton({ className = '' }) {
   return (
     <div
-      className={`animate-pulse rounded-md bg-white/[0.05] ${className}`}
+      className={`rounded-md bg-white/[0.05] ${className}`}
       aria-hidden
     />
   )

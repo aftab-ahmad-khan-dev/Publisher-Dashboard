@@ -186,7 +186,7 @@ export default function BillingPage() {
           subtitle="Platform admin — review receipts and activate plans. No payment required for your account."
         />
         <PageScroll className="space-y-6 pb-8">
-          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <div className="saas-content-card border-white/[0.08] px-4 py-3 text-sm text-zinc-200">
             Signed in as <strong>{user?.email || 'admin'}</strong> — full Pro access unlocked. You are never
             asked to pay. Manage user receipts below (also available under{' '}
             <Link to="/admin/users" className="underline hover:text-white">
@@ -195,7 +195,7 @@ export default function BillingPage() {
             ).
           </div>
 
-          <div className="flex flex-wrap gap-3 text-sm text-slate-400">
+          <div className="flex flex-wrap gap-3 text-sm text-zinc-400">
             <span>
               Pending:{' '}
               <strong className="text-amber-300">{pending.length}</strong>
@@ -207,7 +207,7 @@ export default function BillingPage() {
           </div>
 
           {payments.length === 0 ? (
-            <p className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-8 text-center text-sm text-slate-500">
+            <p className="saas-content-card px-4 py-8 text-center text-sm text-zinc-500">
               No payment receipts yet. When users upload receipts, they appear here for activation.
             </p>
           ) : (
@@ -215,7 +215,7 @@ export default function BillingPage() {
               {payments.map((p) => (
                 <li
                   key={p.id}
-                  className="rounded-2xl border border-white/10 bg-white/[0.02] p-4"
+                  className="saas-content-card p-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -223,15 +223,15 @@ export default function BillingPage() {
                         {p.userEmail || p.workspaceId} ·{' '}
                         {PLAN_META[p.planRequested]?.name || p.planRequested}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-zinc-500">
                         {p.bankMethod} · {formatWhen(p.createdAt)}
                       </p>
-                      {p.note ? <p className="mt-2 text-xs text-slate-400">{p.note}</p> : null}
+                      {p.note ? <p className="mt-2 text-xs text-zinc-400">{p.note}</p> : null}
                     </div>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${
                         p.status === 'approved'
-                          ? 'bg-emerald-500/15 text-emerald-300'
+                          ? 'bg-white/[0.06] text-zinc-300'
                           : p.status === 'rejected'
                             ? 'bg-rose-500/15 text-rose-300'
                             : 'bg-amber-500/15 text-amber-300'
@@ -245,7 +245,7 @@ export default function BillingPage() {
                       <button
                         type="button"
                         onClick={() => setReceiptPreviewUrl(p.receiptUrl)}
-                        className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/5"
+                        className="btn-secondary px-3 py-1.5 text-xs"
                       >
                         View receipt
                       </button>
@@ -256,7 +256,7 @@ export default function BillingPage() {
                           type="button"
                           disabled={busyId === p.id}
                           onClick={() => onActivate(p.id)}
-                          className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                          className="btn-primary px-3 py-1.5 text-xs disabled:opacity-50"
                         >
                           Activate plan
                         </button>
@@ -264,7 +264,7 @@ export default function BillingPage() {
                           type="button"
                           disabled={busyId === p.id}
                           onClick={() => onReject(p.id)}
-                          className="rounded-full border border-rose-500/30 px-3 py-1.5 text-xs text-rose-300 disabled:opacity-50"
+                          className="btn-danger px-3 py-1.5 text-xs disabled:opacity-50"
                         >
                           Reject
                         </button>
@@ -283,7 +283,7 @@ export default function BillingPage() {
             onClick={() => setReceiptPreviewUrl(null)}
             role="dialog"
           >
-            <div className="max-h-[90vh] max-w-3xl overflow-auto rounded-2xl border border-white/10 bg-[#0c1220] p-4">
+            <div className="max-h-[90vh] max-w-3xl overflow-auto saas-content-card bg-[var(--bg-panel)] p-4">
               <img
                 src={receiptPreviewUrl}
                 alt="Payment receipt"
@@ -293,7 +293,7 @@ export default function BillingPage() {
                 href={receiptPreviewUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-3 inline-block text-sm text-indigo-300"
+                className="mt-3 inline-block text-sm text-zinc-300"
                 onClick={(e) => e.stopPropagation()}
               >
                 Open original
@@ -312,7 +312,7 @@ export default function BillingPage() {
         subtitle="Transfer to a bank account, upload your receipt, and we activate your plan after review."
       />
       <PageScroll className="space-y-6 pb-8">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-slate-300">
+        <div className="saas-content-card px-4 py-3 text-sm text-zinc-300">
           Current plan:{' '}
           <span className="font-semibold text-white">
             {PLAN_META[subscription?.plan]?.name || 'No plan'}
@@ -325,7 +325,7 @@ export default function BillingPage() {
         </div>
 
         <section>
-          <h2 className="font-display text-lg font-bold text-white">Choose a plan</h2>
+          <h2 className="text-lg font-bold text-white">Choose a plan</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             {PLAN_ORDER.map((id) => {
               const t = PLAN_META[id]
@@ -335,22 +335,22 @@ export default function BillingPage() {
                   key={id}
                   type="button"
                   onClick={() => setPlanRequested(id)}
-                  className={`rounded-2xl border p-4 text-left transition ${
+                  className={`saas-content-card text-left transition ${
                     active
-                      ? 'border-indigo-500/50 bg-indigo-500/10'
-                      : 'border-white/10 bg-white/[0.02] hover:border-white/20'
+                      ? 'border-white/25 bg-white/[0.08]'
+                      : 'hover:border-white/20'
                   }`}
                 >
-                  <p className="font-display text-base font-bold text-white">{t.name}</p>
-                  <p className="mt-1 font-display text-2xl font-extrabold text-white">
+                  <p className="text-base font-bold text-white">{t.name}</p>
+                  <p className="mt-1 text-2xl font-extrabold text-white">
                     ${Number(t.price).toFixed(2)}
-                    <span className="text-sm font-medium text-slate-500">/mo</span>
+                    <span className="text-sm font-medium text-zinc-500">/mo</span>
                   </p>
-                  <p className="mt-2 text-xs text-slate-400">{t.blurb}</p>
+                  <p className="mt-2 text-xs text-zinc-400">{t.blurb}</p>
                   {Array.isArray(t.features) && t.features.length > 0 && (
                     <ul className="mt-3 space-y-1">
                       {t.features.slice(0, 4).map((f) => (
-                        <li key={f} className="text-[10px] leading-snug text-slate-500">
+                        <li key={f} className="text-[10px] leading-snug text-zinc-500">
                           · {f}
                         </li>
                       ))}
@@ -363,27 +363,27 @@ export default function BillingPage() {
         </section>
 
         <section>
-          <h2 className="font-display text-lg font-bold text-white">Pay by bank transfer</h2>
+          <h2 className="text-lg font-bold text-white">Pay by bank transfer</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {banks.map((bank) => (
               <button
                 key={bank.id}
                 type="button"
                 onClick={() => setBankMethod(bank.id)}
-                className={`rounded-2xl border p-4 text-left transition ${
+                className={`saas-content-card text-left transition ${
                   bankMethod === bank.id
-                    ? 'border-sky-500/40 bg-sky-500/10'
-                    : 'border-white/10 bg-white/[0.02] hover:border-white/20'
+                    ? 'border-white/25 bg-white/[0.08]'
+                    : 'hover:border-white/20'
                 }`}
               >
                 <p className="font-semibold text-white">{bank.name}</p>
-                <p className="mt-1 text-xs text-slate-400">{bank.accountTitle}</p>
-                <p className="mt-2 font-mono text-sm text-slate-200">{bank.accountNumber}</p>
+                <p className="mt-1 text-xs text-zinc-400">{bank.accountTitle}</p>
+                <p className="mt-2 font-mono text-sm text-zinc-200">{bank.accountNumber}</p>
                 {bank.iban ? (
-                  <p className="mt-1 break-all font-mono text-[11px] text-slate-400">{bank.iban}</p>
+                  <p className="mt-1 break-all font-mono text-[11px] text-zinc-400">{bank.iban}</p>
                 ) : null}
                 {bank.branch ? (
-                  <p className="mt-1 text-[11px] text-slate-500">{bank.branch}</p>
+                  <p className="mt-1 text-[11px] text-zinc-500">{bank.branch}</p>
                 ) : null}
               </button>
             ))}
@@ -394,7 +394,7 @@ export default function BillingPage() {
               <button
                 type="button"
                 onClick={() => copyText(selectedBank.accountNumber)}
-                className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/5"
+                className="btn-secondary px-3 py-1.5 text-xs"
               >
                 Copy account / number
               </button>
@@ -402,7 +402,7 @@ export default function BillingPage() {
                 <button
                   type="button"
                   onClick={() => copyText(selectedBank.iban)}
-                  className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/5"
+                  className="btn-secondary px-3 py-1.5 text-xs"
                 >
                   Copy IBAN
                 </button>
@@ -411,12 +411,12 @@ export default function BillingPage() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-          <h2 className="font-display text-lg font-bold text-white">Upload receipt</h2>
-          <p className="mt-1 text-sm text-slate-400">
+        <section className="saas-content-card p-5">
+          <h2 className="text-lg font-bold text-white">Upload receipt</h2>
+          <p className="mt-1 text-sm text-zinc-400">
             Screenshot or photo of your transfer confirmation (JPG/PNG).
           </p>
-          <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-black/20 px-4 py-8 text-center hover:border-indigo-500/40">
+          <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-black/20 px-4 py-8 text-center hover:border-white/25">
             <input
               type="file"
               accept="image/*,application/pdf"
@@ -426,7 +426,7 @@ export default function BillingPage() {
             {receiptPreview ? (
               <img src={receiptPreview} alt="Receipt preview" className="max-h-48 rounded-lg object-contain" />
             ) : (
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-zinc-400">
                 {uploading ? 'Uploading…' : 'Click to choose receipt image'}
               </span>
             )}
@@ -442,7 +442,7 @@ export default function BillingPage() {
             type="button"
             disabled={submitting || uploading}
             onClick={handleSubmit}
-            className="mt-4 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-6 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+            className="btn-primary mt-4 px-6 py-2.5 text-sm disabled:opacity-50"
           >
             {submitting ? 'Submitting…' : 'Submit for activation'}
           </button>
@@ -450,20 +450,20 @@ export default function BillingPage() {
 
         {payments.length > 0 && (
           <section>
-            <h2 className="font-display text-lg font-bold text-white">Your submissions</h2>
+            <h2 className="text-lg font-bold text-white">Your submissions</h2>
             <ul className="mt-3 space-y-2">
               {payments.map((p) => (
                 <li
                   key={p.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm"
                 >
-                  <span className="text-slate-200">
+                  <span className="text-zinc-200">
                     {PLAN_META[p.planRequested]?.name || p.planRequested} · {p.bankMethod}
                   </span>
                   <span
                     className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${
                       p.status === 'approved'
-                        ? 'bg-emerald-500/15 text-emerald-300'
+                        ? 'bg-white/[0.06] text-zinc-300'
                         : p.status === 'rejected'
                           ? 'bg-rose-500/15 text-rose-300'
                           : 'bg-amber-500/15 text-amber-300'
@@ -480,16 +480,16 @@ export default function BillingPage() {
 
       {thankYou && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="max-w-md rounded-2xl border border-white/10 bg-[#0c1220] p-8 text-center shadow-2xl">
-            <h3 className="font-display text-xl font-bold text-white">Thank you!</h3>
-            <p className="mt-3 text-sm text-slate-400">
+          <div className="max-w-md saas-content-card bg-[var(--bg-panel)] p-8 text-center shadow-2xl">
+            <h3 className="text-xl font-bold text-white">Thank you!</h3>
+            <p className="mt-3 text-sm text-zinc-400">
               We received your receipt. A confirmation email is on the way. Once we activate your plan,
               you will get a welcome email and full access unlocks.
             </p>
             <button
               type="button"
               onClick={() => setThankYou(false)}
-              className="mt-6 rounded-full bg-indigo-600 px-5 py-2 text-sm font-bold text-white"
+              className="btn-primary mt-6 px-5 py-2 text-sm"
             >
               Got it
             </button>

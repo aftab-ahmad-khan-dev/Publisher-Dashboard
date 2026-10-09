@@ -42,7 +42,7 @@ function PostThumb({ file }) {
   }, [file])
   if (!url) {
     return (
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-white/[0.03] text-[10px] text-slate-600">
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-white/[0.03] text-[10px] text-zinc-600">
         No img
       </div>
     )
@@ -121,14 +121,14 @@ export default function BulkUploadPage() {
             title="Content"
             description={
               <>
-                One block per post. Headers: <code className="text-slate-400">Post 1 (Day 1)</code>,{' '}
-                <code className="text-slate-400">Post 2 (Day 2)</code>
+                One block per post. Headers: <code className="text-zinc-400">Post 1 (Day 1)</code>,{' '}
+                <code className="text-zinc-400">Post 2 (Day 2)</code>
               </>
             }
             action={
               <button
                 type="button"
-                className="text-[11px] font-medium text-indigo-400 hover:text-indigo-300"
+                className="text-[11px] font-medium text-zinc-400 hover:text-zinc-200"
                 onClick={() => setRaw(SAMPLE)}
               >
                 Load sample
@@ -147,7 +147,7 @@ export default function BulkUploadPage() {
           <PageSection title="Images" description="Matched to post/day number from filename (1.jpg, 2.png, …)">
             <BulkImageDropzone files={imageFiles} onChange={setImageFiles} />
             {imageMapSummary.length > 0 && (
-              <p className="mt-2 text-[11px] text-emerald-400/90">
+              <p className="mt-2 text-[11px] text-zinc-400">
                 Linked: {imageMapSummary.map(([n, f]) => `Day ${n} ← ${f.name}`).join(' · ')}
               </p>
             )}
@@ -173,8 +173,8 @@ export default function BulkUploadPage() {
                   onClick={() => togglePlatform(key)}
                   className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium ring-1 transition ${
                     platforms[key]
-                      ? 'bg-indigo-500/15 text-white ring-indigo-500/40'
-                      : 'bg-white/[0.02] text-slate-500 ring-white/[0.06]'
+                      ? 'bg-white/[0.1] text-white ring-white/20'
+                      : 'bg-white/[0.02] text-zinc-500 ring-white/[0.06]'
                   }`}
                 >
                   <PlatformIcon platform={key} size="sm" />
@@ -207,7 +207,7 @@ export default function BulkUploadPage() {
             className="min-h-[200px]"
           >
             {parsed.length === 0 ? (
-              <p className="py-12 text-center text-xs text-slate-500">Parsed posts appear here</p>
+              <p className="py-12 text-center text-xs text-zinc-500">Parsed posts appear here</p>
             ) : (
               <ul className="space-y-3">
                 {parsed.map((post) => {
@@ -217,8 +217,8 @@ export default function BulkUploadPage() {
                       <div className="flex gap-3">
                         <PostThumb file={post.imageFile} />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold text-indigo-300">{post.title}</p>
-                          <p className="text-[10px] text-slate-500">
+                          <p className="text-xs font-semibold text-zinc-300">{post.title}</p>
+                          <p className="text-[10px] text-zinc-500">
                             {when.toLocaleString(undefined, {
                               weekday: 'short',
                               month: 'short',
@@ -230,7 +230,7 @@ export default function BulkUploadPage() {
                               <span className="ml-2 text-amber-500/80">· no image matched</span>
                             )}
                           </p>
-                          <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-slate-400">
+                          <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-zinc-400">
                             {post.body || '(empty body)'}
                           </p>
                         </div>

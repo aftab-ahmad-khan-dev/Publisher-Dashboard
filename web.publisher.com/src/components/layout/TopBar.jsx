@@ -112,7 +112,7 @@ export default function TopBar() {
         <div className="flex shrink-0 items-center gap-2">
           {processing && (
             <span className="hidden items-center gap-1.5 text-[11px] font-medium text-zinc-500 lg:inline-flex">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-zinc-300" />
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
               {processingLabel || 'Processing'}
             </span>
           )}

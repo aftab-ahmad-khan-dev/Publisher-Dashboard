@@ -17,6 +17,7 @@ import {
   saveEmailTemplateDraft,
   saveEmailNudgeSettings,
   listEmailTemplates,
+  listEmailLibrary,
   listProcessedEmails,
   listEmailMeetings,
   updateEmailMeeting,
@@ -37,12 +38,9 @@ import {
 } from '../lib/backendApi'
 import { mergeTemplate } from '../lib/emailParse'
 import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from '../lib/meetingCta'
-import {
-  OUTREACH_TEMPLATES,
-  PRODUCT_TEMPLATES,
-  SIGNATURE,
-} from '../lib/emailTemplates'
+import { SIGNATURE } from '../lib/emailTemplates'
 import LeadSourcePanel from '../components/email/LeadSourcePanel'
+import TemplateLibraryPanel from '../components/email/TemplateLibraryPanel'
 import ConfirmDialog from '../components/ConfirmDialog'
 import PageShell, { PageScroll } from '../components/PageShell'
 import PageHeader from '../components/PageHeader'
@@ -52,6 +50,7 @@ import { toDatetimeLocalValue, datetimeLocalToISO, parseDatetimeLocal } from '..
 const TABS = [
   { id: 'mailbox', label: 'Inbox' },
   { id: 'campaigns', label: 'Campaigns' },
+  { id: 'templates', label: 'Templates' },
   { id: 'processed', label: 'People' },
   { id: 'meetings', label: 'Meetings' },
 ]
@@ -94,25 +93,25 @@ const MEETING_STATUSES = [
 
 function StatusChip({ status }) {
   const styles = {
-    queued: 'bg-slate-500/20 text-slate-300',
-    sending: 'bg-amber-500/20 text-amber-300',
-    sent: 'bg-sky-500/20 text-sky-300',
-    opened: 'bg-emerald-500/20 text-emerald-300',
-    clicked: 'bg-zinc-100/20 text-zinc-200',
-    failed: 'bg-rose-500/20 text-rose-300',
-    cancelled: 'bg-slate-600/30 text-slate-500',
-    paused: 'bg-amber-500/20 text-amber-200',
-    draft: 'bg-slate-500/20 text-slate-400',
-    completed: 'bg-emerald-500/20 text-emerald-300',
-    invited: 'bg-sky-500/20 text-sky-300',
-    link_clicked: 'bg-zinc-100/20 text-zinc-200',
-    scheduled: 'bg-emerald-500/20 text-emerald-300',
-    no_show: 'bg-rose-500/20 text-rose-300',
-    none: 'bg-white/5 text-slate-500',
+    queued: 'bg-white/[0.06] text-zinc-400',
+    sending: 'bg-amber-500/15 text-amber-200',
+    sent: 'bg-white/[0.08] text-zinc-200',
+    opened: 'bg-white/[0.1] text-zinc-100',
+    clicked: 'bg-white/[0.1] text-zinc-100',
+    failed: 'bg-rose-500/15 text-rose-300',
+    cancelled: 'bg-white/[0.04] text-zinc-500',
+    paused: 'bg-amber-500/15 text-amber-200',
+    draft: 'bg-white/[0.05] text-zinc-400',
+    completed: 'bg-white/[0.1] text-zinc-100',
+    invited: 'bg-white/[0.08] text-zinc-200',
+    link_clicked: 'bg-white/[0.1] text-zinc-100',
+    scheduled: 'bg-white/[0.1] text-zinc-100',
+    no_show: 'bg-rose-500/15 text-rose-300',
+    none: 'bg-white/[0.04] text-zinc-500',
   }
   return (
     <span
-      className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+      className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium capitalize ${
         styles[status] || styles.queued
       }`}
     >
@@ -121,7 +120,7 @@ function StatusChip({ status }) {
   )
 }
 
-/** Green progress for rolling 24h send limit (sent24h / dailyCap). */
+/** Rolling 24h send limit (sent24h / dailyCap). */
 function DailyCapBar({ sent = 0, cap = 200, compact = false }) {
   const limit = Math.max(1, Number(cap) || 200)
   const used = Math.max(0, Number(sent) || 0)
@@ -129,41 +128,29 @@ function DailyCapBar({ sent = 0, cap = 200, compact = false }) {
   const full = used >= limit
   return (
     <div
-      className={`rounded-xl border px-3 py-2.5 ${
-        full
-          ? 'border-amber-500/30 bg-amber-500/[0.08]'
-          : 'border-emerald-500/25 bg-emerald-500/[0.06]'
+      className={`rounded-md border px-3 py-2.5 ${
+        full ? 'border-amber-500/25 bg-amber-500/[0.06]' : 'border-white/[0.08] bg-transparent'
       }`}
       title="Emails sent in the last 24 hours vs your Max / 24h limit"
     >
       <div className="mb-1.5 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p
-            className={`text-[10px] font-semibold uppercase tracking-wide ${
-              full ? 'text-amber-300/90' : 'text-emerald-400/80'
-            }`}
-          >
+          <p className={`text-[11px] font-medium ${full ? 'text-amber-200' : 'text-zinc-400'}`}>
             Daily send limit
           </p>
-          {!compact && (
-            <p className="mt-0.5 text-[10px] text-slate-500">Rolling last 24 hours</p>
-          )}
+          {!compact && <p className="mt-0.5 text-[10px] text-zinc-500">Rolling last 24 hours</p>}
         </div>
-        <p className="text-sm font-semibold tabular-nums text-white">
+        <p className="text-sm font-semibold tabular-nums text-zinc-100">
           {used.toLocaleString()}
-          <span className="text-slate-500"> / </span>
-          <span className={full ? 'text-amber-200' : 'text-emerald-200'}>
-            {limit.toLocaleString()}
-          </span>
-          <span className="ml-1.5 text-[10px] font-medium text-slate-500">{pct}%</span>
+          <span className="text-zinc-500"> / </span>
+          <span className={full ? 'text-amber-200' : 'text-zinc-300'}>{limit.toLocaleString()}</span>
+          <span className="ml-1.5 text-[10px] font-medium text-zinc-500">{pct}%</span>
         </p>
       </div>
-      <div className="h-2.5 overflow-hidden rounded-full bg-black/40 ring-1 ring-white/[0.06]">
+      <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
         <div
           className={`h-full rounded-full transition-[width] duration-500 ease-out ${
-            full
-              ? 'bg-gradient-to-r from-amber-500 to-amber-300'
-              : 'bg-gradient-to-r from-emerald-600 to-emerald-400'
+            full ? 'bg-amber-400' : 'bg-zinc-300'
           }`}
           style={{ width: `${pct}%` }}
         />
@@ -173,7 +160,7 @@ function DailyCapBar({ sent = 0, cap = 200, compact = false }) {
           Cap reached — sending pauses until the 24h window frees slots.
         </p>
       ) : (
-        <p className="mt-1.5 text-[10px] text-slate-500">
+        <p className="mt-1.5 text-[10px] text-zinc-500">
           {(limit - used).toLocaleString()} remaining today
         </p>
       )}
@@ -273,7 +260,7 @@ function MeetingNotesField({ meeting, onSave, slim = true }) {
       <input
         id={`meeting-notes-${meeting.id}`}
         type="text"
-        className={`w-full rounded-md border border-white/10 bg-white/[0.04] text-[11px] text-white placeholder:text-slate-600 focus:border-zinc-400/40 focus:outline-none focus:ring-1 focus:ring-teal-400/30 ${
+        className={`w-full rounded-md border border-white/10 bg-white/[0.04] text-[11px] text-white placeholder:text-zinc-600 focus:border-zinc-400/40 focus:outline-none focus:ring-1 focus:ring-white/10 ${
           slim ? 'h-7 px-2 py-0' : 'px-2.5 py-1.5'
         }`}
         value={text}
@@ -342,36 +329,36 @@ function MeetingBookingBlock({
           compact ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-3'
         }`}
       >
-        <div className="min-w-0 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.07] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-400/90">
+        <div className="min-w-0 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
             When
           </p>
           {hasLeadBooking ? (
             <div className="mt-1 space-y-1.5">
               <div>
-                <p className="text-[9px] font-medium text-emerald-400/80">
+                <p className="text-[9px] font-medium text-zinc-500">
                   Lead{eventTz ? ` · ${eventTz.replace(/_/g, ' ')}` : ''}
                 </p>
-                <p className="text-[11px] font-semibold leading-snug text-emerald-200">
+                <p className="text-[11px] font-semibold leading-snug text-zinc-200">
                   {leadDisplay}
                 </p>
               </div>
               {myWhen ? (
-                <div className="border-t border-emerald-500/15 pt-1.5">
-                  <p className="text-[9px] font-medium text-sky-400/80">
+                <div className="border-t border-white/[0.06] pt-1.5">
+                  <p className="text-[9px] font-medium text-zinc-500">
                     You{myTz ? ` · ${myTz.replace(/_/g, ' ')}` : ''}
                   </p>
-                  <p className="text-[11px] font-semibold leading-snug text-sky-200">
+                  <p className="text-[11px] font-semibold leading-snug text-zinc-300">
                     {myWhen}
                   </p>
                   {sameZone ? (
-                    <p className="mt-0.5 text-[9px] text-slate-500">Same as lead</p>
+                    <p className="mt-0.5 text-[9px] text-zinc-500">Same as lead</p>
                   ) : null}
                 </div>
               ) : null}
             </div>
           ) : (
-            <p className="mt-0.5 text-[11px] text-slate-500">Not booked yet</p>
+            <p className="mt-0.5 text-[11px] text-zinc-500">Not booked yet</p>
           )}
         </div>
 
@@ -399,16 +386,16 @@ function MeetingBookingBlock({
                 Open link
               </a>
             ) : (
-              <p className="text-[11px] text-slate-500">No Meet link yet</p>
+              <p className="text-[11px] text-zinc-500">No Meet link yet</p>
             )}
           </div>
         </div>
 
         <div className="min-w-0 overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
             {hasLeadBooking ? 'Admin invite' : 'Create invite'}
           </p>
-          <p className="mt-0.5 mb-1 text-[9px] leading-snug text-slate-500">
+          <p className="mt-0.5 mb-1 text-[9px] leading-snug text-zinc-500">
             {hasLeadBooking ? 'Only if you need a new Meet' : 'Pick date/time for Meet'}
           </p>
           <DateTimePicker
@@ -422,7 +409,7 @@ function MeetingBookingBlock({
           />
           <button
             type="button"
-            className="mt-1.5 w-full rounded-lg bg-zinc-100/25 px-2 py-1.5 text-[10px] font-semibold text-zinc-100 ring-1 ring-teal-400/35 hover:bg-zinc-100/35 disabled:opacity-50"
+            className="mt-1.5 w-full rounded-lg bg-zinc-100/25 px-2 py-1.5 text-[10px] font-semibold text-zinc-100 ring-1 ring-white/15 hover:bg-zinc-100/35 disabled:opacity-50"
             disabled={inviting || !canInvite || !when}
             onClick={() => {
               if (!when) return
@@ -526,11 +513,12 @@ export default function EmailPage() {
   const [campaignSearch, setCampaignSearch] = useState('')
   const [campaignStatusFilter, setCampaignStatusFilter] = useState('all')
   const [mode, setMode] = useState('bulk')
-  const [templateType, setTemplateType] = useState('outreach')
+  const [templateCategory, setTemplateCategory] = useState('all')
+  const [libraryCategories, setLibraryCategories] = useState([])
   const [apiTemplates, setApiTemplates] = useState([])
-  const [templateId, setTemplateId] = useState(OUTREACH_TEMPLATES[0].id)
-  const [subject, setSubject] = useState(OUTREACH_TEMPLATES[0].subject)
-  const [body, setBody] = useState(OUTREACH_TEMPLATES[0].body)
+  const [templateId, setTemplateId] = useState('')
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
   const [htmlBody, setHtmlBody] = useState('')
   const [meetingLink, setMeetingLink] = useState('')
   const [sendScheduleMode, setSendScheduleMode] = useState('now')
@@ -565,18 +553,40 @@ export default function EmailPage() {
   const [nudgeSettingsBusy, setNudgeSettingsBusy] = useState(false)
 
   const templateList = useMemo(() => {
-    const fromApi = apiTemplates.filter((t) => t.type === templateType)
-    if (fromApi.length) return fromApi
-    const fallback = templateType === 'product' ? PRODUCT_TEMPLATES : OUTREACH_TEMPLATES
-    return fallback.map((t) => ({ ...t, textBody: t.body, htmlBody: '' }))
-  }, [apiTemplates, templateType])
+    if (templateCategory === 'all') return apiTemplates
+    return apiTemplates.filter(
+      (t) => (t.category || t.type || 'General') === templateCategory,
+    )
+  }, [apiTemplates, templateCategory])
 
   const selectedTemplate = useMemo(
     () => templateList.find((t) => t.id === templateId) || templateList[0] || null,
     [templateList, templateId],
   )
 
-  const typeLabel = templateType === 'product' ? 'VorksPro' : 'Outreach'
+  const templateType = selectedTemplate?.category || templateCategory || 'custom'
+  const typeLabel =
+    templateCategory === 'all' ? 'All categories' : templateCategory || 'Templates'
+
+  const refreshLibrary = useCallback(async () => {
+    if (!live) return
+    try {
+      const d = await listEmailTemplates({
+        category: templateCategory !== 'all' ? templateCategory : undefined,
+        meetingLink: meetingLink || globalMeetingLink || undefined,
+      })
+      setApiTemplates(d.templates || [])
+      if (Array.isArray(d.categories)) setLibraryCategories(d.categories)
+    } catch {
+      try {
+        const lib = await listEmailLibrary()
+        setApiTemplates(lib.templates || [])
+        setLibraryCategories(lib.categories || [])
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [live, templateCategory, meetingLink, globalMeetingLink])
 
   const loadCampaigns = useCallback(async () => {
     if (!live) return
@@ -952,10 +962,8 @@ export default function EmailPage() {
         }
       })
       .catch(() => {})
-    listEmailTemplates({ meetingLink: meetingLink || globalMeetingLink })
-      .then((d) => setApiTemplates(d.templates || []))
-      .catch(() => {})
-  }, [live, meetingLink, globalMeetingLink])
+    refreshLibrary()
+  }, [live, meetingLink, globalMeetingLink, refreshLibrary])
 
   const DEFAULT_CALENDAR_BOOKING = 'https://calendar.app.google/eKcZV6Cy9SuCgA878'
   const isCalendarBookingUrl = (u) => {
@@ -1076,9 +1084,14 @@ export default function EmailPage() {
   }
 
   useEffect(() => {
-    if (templateList[0]) applyTemplate(templateList[0])
+    if (!templateList.length) {
+      setTemplateId('')
+      return
+    }
+    const still = templateList.find((t) => t.id === templateId)
+    if (!still) applyTemplate(templateList[0])
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templateType, apiTemplates])
+  }, [templateCategory, apiTemplates])
 
   const previewMerge = useMemo(() => {
     const lead = leadPayload?.leads?.[0]
@@ -1234,7 +1247,7 @@ export default function EmailPage() {
       showToast('Set VITE_API_BASE_URL to send email.', 'error')
       return
     }
-    if (templateType === 'product' && !workspaceBooking) {
+    if (String(templateType).toLowerCase() === 'product' && !workspaceBooking) {
       showToast(
         'Save your Google Calendar booking link once in the Meetings tab (or connect Calendar).',
         'error',
@@ -1432,8 +1445,8 @@ export default function EmailPage() {
 
       {/* ─── Native Mail Box ─── */}
       {tab === 'mailbox' && (
-        <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#080a12]">
-          <aside className="hidden w-44 shrink-0 flex-col border-r border-white/[0.06] bg-[#070910] sm:flex">
+        <div className="mail-shell flex min-h-0 flex-1 overflow-hidden rounded-md border border-white/[0.08] bg-[var(--bg-panel)]">
+          <aside className="hidden w-48 shrink-0 flex-col border-r border-white/[0.06] bg-[var(--bg-app)] sm:flex">
             <div className="p-3">
               <button
                 type="button"
@@ -1443,20 +1456,20 @@ export default function EmailPage() {
                 Compose
               </button>
             </div>
-            <nav className="saas-scroll flex-1 space-y-0.5 overflow-y-auto px-2">
+            <nav className="saas-scroll flex-1 space-y-px overflow-y-auto px-2">
               {MAILBOX_FOLDERS.map((f) => (
                 <button
                   key={f.id}
                   type="button"
                   onClick={() => setFolder(f.id)}
-                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
+                  className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-[13px] font-medium transition ${
                     folder === f.id
-                      ? 'bg-zinc-100/15 font-semibold text-white ring-1 ring-white/10'
-                      : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                      ? 'bg-white/[0.08] text-zinc-50'
+                      : 'text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200'
                   }`}
                 >
                   <span>{f.label}</span>
-                  <span className="tabular-nums text-[10px] text-slate-500">
+                  <span className="tabular-nums text-[10px] text-zinc-500">
                     {folderCounts[f.id] ?? ''}
                   </span>
                 </button>
@@ -1468,7 +1481,7 @@ export default function EmailPage() {
           </aside>
 
           <section className="flex w-full min-w-0 flex-col border-r border-white/[0.06] sm:w-[340px] lg:w-[380px]">
-            <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] bg-black/20 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-3 py-2">
               <input
                 value={mailboxQuery}
                 onChange={(e) => setMailboxQuery(e.target.value)}
@@ -1519,8 +1532,8 @@ export default function EmailPage() {
             </div>
 
             {selectMode && tab === 'mailbox' && (
-              <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.06] bg-zinc-100/[0.07] px-3 py-2">
-                <label className="mr-1 flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-zinc-200">
+              <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                <label className="mr-1 flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-zinc-300">
                   <input
                     type="checkbox"
                     checked={allSelected && messages.length > 0}
@@ -1531,14 +1544,14 @@ export default function EmailPage() {
                   Select all
                 </label>
                 {selectedCount > 0 && (
-                  <span className="text-[10px] text-slate-400">{selectedCount} selected</span>
+                  <span className="text-[10px] text-zinc-500">{selectedCount} selected</span>
                 )}
                 {selectedCount > 0 &&
                   (folder === 'junk' ? (
                     <>
                       <button
                         type="button"
-                        className="rounded-lg bg-emerald-500/20 px-2 py-1 text-[10px] font-semibold text-emerald-200 disabled:opacity-50"
+                        className="btn-secondary px-2 py-1 text-[10px] disabled:opacity-50"
                         disabled={bulkBusy}
                         onClick={() => runBulkMailbox('restore')}
                       >
@@ -1546,7 +1559,7 @@ export default function EmailPage() {
                       </button>
                       <button
                         type="button"
-                        className="rounded-lg bg-rose-500/20 px-2 py-1 text-[10px] font-semibold text-rose-300 disabled:opacity-50"
+                        className="btn-danger px-2 py-1 text-[10px] disabled:opacity-50"
                         disabled={bulkBusy}
                         onClick={() => runBulkMailbox('delete')}
                       >
@@ -1556,7 +1569,7 @@ export default function EmailPage() {
                   ) : (
                     <button
                       type="button"
-                      className="rounded-lg bg-amber-500/20 px-2 py-1 text-[10px] font-semibold text-amber-200 disabled:opacity-50"
+                      className="btn-secondary px-2 py-1 text-[10px] disabled:opacity-50"
                       disabled={bulkBusy}
                       onClick={() => runBulkMailbox('junk')}
                     >
@@ -1568,17 +1581,17 @@ export default function EmailPage() {
 
             <div className="saas-scroll min-h-0 flex-1 overflow-y-auto">
               {!live && (
-                <p className="p-4 text-sm text-slate-500">Connect the API to use the mailbox.</p>
+                <p className="p-4 text-sm text-zinc-500">Connect the API to use the mailbox.</p>
               )}
               {live && messages.length === 0 && (
-                <p className="p-4 text-sm text-slate-500">No messages in this folder.</p>
+                <p className="p-4 text-sm text-zinc-500">No messages in this folder.</p>
               )}
               {messages.map((m) => (
                 <div
                   key={m.id}
-                  className={`flex w-full items-start gap-2 border-b border-white/[0.04] px-3 py-2.5 transition hover:bg-white/[0.03] ${
+                  className={`flex w-full items-start gap-2 border-b border-white/[0.05] px-3 py-2.5 transition hover:bg-white/[0.03] ${
                     selectedId === m.id ? 'bg-white/[0.06]' : ''
-                  } ${selectMode && selectedMailIds.has(m.id) ? 'bg-zinc-100/[0.08]' : ''}`}
+                  } ${selectMode && selectedMailIds.has(m.id) ? 'bg-white/[0.05]' : ''}`}
                 >
                   {selectMode && (
                     <input
@@ -1601,20 +1614,20 @@ export default function EmailPage() {
                     className="min-w-0 flex-1 text-left"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="truncate text-sm font-medium text-white">
+                      <p className="truncate text-sm font-medium text-zinc-100">
                         {m.name || m.email}
                       </p>
-                      <span className="shrink-0 text-[10px] text-slate-500">
+                      <span className="shrink-0 text-[10px] text-zinc-500">
                         {fmtTime(m.sentAt || m.createdAt)}
                       </span>
                     </div>
-                    <p className="truncate text-xs text-slate-400">
+                    <p className="truncate text-xs text-zinc-500">
                       {m.renderedSubject || m.company || m.email}
                     </p>
-                    <div className="mt-1 flex items-center gap-2">
+                    <div className="mt-1.5 flex items-center gap-2">
                       <StatusChip status={m.status} />
                       {m.openCount > 0 && (
-                        <span className="text-[10px] text-emerald-400/80">
+                        <span className="text-[10px] text-zinc-500">
                           {m.openCount} open{m.openCount > 1 ? 's' : ''}
                         </span>
                       )}
@@ -1627,13 +1640,13 @@ export default function EmailPage() {
               ))}
             </div>
             <div className="flex items-center justify-between gap-2 border-t border-white/[0.06] px-3 py-2">
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[10px] text-zinc-500">
                 {mailboxTotal} · p.{mailboxPage}/{mailboxTotalPages}
               </p>
               <div className="flex gap-1">
                 <button
                   type="button"
-                  className="rounded-lg border border-white/10 px-2 py-1 text-[10px] font-semibold text-slate-300 disabled:opacity-40"
+                  className="btn-secondary px-2 py-1 text-[10px] disabled:opacity-40"
                   disabled={mailboxPage <= 1}
                   onClick={() => setMailboxPage((p) => Math.max(1, p - 1))}
                 >
@@ -1641,7 +1654,7 @@ export default function EmailPage() {
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg border border-white/10 px-2 py-1 text-[10px] font-semibold text-slate-300 disabled:opacity-40"
+                  className="btn-secondary px-2 py-1 text-[10px] disabled:opacity-40"
                   disabled={mailboxPage >= mailboxTotalPages}
                   onClick={() =>
                     setMailboxPage((p) => Math.min(mailboxTotalPages, p + 1))
@@ -1653,11 +1666,11 @@ export default function EmailPage() {
             </div>
           </section>
 
-          <section className="hidden min-w-0 flex-1 flex-col lg:flex">
+          <section className="hidden min-w-0 flex-1 flex-col bg-[var(--bg-elevated)] lg:flex">
             {!detail?.recipient ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-                <p className="font-display text-lg text-slate-400">Inbox</p>
-                <p className="max-w-sm text-sm text-slate-600">
+                <p className="text-sm font-medium text-zinc-300">Inbox</p>
+                <p className="max-w-sm text-sm text-zinc-500">
                   Select a message to read it, or open Campaigns to compose and send.
                 </p>
               </div>
@@ -1666,16 +1679,16 @@ export default function EmailPage() {
                 <header className="border-b border-white/[0.06] px-5 py-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <h2 className="font-display text-lg font-semibold text-white">
+                      <h2 className="text-base font-semibold tracking-tight text-zinc-50">
                         {detail.recipient.renderedSubject || 'No subject'}
                       </h2>
-                      <p className="mt-1 text-sm text-slate-400">
+                      <p className="mt-1 text-sm text-zinc-400">
                         To:{' '}
                         {detail.recipient.name
                           ? `${detail.recipient.name} <${detail.recipient.email}>`
                           : detail.recipient.email}
                       </p>
-                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-zinc-500">
                         <StatusChip status={detail.recipient.status} />
                         {detail.recipient.company && <span>{detail.recipient.company}</span>}
                         {detail.recipient.location && <span>{detail.recipient.location}</span>}
@@ -1686,7 +1699,7 @@ export default function EmailPage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <div className="text-right text-[11px] text-slate-500">
+                      <div className="text-right text-[11px] text-zinc-500">
                         <p>Opens: {detail.recipient.openCount || 0}</p>
                         <p>Clicks: {detail.recipient.clickCount || 0}</p>
                         <p>Sent: {fmtTime(detail.recipient.sentAt)}</p>
@@ -1768,13 +1781,13 @@ export default function EmailPage() {
                 <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
                   {detail.recipient.renderedHtml ? (
                     <div
-                      className="prose prose-invert prose-sm max-w-none text-slate-200"
+                      className="prose prose-invert prose-sm max-w-none text-zinc-200"
                       dangerouslySetInnerHTML={{
                         __html: detail.recipient.renderedHtml,
                       }}
                     />
                   ) : (
-                    <pre className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
+                    <pre className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
                       {detail.recipient.renderedText || 'Content not captured yet.'}
                     </pre>
                   )}
@@ -1790,16 +1803,34 @@ export default function EmailPage() {
         </div>
       )}
 
+      {/* ─── Template library ─── */}
+      {tab === 'templates' && (
+        <PageScroll className="pb-4">
+          <TemplateLibraryPanel
+            live={live}
+            showToast={showToast}
+            onLibraryChange={(res) => {
+              if (Array.isArray(res?.categories)) setLibraryCategories(res.categories)
+              if (templateCategory === 'all' && Array.isArray(res?.templates)) {
+                setApiTemplates(res.templates)
+              } else {
+                refreshLibrary()
+              }
+            }}
+          />
+        </PageScroll>
+      )}
+
       {/* ─── Campaigns tab ─── */}
       {tab === 'campaigns' && (
         <PageScroll className="pb-8">
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-4">
-            <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 saas-panel">
+            <section className="saas-content-card p-4 saas-panel">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Lead source</h3>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
+                  <p className="mt-0.5 text-[11px] text-zinc-500">
                     Choose Excel file or paste an Excel / Google Sheets link, then start the campaign.
                   </p>
                 </div>
@@ -1812,7 +1843,7 @@ export default function EmailPage() {
                       className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold capitalize ${
                         mode === m
                           ? 'bg-zinc-100/25 text-zinc-200'
-                          : 'bg-white/[0.04] text-slate-500'
+                          : 'bg-white/[0.04] text-zinc-500'
                       }`}
                     >
                       {m}
@@ -1861,57 +1892,87 @@ export default function EmailPage() {
               )}
             </section>
 
-            <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+            <section className="saas-content-card p-4">
               <h3 className="mb-3 text-sm font-semibold text-white">Template & send settings</h3>
 
               <div className="mb-3 space-y-3">
                 <div>
-                  <p className="mb-1.5 text-[11px] font-medium text-slate-400">Campaign type</p>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-medium text-zinc-400">Category</p>
+                    <button
+                      type="button"
+                      className="text-[11px] font-medium text-zinc-400 hover:text-white"
+                      onClick={() => setTab('templates')}
+                    >
+                      Manage templates
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { id: 'outreach', label: 'Outreach' },
-                      { id: 'product', label: 'VorksPro' },
-                    ].map((t) => (
+                    <button
+                      type="button"
+                      onClick={() => setTemplateCategory('all')}
+                      className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+                        templateCategory === 'all'
+                          ? 'bg-white/[0.1] text-white ring-1 ring-white/15'
+                          : 'bg-white/[0.04] text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      All
+                    </button>
+                    {libraryCategories.map((c) => (
                       <button
-                        key={t.id}
+                        key={c}
                         type="button"
-                        onClick={() => setTemplateType(t.id)}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                          templateType === t.id
-                            ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/30'
-                            : 'bg-white/[0.04] text-slate-400 hover:text-slate-200'
+                        onClick={() => setTemplateCategory(c)}
+                        className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+                          templateCategory === c
+                            ? 'bg-white/[0.1] text-white ring-1 ring-white/15'
+                            : 'bg-white/[0.04] text-zinc-400 hover:text-zinc-200'
                         }`}
                       >
-                        {t.label}
+                        {c}
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <p className="mb-1.5 text-[11px] font-medium text-slate-400">
+                  <p className="mb-1.5 text-[11px] font-medium text-zinc-400">
                     Template · {typeLabel}
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {templateList.map((t) => (
+                  {templateList.length === 0 ? (
+                    <div className="rounded-md border border-dashed border-white/[0.08] px-3 py-4 text-center">
+                      <p className="text-xs text-zinc-500">No templates in this category yet.</p>
                       <button
-                        key={t.id}
                         type="button"
-                        onClick={() => applyTemplate(t)}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                          templateId === t.id
-                            ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/30'
-                            : 'bg-white/[0.04] text-slate-400 hover:text-slate-200'
-                        }`}
+                        className="btn-secondary mt-2 px-3 py-1.5 text-xs"
+                        onClick={() => setTab('templates')}
                       >
-                        {t.name}
+                        Create one
                       </button>
-                    ))}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {templateList.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => applyTemplate(t)}
+                          className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+                            templateId === t.id
+                              ? 'bg-white/[0.1] text-white ring-1 ring-white/15'
+                              : 'bg-white/[0.04] text-zinc-400 hover:text-zinc-200'
+                          }`}
+                        >
+                          {t.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <p className="mb-1.5 text-[11px] font-medium text-slate-400">
+                  <p className="mb-1.5 text-[11px] font-medium text-zinc-400">
                     Start sending
                   </p>
                   <div className="mb-2 flex flex-wrap gap-1.5">
@@ -1920,8 +1981,8 @@ export default function EmailPage() {
                       onClick={() => setSendScheduleMode('now')}
                       className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
                         sendScheduleMode === 'now'
-                          ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/30'
-                          : 'bg-white/[0.04] text-slate-400 hover:text-slate-200'
+                          ? 'bg-white/[0.1] text-zinc-100 ring-1 ring-white/15'
+                          : 'bg-white/[0.04] text-zinc-400 hover:text-zinc-200'
                       }`}
                     >
                       Send now
@@ -1937,8 +1998,8 @@ export default function EmailPage() {
                       }}
                       className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
                         sendScheduleMode === 'later'
-                          ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/30'
-                          : 'bg-white/[0.04] text-slate-400 hover:text-slate-200'
+                          ? 'bg-white/[0.1] text-zinc-100 ring-1 ring-white/15'
+                          : 'bg-white/[0.04] text-zinc-400 hover:text-zinc-200'
                       }`}
                     >
                       Pick date & time
@@ -1958,13 +2019,15 @@ export default function EmailPage() {
               </div>
 
               <div className="mb-3">
-                <label className="mb-1 block text-[11px] font-medium text-slate-400">
+                <label className="mb-1 block text-[11px] font-medium text-zinc-400">
                   Meeting booking link
-                  {templateType === 'product' ? ' (from workspace)' : ' (optional)'}
+                  {String(templateType).toLowerCase() === 'product'
+                    ? ' (from workspace)'
+                    : ' (optional)'}
                 </label>
                 {workspaceBooking ? (
                   <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5">
-                    <p className="text-[11px] text-emerald-300/90">Using workspace booking link</p>
+                    <p className="text-[11px] text-zinc-300">Using workspace booking link</p>
                     <a
                       href={workspaceBooking}
                       target="_blank"
@@ -1975,7 +2038,7 @@ export default function EmailPage() {
                     </a>
                     <button
                       type="button"
-                      className="mt-1.5 text-[11px] font-medium text-slate-400 hover:text-white"
+                      className="mt-1.5 text-[11px] font-medium text-zinc-400 hover:text-white"
                       onClick={() => setTab('meetings')}
                     >
                       Change in Meetings →
@@ -1991,7 +2054,9 @@ export default function EmailPage() {
                     >
                       Set it once in Meetings
                     </button>
-                    {templateType === 'product' ? ' (required for VorksPro).' : '.'}
+                    {String(templateType).toLowerCase() === 'product'
+                      ? ' (required for product templates).'
+                      : '.'}
                   </div>
                 )}
               </div>
@@ -2000,7 +2065,7 @@ export default function EmailPage() {
                 <div className="mb-3 space-y-2">
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div>
-                      <label className="mb-1 block text-[11px] text-slate-400">
+                      <label className="mb-1 block text-[11px] text-zinc-400">
                         Rest every (emails)
                       </label>
                       <input
@@ -2013,7 +2078,7 @@ export default function EmailPage() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] text-slate-400">
+                      <label className="mb-1 block text-[11px] text-zinc-400">
                         Rest duration (min)
                       </label>
                       <input
@@ -2026,7 +2091,7 @@ export default function EmailPage() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] text-slate-400">Max / 24h</label>
+                      <label className="mb-1 block text-[11px] text-zinc-400">Max / 24h</label>
                       <input
                         type="number"
                         min={1}
@@ -2042,12 +2107,12 @@ export default function EmailPage() {
                       </div>
                     </div>
                     <div className="flex items-end">
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[11px] text-zinc-500">
                         Est. {estFinish || '—'} · {leadPayload?.leads?.length || 0} leads
                       </p>
                     </div>
                   </div>
-                  <p className="text-[10px] text-slate-600">
+                  <p className="text-[10px] text-zinc-600">
                     Each email waits a random 0–8s. After every {batchSize} sends, the campaign
                     pauses {cooldownMinutes} min, then continues automatically.
                   </p>
@@ -2071,7 +2136,7 @@ export default function EmailPage() {
               />
 
               {isLocalApi() && (
-                <p className="mt-2 text-[11px] text-slate-500">
+                <p className="mt-2 text-[11px] text-zinc-500">
                   Open/click tracking needs a public API_PUBLIC_URL in production.
                 </p>
               )}
@@ -2095,7 +2160,7 @@ export default function EmailPage() {
           </div>
 
           <div className="space-y-4">
-            <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+            <section className="saas-content-card p-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <h3 className="mr-auto text-sm font-semibold text-white">Campaigns</h3>
                 <button
@@ -2142,11 +2207,11 @@ export default function EmailPage() {
 
               {showCampaignBuckets ? (
                 <>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                     Active
                   </p>
                   {activeCampaigns.length === 0 && (
-                    <p className="text-xs text-slate-500">No running campaigns. Start one from the left.</p>
+                    <p className="text-xs text-zinc-500">No running campaigns. Start one from the left.</p>
                   )}
                 </>
               ) : null}
@@ -2160,10 +2225,10 @@ export default function EmailPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-white">{c.name}</p>
-                        <p className="truncate text-[11px] text-slate-500">{c.subject}</p>
+                        <p className="truncate text-[11px] text-zinc-500">{c.subject}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-2">
                           <StatusChip status={c.status} />
-                          <span className="text-[10px] text-slate-500">
+                          <span className="text-[10px] text-zinc-500">
                             {c.stats?.sent || 0}/{c.stats?.total || 0} sent · {c.stats?.opened || 0}{' '}
                             opens · {c.stats?.clicked || 0} clicks
                           </span>
@@ -2187,7 +2252,7 @@ export default function EmailPage() {
                           <>
                             <button
                               type="button"
-                              className="rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200"
+                              className="rounded-lg btn-secondary px-2 py-1 text-[10px]"
                               onClick={() =>
                                 resumeEmailCampaign(c.id)
                                   .then(refreshAll)
@@ -2198,7 +2263,7 @@ export default function EmailPage() {
                             </button>
                             <button
                               type="button"
-                              className="rounded-lg bg-sky-500/15 px-2 py-1 text-[10px] font-semibold text-sky-200"
+                              className="rounded-lg bg-sky-500/15 px-2 py-1 text-[10px] font-semibold text-zinc-300"
                               onClick={() => {
                                 if (
                                   !window.confirm(
@@ -2227,7 +2292,7 @@ export default function EmailPage() {
                         {['failed', 'cancelled', 'completed'].includes(c.status) && (
                           <button
                             type="button"
-                            className="rounded-lg bg-sky-500/15 px-2 py-1 text-[10px] font-semibold text-sky-200"
+                            className="rounded-lg bg-sky-500/15 px-2 py-1 text-[10px] font-semibold text-zinc-300"
                             onClick={() => {
                               if (
                                 !window.confirm(
@@ -2283,13 +2348,13 @@ export default function EmailPage() {
                   </div>
                 ))}
                 {!showCampaignBuckets && campaigns.length === 0 && (
-                  <p className="text-xs text-slate-500">No campaigns match this filter.</p>
+                  <p className="text-xs text-zinc-500">No campaigns match this filter.</p>
                 )}
               </div>
 
               {showCampaignBuckets && recentCampaigns.length > 0 && (
                 <div className="mt-4 border-t border-white/[0.06] pt-3">
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                     Recent
                   </p>
                   <div className="max-h-48 space-y-1.5 overflow-y-auto">
@@ -2298,7 +2363,7 @@ export default function EmailPage() {
                         key={c.id}
                         className="flex items-center justify-between gap-2 text-[11px]"
                       >
-                        <span className="truncate text-slate-400">{c.name}</span>
+                        <span className="truncate text-zinc-400">{c.name}</span>
                         <StatusChip status={c.status} />
                       </div>
                     ))}
@@ -2307,8 +2372,8 @@ export default function EmailPage() {
               )}
             </section>
 
-            <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <section className="saas-content-card p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
                 Preview
               </p>
               <p className="mt-1 text-sm font-medium text-white">{previewMerge.subject}</p>
@@ -2322,11 +2387,11 @@ export default function EmailPage() {
                   />
                 </div>
               ) : (
-                <pre className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-slate-400">
+                <pre className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-zinc-400">
                   {previewMerge.body}
                 </pre>
               )}
-              <p className="mt-2 text-[10px] text-slate-600">
+              <p className="mt-2 text-[10px] text-zinc-600">
                 {SIGNATURE.name} · {SIGNATURE.site}
               </p>
             </section>
@@ -2343,28 +2408,28 @@ export default function EmailPage() {
             className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5"
             title="Emails already sent (or failed) out of all recipients in campaigns"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
               People who engaged
             </p>
             <p className="mt-0.5 text-lg font-semibold text-white tabular-nums">
               {processedCounts.processed.toLocaleString()}
-              <span className="text-slate-500"> / </span>
-              <span className="text-slate-300">
+              <span className="text-zinc-500"> / </span>
+              <span className="text-zinc-300">
                 {processedCounts.total.toLocaleString()}
               </span>
             </p>
-            <p className="mt-0.5 text-[10px] text-slate-500">
+            <p className="mt-0.5 text-[10px] text-zinc-500">
               sent of total recipients
             </p>
           </div>
           <div
-            className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-2.5"
+            className="rounded-xl border border-white/[0.08] bg-transparent px-3 py-2.5"
             title="Leads who booked a meeting from campaign emails"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-400/80">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
               Meetings booked
             </p>
-            <p className="mt-0.5 text-lg font-semibold text-emerald-200 tabular-nums">
+            <p className="mt-0.5 text-lg font-semibold text-zinc-200 tabular-nums">
               {processedCounts.meetingsBooked.toLocaleString()}
             </p>
           </div>
@@ -2372,16 +2437,16 @@ export default function EmailPage() {
             className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 sm:col-span-2"
             title="Rows matching your current search and filters"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
               Showing (filtered)
             </p>
-            <p className="mt-0.5 text-lg font-semibold text-slate-200 tabular-nums">
+            <p className="mt-0.5 text-lg font-semibold text-zinc-200 tabular-nums">
               {processedCounts.filtered.toLocaleString()}
-              <span className="ml-1 text-xs font-normal text-slate-500">
+              <span className="ml-1 text-xs font-normal text-zinc-500">
                 · page {processedPage}/{processedTotalPages}
               </span>
             </p>
-            <p className="mt-0.5 text-[10px] text-slate-500">
+            <p className="mt-0.5 text-[10px] text-zinc-500">
               Auto notes: Last chance {nudgeFinalCallHours}h → Check in +
               {nudgeReasonHours}h → Gentle nudge +{nudgeFollowUpHours}h if status unchanged
             </p>
@@ -2424,12 +2489,12 @@ export default function EmailPage() {
           </div>
         )}
 
-        <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+        <div className="mb-3 saas-content-card p-4">
           <h3 className="mb-2 text-sm font-semibold text-white">Auto follow-up timing</h3>
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div>
-                <label className="mb-1 block text-[11px] text-slate-400">
+                <label className="mb-1 block text-[11px] text-zinc-400">
                   Last chance (hours)
                 </label>
                 <input
@@ -2444,7 +2509,7 @@ export default function EmailPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] text-slate-400">
+                <label className="mb-1 block text-[11px] text-zinc-400">
                   Check in after (hours)
                 </label>
                 <input
@@ -2457,7 +2522,7 @@ export default function EmailPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] text-slate-400">
+                <label className="mb-1 block text-[11px] text-zinc-400">
                   Gentle nudge after (hours)
                 </label>
                 <input
@@ -2482,7 +2547,7 @@ export default function EmailPage() {
                 </button>
               </div>
             </div>
-            <p className="text-[10px] text-slate-600">
+            <p className="text-[10px] text-zinc-600">
               Last chance sends after {nudgeFinalCallHours}h if meeting status is unchanged.
               Check in sends {nudgeReasonHours}h after Last chance. Gentle nudge sends{' '}
               {nudgeFollowUpHours}h after Check in. Updating meeting status stops the sequence.
@@ -2556,7 +2621,7 @@ export default function EmailPage() {
             {!selectMode ? (
               <button
                 type="button"
-                className="ml-auto rounded-lg border border-white/10 px-2.5 text-[10px] font-semibold text-slate-300 hover:bg-white/[0.06] disabled:opacity-40"
+                className="ml-auto rounded-lg border border-white/10 px-2.5 text-[10px] font-semibold text-zinc-300 hover:bg-white/[0.06] disabled:opacity-40"
                 style={{ height: '2.125rem' }}
                 disabled={!filteredProcessed.length}
                 onClick={() => setSelectMode(true)}
@@ -2577,7 +2642,7 @@ export default function EmailPage() {
                 </label>
                 {selectedCount > 0 && (
                   <>
-                    <span className="text-[10px] text-slate-400">{selectedCount} selected</span>
+                    <span className="text-[10px] text-zinc-400">{selectedCount} selected</span>
                     <button
                       type="button"
                       className="rounded-lg bg-amber-500/20 px-2.5 py-1 text-[10px] font-semibold text-amber-200 disabled:opacity-50"
@@ -2588,7 +2653,7 @@ export default function EmailPage() {
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg bg-emerald-500/20 px-2.5 py-1 text-[10px] font-semibold text-emerald-200 disabled:opacity-50"
+                      className="rounded-lg bg-white/[0.1] px-2.5 py-1 text-[10px] font-semibold text-zinc-200 disabled:opacity-50"
                       disabled={bulkBusy}
                       onClick={() => runBulkMailbox('restore')}
                     >
@@ -2606,7 +2671,7 @@ export default function EmailPage() {
                 )}
                 <button
                   type="button"
-                  className="rounded-lg border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-400 hover:bg-white/[0.06]"
+                  className="rounded-lg border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-zinc-400 hover:bg-white/[0.06]"
                   onClick={exitSelectMode}
                 >
                   Done
@@ -2616,7 +2681,7 @@ export default function EmailPage() {
           </div>
           <div>
               {filteredProcessed.length === 0 ? (
-              <p className="px-4 py-8 text-center text-xs text-slate-500 md:hidden">
+              <p className="px-4 py-8 text-center text-xs text-zinc-500 md:hidden">
                 No processed mail yet. Start a campaign from the Campaigns tab.
               </p>
             ) : (
@@ -2675,7 +2740,7 @@ export default function EmailPage() {
                           {canShowReminder(r) && (
                             <button
                               type="button"
-                              className="has-tip mt-1.5 block w-full rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200 disabled:opacity-50"
+                              className="has-tip mt-1.5 block w-full rounded-lg btn-secondary px-2 py-1 text-[10px] disabled:opacity-50"
                               disabled={Boolean(nudgeBusyId)}
                               aria-label={NUDGE_TOOLTIPS.reminder}
                               data-tip={NUDGE_TOOLTIPS.reminder}
@@ -2698,7 +2763,7 @@ export default function EmailPage() {
                         </span>
                       </div>
                       {(r.lastNudgeType || r.nudgeAutoStopped) && (
-                        <p className="mt-1 text-[10px] text-slate-500">
+                        <p className="mt-1 text-[10px] text-zinc-500">
                           {r.nudgeAutoStopped
                             ? 'Auto nudges stopped'
                             : `Last auto/manual: ${r.lastNudgeType.replace(/_/g, ' ')}`}
@@ -2707,7 +2772,7 @@ export default function EmailPage() {
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <button
                           type="button"
-                          className="rounded-lg bg-white/[0.06] px-2.5 py-1 text-[10px] font-semibold text-slate-300"
+                          className="rounded-lg bg-white/[0.06] px-2.5 py-1 text-[10px] font-semibold text-zinc-300"
                           onClick={() => {
                             setTab('mailbox')
                             setFolder(r.mailboxFolder === 'junk' ? 'junk' : 'sent')
@@ -2720,7 +2785,7 @@ export default function EmailPage() {
                           <>
                             <button
                               type="button"
-                              className="has-tip rounded-lg bg-sky-500/15 px-2.5 py-1 text-[10px] font-semibold text-sky-200 disabled:opacity-50"
+                              className="has-tip rounded-lg bg-sky-500/15 px-2.5 py-1 text-[10px] font-semibold text-zinc-300 disabled:opacity-50"
                               disabled={Boolean(nudgeBusyId)}
                               aria-label={NUDGE_TOOLTIPS.follow_up}
                               data-tip={NUDGE_TOOLTIPS.follow_up}
@@ -2781,7 +2846,7 @@ export default function EmailPage() {
                   <tr>
                     <td
                       colSpan={selectMode ? 11 : 10}
-                      className="px-3 py-8 text-center text-slate-500"
+                      className="px-3 py-8 text-center text-zinc-500"
                     >
                       No processed mail yet. Start a campaign from the Campaigns tab.
                     </td>
@@ -2812,17 +2877,17 @@ export default function EmailPage() {
                           />
                         </td>
                       )}
-                      <td className="px-3 py-2 font-medium text-slate-200">{displayName}</td>
-                      <td className="px-3 py-2 text-slate-400">{r.email}</td>
-                      <td className="px-3 py-2 text-slate-400">
+                      <td className="px-3 py-2 font-medium text-zinc-200">{displayName}</td>
+                      <td className="px-3 py-2 text-zinc-400">{r.email}</td>
+                      <td className="px-3 py-2 text-zinc-400">
                         {r.company || r.mergeData?.company || '—'}
                       </td>
                       <td className="max-w-[200px] px-3 py-2">
-                        <p className="truncate font-medium text-slate-300" title={campaignLabel}>
+                        <p className="truncate font-medium text-zinc-300" title={campaignLabel}>
                           {campaignLabel}
                         </p>
                         {subjectLabel && subjectLabel !== campaignLabel && (
-                          <p className="truncate text-[10px] text-slate-600" title={subjectLabel}>
+                          <p className="truncate text-[10px] text-zinc-600" title={subjectLabel}>
                             {subjectLabel}
                           </p>
                         )}
@@ -2830,8 +2895,8 @@ export default function EmailPage() {
                       <td className="px-3 py-2">
                         <StatusChip status={r.status} />
                       </td>
-                      <td className="px-3 py-2 text-slate-300">{r.openCount || 0}</td>
-                      <td className="px-3 py-2 text-slate-300">{r.clickCount || 0}</td>
+                      <td className="px-3 py-2 text-zinc-300">{r.openCount || 0}</td>
+                      <td className="px-3 py-2 text-zinc-300">{r.clickCount || 0}</td>
                       <td className="px-3 py-2">
                         <select
                           className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white"
@@ -2849,7 +2914,7 @@ export default function EmailPage() {
                         {canShowReminder(r) && (
                           <button
                             type="button"
-                            className="has-tip mt-1.5 block w-full rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50"
+                            className="has-tip mt-1.5 block w-full rounded-lg btn-secondary px-2 py-1 text-[10px] hover:bg-white/[0.1] disabled:opacity-50"
                             disabled={Boolean(nudgeBusyId)}
                             aria-label={NUDGE_TOOLTIPS.reminder}
                             data-tip={NUDGE_TOOLTIPS.reminder}
@@ -2870,21 +2935,21 @@ export default function EmailPage() {
                           Add to Sales
                         </button>
                         {r.nudgeAutoStopped ? (
-                          <p className="mt-0.5 text-[9px] text-slate-600">Auto stopped</p>
+                          <p className="mt-0.5 text-[9px] text-zinc-600">Auto stopped</p>
                         ) : r.lastNudgeType ? (
-                          <p className="mt-0.5 text-[9px] text-slate-600">
+                          <p className="mt-0.5 text-[9px] text-zinc-600">
                             Nudge: {r.lastNudgeType.replace(/_/g, ' ')}
                           </p>
                         ) : null}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-slate-500">
+                      <td className="whitespace-nowrap px-3 py-2 text-zinc-500">
                         {fmtTime(r.sentAt)}
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-wrap justify-end gap-1">
                           <button
                             type="button"
-                            className="rounded-lg bg-white/[0.06] px-2 py-1 text-[10px] font-semibold text-slate-300 hover:bg-white/[0.1]"
+                            className="rounded-lg bg-white/[0.06] px-2 py-1 text-[10px] font-semibold text-zinc-300 hover:bg-white/[0.1]"
                             onClick={() => {
                               setTab('mailbox')
                               setFolder(r.mailboxFolder === 'junk' ? 'junk' : 'sent')
@@ -2897,7 +2962,7 @@ export default function EmailPage() {
                             <>
                               <button
                                 type="button"
-                                className="has-tip rounded-lg bg-sky-500/15 px-2 py-1 text-[10px] font-semibold text-sky-200 hover:bg-sky-500/25 disabled:opacity-50"
+                                className="has-tip rounded-lg bg-sky-500/15 px-2 py-1 text-[10px] font-semibold text-zinc-300 hover:bg-sky-500/25 disabled:opacity-50"
                                 disabled={Boolean(nudgeBusyId)}
                                 aria-label={NUDGE_TOOLTIPS.follow_up}
                                 data-tip={NUDGE_TOOLTIPS.follow_up}
@@ -2931,7 +2996,7 @@ export default function EmailPage() {
                             <>
                               <button
                                 type="button"
-                                className="rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/25"
+                                className="rounded-lg btn-secondary px-2 py-1 text-[10px] hover:bg-white/[0.1]"
                                 onClick={async () => {
                                   try {
                                     await restoreMailboxFromJunk(r.id)
@@ -3002,7 +3067,7 @@ export default function EmailPage() {
             </table>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] px-4 py-3">
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-zinc-500">
               Page {processedPage} of {processedTotalPages} · {processedCounts.filtered} matching
             </p>
             <div className="flex items-center gap-2">
@@ -3037,13 +3102,13 @@ export default function EmailPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-white">Google Calendar</h3>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-zinc-500">
                   Connect once, save your booking page once, then sync Meet invites automatically.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {calendarConnected || apiConfig?.gmail?.calendarReady || apiConfig?.gmail?.hasRefreshToken ? (
-                  <span className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
+                  <span className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-zinc-300">
                     Calendar connected
                   </span>
                 ) : (
@@ -3075,7 +3140,7 @@ export default function EmailPage() {
             )}
 
             <div>
-              <label className="mb-1 block text-[11px] font-medium text-slate-400">
+              <label className="mb-1 block text-[11px] font-medium text-zinc-400">
                 Workspace booking URL (saved once for all campaigns)
               </label>
               <div className="flex flex-wrap gap-2">
@@ -3121,7 +3186,7 @@ export default function EmailPage() {
                         href="https://calendar.google.com/calendar/u/0/r/appointment"
                         target="_blank"
                         rel="noreferrer"
-                        className="font-semibold text-sky-200 underline hover:text-white"
+                        className="font-semibold text-zinc-300 underline hover:text-white"
                       >
                         Google Calendar → Appointment schedules
                       </a>
@@ -3145,10 +3210,10 @@ export default function EmailPage() {
                   </p>
                 </div>
               </details>
-              <p className="mt-1.5 text-[10px] text-slate-600">
-                Paste the <span className="font-semibold text-slate-400">public booking page</span>{' '}
+              <p className="mt-1.5 text-[10px] text-zinc-600">
+                Paste the <span className="font-semibold text-zinc-400">public booking page</span>{' '}
                 link (Share → Booking page / calendar.app.google/…). Do{' '}
-                <span className="font-semibold text-slate-400">not</span> paste the Appointment
+                <span className="font-semibold text-zinc-400">not</span> paste the Appointment
                 schedules admin URL (/r/appointment) — guests get Google’s error page and cannot
                 book. Every campaign reuses this link.
               </p>
@@ -3159,7 +3224,7 @@ export default function EmailPage() {
             <div className="saas-toolbar justify-between">
               <div className="min-w-0">
                 <h3 className="text-sm font-semibold text-white">Scheduled & meeting pipeline</h3>
-                <p className="mt-0.5 text-[11px] text-slate-500">
+                <p className="mt-0.5 text-[11px] text-zinc-500">
                   {meetingsBookedCount} booked · {meetingsTotal} in pipeline · page {meetingsPage}/
                   {meetingsTotalPages}
                 </p>
@@ -3263,7 +3328,7 @@ export default function EmailPage() {
 
             <div>
               {meetings.length === 0 ? (
-                <p className="px-4 py-8 text-center text-xs text-slate-500">
+                <p className="px-4 py-8 text-center text-xs text-zinc-500">
                   No meeting activity yet. Open this tab to sync Calendar bookings, or tap Refresh +
                   sync.
                 </p>
@@ -3273,13 +3338,13 @@ export default function EmailPage() {
                     <div
                       key={m.id}
                       className={`mobile-data-card ${
-                        selectedMeetingIds.has(m.id) ? 'ring-1 ring-teal-500/40' : ''
+                        selectedMeetingIds.has(m.id) ? 'ring-1 ring-white/20' : ''
                       }`}
                     >
                       <div className="flex items-start gap-2">
                         <input
                           type="checkbox"
-                          className="mt-0.5 h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-teal-500"
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-zinc-100"
                           checked={selectedMeetingIds.has(m.id)}
                           onChange={(e) => {
                             setSelectedMeetingIds((prev) => {
@@ -3322,7 +3387,7 @@ export default function EmailPage() {
                           {canShowReminder(m) && (
                             <button
                               type="button"
-                              className="has-tip mt-1.5 block w-full rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200 disabled:opacity-50"
+                              className="has-tip mt-1.5 block w-full rounded-lg btn-secondary px-2 py-1 text-[10px] disabled:opacity-50"
                               disabled={Boolean(nudgeBusyId)}
                               aria-label={NUDGE_TOOLTIPS.reminder}
                               data-tip={NUDGE_TOOLTIPS.reminder}
@@ -3377,7 +3442,7 @@ export default function EmailPage() {
                       <label className="inline-flex cursor-pointer items-center gap-1.5" title="Select all">
                         <input
                           type="checkbox"
-                          className="h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-teal-500"
+                          className="h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-zinc-100"
                           checked={
                             meetings.length > 0 &&
                             meetings.every((row) => selectedMeetingIds.has(row.id))
@@ -3404,7 +3469,7 @@ export default function EmailPage() {
                 <tbody>
                   {meetings.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
+                      <td colSpan={6} className="px-3 py-8 text-center text-zinc-500">
                         No meeting activity yet. Open this tab to sync Calendar bookings, or click Sync now.
                       </td>
                     </tr>
@@ -3419,7 +3484,7 @@ export default function EmailPage() {
                       <td className="px-3 py-2">
                         <input
                           type="checkbox"
-                          className="h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-teal-500"
+                          className="h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-zinc-100"
                           checked={selectedMeetingIds.has(m.id)}
                           onChange={(e) => {
                             setSelectedMeetingIds((prev) => {
@@ -3433,11 +3498,11 @@ export default function EmailPage() {
                         />
                       </td>
                       <td className="px-3 py-2">
-                        <p className="font-medium text-slate-200">{m.name || '—'}</p>
-                        <p className="text-slate-500">{m.email}</p>
+                        <p className="font-medium text-zinc-200">{m.name || '—'}</p>
+                        <p className="text-zinc-500">{m.email}</p>
                       </td>
-                      <td className="px-3 py-2 text-slate-400">{m.company || '—'}</td>
-                      <td className="max-w-[120px] truncate px-3 py-2 text-slate-500">
+                      <td className="px-3 py-2 text-zinc-400">{m.company || '—'}</td>
+                      <td className="max-w-[120px] truncate px-3 py-2 text-zinc-500">
                         {m.campaignName || '—'}
                       </td>
                       <td className="px-3 py-2">
@@ -3460,7 +3525,7 @@ export default function EmailPage() {
                         {canShowReminder(m) && (
                           <button
                             type="button"
-                            className="has-tip mt-1.5 block w-full rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50"
+                            className="has-tip mt-1.5 block w-full rounded-lg btn-secondary px-2 py-1 text-[10px] hover:bg-white/[0.1] disabled:opacity-50"
                             disabled={Boolean(nudgeBusyId)}
                             aria-label={NUDGE_TOOLTIPS.reminder}
                             data-tip={NUDGE_TOOLTIPS.reminder}
@@ -3508,7 +3573,7 @@ export default function EmailPage() {
               </table>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] px-4 py-3">
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-zinc-500">
                 Page {meetingsPage} of {meetingsTotalPages} · {meetingsTotal} matching ·{' '}
                 {meetingsPageSize} per page
               </p>

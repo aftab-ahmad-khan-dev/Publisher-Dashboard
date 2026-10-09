@@ -110,7 +110,7 @@ export default function LeadLog({ leads, onOpenLead, onStageChange }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search leads…"
-          className="min-w-[180px] flex-1 rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-indigo-500/40"
+          className="min-w-[180px] flex-1 rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-white/20"
         />
         <select
           value={stage}
@@ -124,16 +124,16 @@ export default function LeadLog({ leads, onOpenLead, onStageChange }) {
             </option>
           ))}
         </select>
-        <span className="text-xs text-slate-500">{filtered.length} rows</span>
+        <span className="text-xs text-zinc-500">{filtered.length} rows</span>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-white/[0.08]">
         <table className="min-w-full text-left text-xs">
-          <thead className="bg-white/[0.03] text-[10px] uppercase tracking-wide text-slate-500">
+          <thead className="bg-white/[0.03] text-[10px] uppercase tracking-wide text-zinc-500">
             <tr>
               {COLUMNS.map((col) => (
                 <th key={col.key} className="whitespace-nowrap px-3 py-2.5 font-semibold">
-                  <button type="button" onClick={() => toggleSort(col.key)} className="hover:text-slate-300">
+                  <button type="button" onClick={() => toggleSort(col.key)} className="hover:text-zinc-300">
                     {col.label}
                     {sortKey === col.key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
                   </button>
@@ -150,7 +150,7 @@ export default function LeadLog({ leads, onOpenLead, onStageChange }) {
                 }`}
               >
                 {COLUMNS.map((col) => (
-                  <td key={col.key} className="whitespace-nowrap px-3 py-2 text-slate-300">
+                  <td key={col.key} className="whitespace-nowrap px-3 py-2 text-zinc-300">
                     {col.key === 'name' ? (
                       <button
                         type="button"
@@ -165,7 +165,7 @@ export default function LeadLog({ leads, onOpenLead, onStageChange }) {
                       <select
                         value={lead.pipelineStage}
                         onChange={(e) => onStageChange(lead, e.target.value)}
-                        className="rounded border border-white/[0.1] bg-transparent px-1.5 py-1 text-[11px] text-slate-200"
+                        className="rounded border border-white/[0.1] bg-transparent px-1.5 py-1 text-[11px] text-zinc-200"
                       >
                         {PIPELINE_STAGES.map((s) => (
                           <option key={s.id} value={s.id}>
@@ -186,7 +186,7 @@ export default function LeadLog({ leads, onOpenLead, onStageChange }) {
             ))}
             {!filtered.length ? (
               <tr>
-                <td colSpan={COLUMNS.length} className="px-3 py-10 text-center text-slate-600">
+                <td colSpan={COLUMNS.length} className="px-3 py-10 text-center text-zinc-600">
                   No leads match these filters
                 </td>
               </tr>

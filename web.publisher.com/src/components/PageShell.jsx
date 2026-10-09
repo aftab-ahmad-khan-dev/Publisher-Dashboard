@@ -24,8 +24,8 @@ export function EmptyState({ icon, title, description, action }) {
   return (
     <div className="saas-empty-state">
       {icon && <div className="saas-empty-state__icon">{icon}</div>}
-      <p className="font-display text-base font-semibold text-slate-200">{title}</p>
-      {description && <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">{description}</p>}
+      <p className="text-base font-semibold text-zinc-200">{title}</p>
+      {description && <p className="mt-1 max-w-sm text-xs leading-relaxed text-zinc-500">{description}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
   )

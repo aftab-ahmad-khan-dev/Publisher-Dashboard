@@ -323,9 +323,34 @@ export async function getOverview() {
 export async function listEmailTemplates(params = {}) {
   const qs = new URLSearchParams();
   if (params.type) qs.set("type", params.type);
+  if (params.category) qs.set("category", params.category);
   if (params.meetingLink) qs.set("meetingLink", params.meetingLink);
+  if (params.builtin) qs.set("builtin", "1");
   const q = qs.toString();
   return apiFetch(`/email/templates${q ? `?${q}` : ""}`);
+}
+
+export async function listEmailLibrary(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.category) qs.set("category", params.category);
+  const q = qs.toString();
+  return apiFetch(`/email/library${q ? `?${q}` : ""}`);
+}
+
+export async function createEmailLibraryTemplate(body) {
+  return apiFetch("/email/library", { method: "POST", body });
+}
+
+export async function updateEmailLibraryTemplate(id, body) {
+  return apiFetch(`/email/library/${id}`, { method: "PUT", body });
+}
+
+export async function deleteEmailLibraryTemplate(id) {
+  return apiFetch(`/email/library/${id}`, { method: "DELETE" });
+}
+
+export async function seedEmailLibrary() {
+  return apiFetch("/email/library/seed", { method: "POST", body: {} });
 }
 
 export async function listProcessedEmails(params = {}) {

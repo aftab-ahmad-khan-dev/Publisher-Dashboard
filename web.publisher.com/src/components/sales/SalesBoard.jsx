@@ -26,7 +26,7 @@ function DragHandle(props) {
   return (
     <button
       type="button"
-      className="flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-md text-slate-600 hover:bg-white/[0.06] hover:text-slate-300 active:cursor-grabbing"
+      className="flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-md text-zinc-600 hover:bg-white/[0.06] hover:text-zinc-300 active:cursor-grabbing"
       aria-label="Drag card"
       {...props}
     >
@@ -57,9 +57,9 @@ function LeadCard({ lead, onOpen, dragProps, overlay }) {
       className={`group relative rounded-xl border transition ${
         lead.hasLeak
           ? 'border-rose-500/45 bg-gradient-to-br from-rose-500/[0.1] to-transparent'
-          : 'border-white/[0.08] bg-[#0c0e16] hover:border-white/[0.14]'
+          : 'border-white/[0.08] bg-[var(--bg-panel)] hover:border-white/[0.14]'
       } ${isDragging ? 'opacity-30' : ''} ${
-        overlay ? 'scale-[1.02] shadow-2xl shadow-black/50 ring-1 ring-indigo-500/30' : ''
+        overlay ? 'scale-[1.02] shadow-2xl shadow-black/50 ring-1 ring-white/20' : ''
       }`}
     >
       <div className="flex gap-1 p-2.5">
@@ -79,7 +79,7 @@ function LeadCard({ lead, onOpen, dragProps, overlay }) {
                 {lead.name || lead.email || 'Untitled'}
               </p>
               {lead.company ? (
-                <p className="mt-0.5 truncate text-[11px] text-slate-500">{lead.company}</p>
+                <p className="mt-0.5 truncate text-[11px] text-zinc-500">{lead.company}</p>
               ) : null}
             </div>
             {lead.totalDealValue > 0 ? (
@@ -101,14 +101,14 @@ function LeadCard({ lead, onOpen, dragProps, overlay }) {
               </span>
             ) : null}
             {lead.source ? (
-              <span className="rounded-md bg-white/[0.05] px-1.5 py-0.5 text-[9px] font-medium text-slate-400">
+              <span className="rounded-md bg-white/[0.05] px-1.5 py-0.5 text-[9px] font-medium text-zinc-400">
                 {lead.source}
               </span>
             ) : null}
           </div>
 
           {(lead.meetingDateAt || lead.lastTouchAt) && (
-            <p className="mt-2 text-[10px] tabular-nums text-slate-600">
+            <p className="mt-2 text-[10px] tabular-nums text-zinc-600">
               {lead.meetingDateAt
                 ? `Meet ${formatDate(lead.meetingDateAt)}`
                 : `Touch ${formatDate(lead.lastTouchAt)}`}
@@ -156,33 +156,33 @@ function Column({ stage, leads, onOpen, onQuickAdd }) {
 
   return (
     <div
-      className={`flex w-[280px] shrink-0 flex-col rounded-2xl border transition ${
+      className={`flex w-[280px] shrink-0 flex-col rounded-md border transition ${
         isOver
-          ? 'border-indigo-400/50 bg-indigo-500/[0.08] shadow-[inset_0_0_0_1px_rgba(129,140,248,0.2)]'
+          ? 'border-white/25 bg-white/[0.06]'
           : 'border-white/[0.06] bg-white/[0.015]'
       }`}
     >
-      <div className="sticky top-0 z-10 rounded-t-2xl border-b border-white/[0.05] bg-[#080a12]/95 px-3 py-2.5 backdrop-blur-md">
+      <div className="sticky top-0 z-10 rounded-t-md border-b border-white/[0.05] bg-[var(--bg-panel)]/95 px-3 py-2.5 backdrop-blur-md">
         <div className="flex items-center gap-2">
           <span
             className="h-2 w-2 shrink-0 rounded-full"
             style={{ background: stage.color, boxShadow: `0 0 8px ${stage.color}66` }}
           />
-          <h3 className="min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-[0.08em] text-slate-200">
+          <h3 className="min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-200">
             {stage.label}
           </h3>
-          <span className="rounded-md bg-white/[0.07] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-slate-300">
+          <span className="rounded-md bg-white/[0.07] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-zinc-300">
             {leads.length}
           </span>
         </div>
-        <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
+        <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-zinc-500">
           <span className="tabular-nums">
             {pipelineValue > 0 ? formatMoney(pipelineValue) : '—'}
           </span>
           {leakCount > 0 ? (
             <span className="font-semibold text-rose-400">{leakCount} leak{leakCount === 1 ? '' : 's'}</span>
           ) : (
-            <span className="text-slate-600">Healthy</span>
+            <span className="text-zinc-600">Healthy</span>
           )}
         </div>
       </div>
@@ -197,7 +197,7 @@ function Column({ stage, leads, onOpen, onQuickAdd }) {
           ))}
           {!leads.length ? (
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-white/[0.06] px-3 py-8 text-center">
-              <p className="text-[11px] text-slate-600">Drop cards here</p>
+              <p className="text-[11px] text-zinc-600">Drop cards here</p>
             </div>
           ) : null}
         </div>
@@ -207,7 +207,7 @@ function Column({ stage, leads, onOpen, onQuickAdd }) {
         <button
           type="button"
           onClick={() => onQuickAdd(stage.id)}
-          className="mx-2 mb-2 rounded-lg border border-transparent px-2 py-1.5 text-left text-[11px] font-medium text-slate-600 transition hover:border-white/[0.08] hover:bg-white/[0.03] hover:text-slate-300"
+          className="mx-2 mb-2 rounded-lg border border-transparent px-2 py-1.5 text-left text-[11px] font-medium text-zinc-600 transition hover:border-white/[0.08] hover:bg-white/[0.03] hover:text-zinc-300"
         >
           + Add lead
         </button>
@@ -218,8 +218,8 @@ function Column({ stage, leads, onOpen, onQuickAdd }) {
 
 function BoardEmptyState({ importableCount, importing, onImport, onCreate }) {
   return (
-    <div className="mx-auto max-w-lg rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-transparent px-6 py-10 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-300">
+    <div className="mx-auto max-w-lg rounded-md border border-white/[0.08] bg-transparent px-6 py-10 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-white/[0.08] text-zinc-300">
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
             strokeLinecap="round"
@@ -230,7 +230,7 @@ function BoardEmptyState({ importableCount, importing, onImport, onCreate }) {
         </svg>
       </div>
       <h3 className="mt-4 text-base font-semibold text-white">Your pipeline is empty</h3>
-      <p className="mt-2 text-sm leading-relaxed text-slate-400">
+      <p className="mt-2 text-sm leading-relaxed text-zinc-400">
         Mail Box meetings don&apos;t appear here automatically. Import them onto the board, or
         create a lead manually — every downstream metric comes from these cards.
       </p>
@@ -240,7 +240,7 @@ function BoardEmptyState({ importableCount, importing, onImport, onCreate }) {
             type="button"
             disabled={importing}
             onClick={onImport}
-            className="rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50"
+            className="btn-primary px-4 py-2.5 text-sm disabled:opacity-50"
           >
             {importing
               ? 'Importing…'
@@ -250,13 +250,13 @@ function BoardEmptyState({ importableCount, importing, onImport, onCreate }) {
         <button
           type="button"
           onClick={onCreate}
-          className="rounded-lg border border-white/[0.12] px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/[0.04]"
+          className="rounded-lg border border-white/[0.12] px-4 py-2.5 text-sm font-semibold text-zinc-300 hover:bg-white/[0.04]"
         >
           + Create lead
         </button>
       </div>
       {importableCount === 0 ? (
-        <p className="mt-4 text-[11px] text-slate-600">
+        <p className="mt-4 text-[11px] text-zinc-600">
           No eligible meetings found. Book or sync meetings in Mail Box first.
         </p>
       ) : null}
@@ -345,14 +345,14 @@ export default function SalesBoard({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[11px] text-slate-400">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[11px] text-zinc-400">
         <span>
           <strong className="tabular-nums text-white">{totals.count}</strong> leads
         </span>
         <span className="h-3 w-px bg-white/[0.08]" />
         <span>
           Pipeline{' '}
-          <strong className="tabular-nums text-slate-200">{formatMoney(totals.pipeline)}</strong>
+          <strong className="tabular-nums text-zinc-200">{formatMoney(totals.pipeline)}</strong>
         </span>
         <span className="h-3 w-px bg-white/[0.08]" />
         <span>
@@ -370,7 +370,7 @@ export default function SalesBoard({
             type="button"
             disabled={importing}
             onClick={onImportMeetings}
-            className="ml-auto rounded-md bg-indigo-500/15 px-2.5 py-1 text-[11px] font-semibold text-indigo-200 hover:bg-indigo-500/25 disabled:opacity-50"
+            className="ml-auto btn-secondary px-2.5 py-1 text-[11px] disabled:opacity-50"
           >
             {importing ? 'Importing…' : `Import ${importableCount} more`}
           </button>

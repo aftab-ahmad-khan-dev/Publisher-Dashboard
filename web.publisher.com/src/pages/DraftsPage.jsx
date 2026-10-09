@@ -119,12 +119,12 @@ function DraftGridCard({ draft, onEdit, onDelete, delay }) {
         <PlatformIconGroup platforms={platforms} size="sm" />
       </div>
       <button type="button" onClick={onEdit} className="mt-2 flex-1 text-left">
-        <h3 className="line-clamp-2 text-sm font-semibold text-white group-hover:text-sky-200">
+        <h3 className="line-clamp-2 text-sm font-semibold text-white group-hover:text-zinc-100">
           {draft.title}
         </h3>
-        <p className="mt-1 line-clamp-2 text-xs text-slate-500">{draft.body || 'Empty draft'}</p>
+        <p className="mt-1 line-clamp-2 text-xs text-zinc-500">{draft.body || 'Empty draft'}</p>
       </button>
-      <p className="mt-2 text-[10px] text-slate-600">{formatDraftDate(draft.updatedAt)}</p>
+      <p className="mt-2 text-[10px] text-zinc-600">{formatDraftDate(draft.updatedAt)}</p>
       <div className="mt-2 flex gap-2 border-t border-white/[0.06] pt-2">
         <button type="button" onClick={onEdit} className="btn-secondary min-h-0 flex-1 py-1 text-[10px]">
           Edit
@@ -149,7 +149,7 @@ function DraftListCard({ draft, onEdit, onDelete, delay }) {
           <PlatformIconGroup platforms={platforms} size="sm" />
           <div className="min-w-0">
             <h3 className="truncate text-sm font-semibold text-white">{draft.title}</h3>
-            <p className="truncate text-xs text-slate-500">{formatDraftDate(draft.updatedAt)}</p>
+            <p className="truncate text-xs text-zinc-500">{formatDraftDate(draft.updatedAt)}</p>
           </div>
         </button>
         <div className="flex shrink-0 gap-2">

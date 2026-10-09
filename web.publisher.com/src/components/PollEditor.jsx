@@ -65,14 +65,14 @@ export default function PollEditor({ poll, platforms, setPoll, disabled = false,
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-display text-sm font-bold tracking-tight text-white">Poll</h3>
+            <h3 className="text-sm font-bold tracking-tight text-white">Poll</h3>
             {POLL_PLATFORMS.map((p) => (
               <span
                 key={p}
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${
                   platforms[p]
-                    ? 'bg-white/[0.08] text-slate-200 ring-white/15'
-                    : 'bg-white/[0.02] text-slate-600 ring-white/[0.06]'
+                    ? 'bg-white/[0.08] text-zinc-200 ring-white/15'
+                    : 'bg-white/[0.02] text-zinc-600 ring-white/[0.06]'
                 }`}
               >
                 <PlatformIcon platform={p} size="sm" className="!h-3 !w-3 !ring-0" />
@@ -80,13 +80,13 @@ export default function PollEditor({ poll, platforms, setPoll, disabled = false,
               </span>
             ))}
           </div>
-          <p className="mt-1 text-[11px] text-slate-500">
+          <p className="mt-1 text-[11px] text-zinc-500">
             Engage your audience · schedule &amp; Day N supported
           </p>
         </div>
 
         <div className="flex shrink-0 items-center gap-2.5">
-          <span className="hidden text-[11px] font-medium text-slate-400 sm:inline">
+          <span className="hidden text-[11px] font-medium text-zinc-400 sm:inline">
             {poll.enabled ? 'On' : 'Off'}
           </span>
           <ToggleSwitch
@@ -117,7 +117,7 @@ export default function PollEditor({ poll, platforms, setPoll, disabled = false,
               disabled={disabled}
               className="input-premium w-full"
             />
-            <p className="mt-1.5 text-[10px] text-slate-500">
+            <p className="mt-1.5 text-[10px] text-zinc-500">
               Leave blank to use the post body as the question.
             </p>
           </div>
@@ -125,7 +125,7 @@ export default function PollEditor({ poll, platforms, setPoll, disabled = false,
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="field-label mb-0">Answer options</label>
-              <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-slate-400 ring-1 ring-white/[0.08]">
+              <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-zinc-400 ring-1 ring-white/[0.08]">
                 {poll.options?.length || 0} / {maxOptions}
               </span>
             </div>
@@ -191,8 +191,8 @@ export default function PollEditor({ poll, platforms, setPoll, disabled = false,
             <div className="flex flex-col justify-end">
               <div className="poll-toggle-row">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-slate-200">Multiple choices</p>
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-xs font-medium text-zinc-200">Multiple choices</p>
+                  <p className="text-[10px] text-zinc-500">
                     {platforms.reddit ? 'LinkedIn only' : 'Let voters pick more than one'}
                   </p>
                 </div>
@@ -218,10 +218,10 @@ export default function PollEditor({ poll, platforms, setPoll, disabled = false,
                 </p>
                 <p className="mt-1 text-sm font-medium text-white">
                   {pollWindow.startLabel}
-                  <span className="mx-2 text-slate-600">→</span>
+                  <span className="mx-2 text-zinc-600">→</span>
                   {pollWindow.endLabel}
                 </p>
-                <p className="mt-1 text-[10px] text-slate-500">
+                <p className="mt-1 text-[10px] text-zinc-500">
                   {scheduleContext?.publishMode === 'scheduled'
                     ? 'Opens when the post goes live, then runs for the duration above.'
                     : 'Runs from publish time for the duration above.'}
@@ -230,7 +230,7 @@ export default function PollEditor({ poll, platforms, setPoll, disabled = false,
             </div>
           )}
 
-          <p className="text-[10px] leading-relaxed text-slate-600">
+          <p className="text-[10px] leading-relaxed text-zinc-600">
             Polls cannot include images. Facebook, Instagram, Pinterest, Threads, and Quora are
             skipped automatically.
           </p>

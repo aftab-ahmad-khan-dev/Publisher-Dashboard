@@ -481,7 +481,7 @@ export default function ApiConfigPage() {
                         <h3 className='text-sm font-semibold text-white'>
                           Meta Suite
                         </h3>
-                        <p className='text-[10px] text-slate-500'>
+                        <p className='text-[10px] text-zinc-500'>
                           Instagram + Facebook
                         </p>
                       </div>
@@ -545,7 +545,7 @@ export default function ApiConfigPage() {
                         <h3 className='text-sm font-semibold text-white'>
                           LinkedIn
                         </h3>
-                        <p className='text-[10px] text-slate-500'>
+                        <p className='text-[10px] text-zinc-500'>
                           {summary.linkedInPublish
                             ? "Ready to publish"
                             : "Saved to DB — connect OAuth to publish"}
@@ -606,16 +606,16 @@ export default function ApiConfigPage() {
                       onChange={(v) => update("linkedin", "accessToken", v)}
                       className='sm:col-span-2'
                     />
-                    <p className='sm:col-span-2 text-[10px] leading-relaxed text-slate-500'>
+                    <p className='sm:col-span-2 text-[10px] leading-relaxed text-zinc-500'>
                       Portal token needs{" "}
-                      <code className='text-indigo-300/90'>w_member_social</code> for
+                      <code className='text-zinc-300/90'>w_member_social</code> for
                       your profile, or{" "}
-                      <code className='text-indigo-300/90'>
+                      <code className='text-zinc-300/90'>
                         w_organization_social
                       </code>{" "}
                       for a company page. Use Copy access token (full string).
                       Placeholder org{" "}
-                      <code className='text-slate-400'>
+                      <code className='text-zinc-400'>
                         urn:li:organization:12345
                       </code>{" "}
                       is ignored; profile is used instead.
@@ -665,7 +665,7 @@ export default function ApiConfigPage() {
                       <PlatformIcon platform='reddit' size='lg' />
                       <div>
                         <h3 className='text-sm font-semibold text-white'>Reddit</h3>
-                        <p className='text-[10px] text-slate-500'>
+                        <p className='text-[10px] text-zinc-500'>
                           Script app · self-posts · no promo tone
                         </p>
                       </div>
@@ -711,24 +711,24 @@ export default function ApiConfigPage() {
                       placeholder='PulsePublisher/1.0 by u/yourname'
                     />
                   </div>
-                  <div className='mt-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-2.5 text-[11px] leading-relaxed text-slate-400'>
+                  <div className='mt-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-2.5 text-[11px] leading-relaxed text-zinc-400'>
                     <p className='font-medium text-amber-200/90'>Reddit app setup</p>
                     <p className='mt-1'>
                       <a
                         href={redditEnvSetup?.appsUrl || "https://www.reddit.com/prefs/apps"}
                         target='_blank'
                         rel='noreferrer'
-                        className='text-indigo-300 underline'
+                        className='text-zinc-300 underline'
                       >
                         reddit.com/prefs/apps
                       </a>{" "}
                       → web or script app. Redirect URI:
                     </p>
-                    <code className='mt-1 block break-all font-mono text-[10px] text-emerald-300/90'>
+                    <code className='mt-1 block break-all font-mono text-[10px] text-zinc-300/90'>
                       {redditEnvSetup?.redirectUri ||
                         "http://127.0.0.1:3001/api/auth/reddit/callback"}
                     </code>
-                    <p className='mt-1.5 text-slate-500'>
+                    <p className='mt-1.5 text-zinc-500'>
                       Client ID + secret → subreddit → Connect Reddit (or paste refresh token).
                     </p>
                   </div>
@@ -778,7 +778,7 @@ export default function ApiConfigPage() {
                         <h3 className='text-sm font-semibold text-white'>
                           Gmail (Mailsuite compatible)
                         </h3>
-                        <p className='text-[10px] text-slate-500'>
+                        <p className='text-[10px] text-zinc-500'>
                           Bulk send · Calendar Meet invites & sync · Sheets write-back
                         </p>
                       </div>
@@ -805,12 +805,12 @@ export default function ApiConfigPage() {
                     />
                   </div>
                   {form.gmail?.fromEmail && (
-                    <p className='mt-1 text-[11px] text-emerald-400/90'>
+                    <p className='mt-1 text-[11px] text-zinc-400'>
                       Sending as {form.gmail.fromEmail}
                     </p>
                   )}
                   {(form.gmail?.hasRefreshToken || form.gmail?.calendarReady) && (
-                    <p className='mt-1 text-[11px] text-indigo-300/90'>
+                    <p className='mt-1 text-[11px] text-zinc-300/90'>
                       Calendar scopes granted — use Mail Box → Meetings to save your booking URL,
                       Sync events, and Invite with Meet.
                       {form.gmail?.calendarBookingUrl
@@ -863,7 +863,7 @@ export default function ApiConfigPage() {
                       <PlatformIcon platform='threads' size='lg' />
                       <div>
                         <h3 className='text-sm font-semibold text-white'>Threads</h3>
-                        <p className='text-[10px] text-slate-500'>
+                        <p className='text-[10px] text-zinc-500'>
                           Text posts · access token + user ID
                         </p>
                       </div>
@@ -891,9 +891,9 @@ export default function ApiConfigPage() {
                       className='sm:col-span-2'
                     />
                   </div>
-                  <p className='mt-2 text-[11px] leading-relaxed text-slate-500'>
+                  <p className='mt-2 text-[11px] leading-relaxed text-zinc-500'>
                     Create a token via{" "}
-                    <a href='https://developers.facebook.com/docs/threads' target='_blank' rel='noreferrer' className='text-indigo-300 underline'>
+                    <a href='https://developers.facebook.com/docs/threads' target='_blank' rel='noreferrer' className='text-zinc-300 underline'>
                       Meta’s Threads API
                     </a>
                     . Test to auto-fill your user ID.
@@ -934,7 +934,7 @@ export default function ApiConfigPage() {
                   className='w-full'
                 />
                 <label className='flex items-center justify-between rounded-lg border border-white/[0.06] px-3 py-2 text-xs'>
-                  <span className='text-slate-300'>Notifications</span>
+                  <span className='text-zinc-300'>Notifications</span>
                   <input
                     type='checkbox'
                     checked={form.notificationsEnabled}
@@ -959,7 +959,7 @@ export default function ApiConfigPage() {
 
             <section className='saas-content-card rounded-xl p-4'>
               <h3 className='text-sm font-semibold text-white'>Scheduling defaults</h3>
-              <p className='mt-1 text-[11px] text-slate-500'>
+              <p className='mt-1 text-[11px] text-zinc-500'>
                 Default time of day used for the next open slot and bulk uploads.
               </p>
               <div className='mt-3 space-y-2'>
@@ -1006,7 +1006,7 @@ function Field({
   return (
     <div className={className}>
       <div className='mb-1 flex items-center justify-between gap-2'>
-        <label className='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>
+        <label className='block text-[10px] font-bold uppercase tracking-wider text-zinc-500'>
           {label}
         </label>
         {help && (
@@ -1014,7 +1014,7 @@ function Field({
             href={help}
             target='_blank'
             rel='noreferrer'
-            className='shrink-0 text-[9px] font-semibold text-indigo-400 hover:text-indigo-300'
+            className='shrink-0 text-[9px] font-semibold text-zinc-400 hover:text-zinc-200'
             title={`Where to get ${label}`}
           >
             Where to get it ↗
@@ -1053,7 +1053,7 @@ function SecretField({ label, value, onChange, hasStored, className = "", help }
 function StatusDot({ connected, label }) {
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${connected ? "bg-emerald-500/15 text-emerald-400" : "bg-slate-700/50 text-slate-400"}`}
+      className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${connected ? "bg-white/[0.06] text-zinc-300" : "bg-white/[0.04] text-zinc-400"}`}
     >
       {label || (connected ? "Ready" : "Setup")}
     </span>
@@ -1064,10 +1064,10 @@ function withAlive(status) {
   const alive = status.tier === "functional" || status.tier === "connected";
   const signal =
     status.tier === "functional"
-      ? { text: "Signal live", className: "text-emerald-500/80" }
+      ? { text: "Signal live", className: "text-zinc-400" }
       : status.tier === "connected"
         ? { text: "Saved · run test to verify", className: "text-amber-500/80" }
-        : { text: "No signal · flatline", className: "text-slate-500" };
+        : { text: "No signal · flatline", className: "text-zinc-500" };
   return { ...status, alive, signal };
 }
 
@@ -1287,11 +1287,11 @@ function getPlatformStatus(platform, form, summary, lastTest) {
 function PlatformStatusCard({ status, platform }) {
   const tierStyles = {
     functional: {
-      border: "border-emerald-500/30",
-      bg: "bg-emerald-500/[0.07]",
+      border: "border-white/[0.15]",
+      bg: "bg-white/[0.04]",
       color: "#34d399",
-      title: "text-emerald-300",
-      monitor: "border-emerald-500/20 bg-emerald-500/10",
+      title: "text-zinc-300",
+      monitor: "border-white/[0.1] bg-white/[0.04]",
     },
     connected: {
       border: "border-amber-500/25",
@@ -1311,7 +1311,7 @@ function PlatformStatusCard({ status, platform }) {
       border: "border-white/[0.08]",
       bg: "bg-white/[0.02]",
       color: "#64748b",
-      title: "text-slate-400",
+      title: "text-zinc-400",
       monitor: "border-white/[0.06] bg-white/[0.02]",
     },
   };
@@ -1331,7 +1331,7 @@ function PlatformStatusCard({ status, platform }) {
               <PlatformIcon platform={platform} size='sm' />
             )}
           </div>
-          <p className='mt-1.5 line-clamp-3 text-[11px] leading-relaxed text-slate-400'>
+          <p className='mt-1.5 line-clamp-3 text-[11px] leading-relaxed text-zinc-400'>
             {status.message}
           </p>
           <p

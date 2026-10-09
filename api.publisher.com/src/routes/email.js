@@ -26,6 +26,15 @@ import {
   getEmailHtmlTemplate,
 } from '../lib/emailHtmlTemplates.js'
 import {
+  listLibraryTemplates,
+  listLibraryCategories,
+  getLibraryTemplate,
+  createLibraryTemplate,
+  updateLibraryTemplate,
+  deleteLibraryTemplate,
+  seedLibraryIfEmpty,
+} from '../lib/emailTemplateLibrary.js'
+import {
   getWorkspaceConfig,
   saveGmailConfig,
   toClientConfig,
@@ -1843,16 +1852,108 @@ router.put('/email/settings/calendar', async (req, res, next) => {
   }
 })
 
+/** User template library (per-workspace CRUD). */
+router.get('/email/library', async (req, res, next) => {
+  try {
+    const category = String(req.query.category || '').trim()
+    const templates = await listLibraryTemplates(req.workspaceId, {
+      category: category || undefined,
+    })
+    const categories = await listLibraryCategories(req.workspaceId)
+    res.json({ ok: true, templates, categories })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/email/library/categories', async (req, res, next) => {
+  try {
+    const categories = await listLibraryCategories(req.workspaceId)
+    res.json({ ok: true, categories })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/email/library/seed', async (req, res, next) => {
+  try {
+    const result = await seedLibraryIfEmpty(req.workspaceId)
+    const categories = await listLibraryCategories(req.workspaceId)
+    res.json({ ok: true, ...result, categories })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/email/library', async (req, res, next) => {
+  try {
+    const template = await createLibraryTemplate(req.workspaceId, req.body || {})
+    res.status(201).json({ ok: true, template })
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ ok: false, error: err.message })
+    next(err)
+  }
+})
+
+router.get('/email/library/:id', async (req, res, next) => {
+  try {
+    const template = await getLibraryTemplate(req.workspaceId, req.params.id)
+    if (!template) return res.status(404).json({ ok: false, error: 'Template not found' })
+    res.json({ ok: true, template })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.put('/email/library/:id', async (req, res, next) => {
+  try {
+    const template = await updateLibraryTemplate(req.workspaceId, req.params.id, req.body || {})
+    res.json({ ok: true, template })
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ ok: false, error: err.message })
+    next(err)
+  }
+})
+
+router.delete('/email/library/:id', async (req, res, next) => {
+  try {
+    await deleteLibraryTemplate(req.workspaceId, req.params.id)
+    res.json({ ok: true })
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ ok: false, error: err.message })
+    next(err)
+  }
+})
+
+/**
+ * Compose picker: prefer workspace library templates.
+ * `?builtin=1` returns legacy shared HTML templates (migration / admin).
+ */
 router.get('/email/templates', async (req, res, next) => {
   try {
-    const type = String(req.query.type || '').trim()
+    const wantBuiltin = String(req.query.builtin || '') === '1'
+    const category = String(req.query.category || req.query.type || '').trim()
     const meetingLink = String(
       req.query.meetingLink || (await resolveBookingUrl(req.workspaceId)),
     )
+
+    if (!wantBuiltin) {
+      let templates = await listLibraryTemplates(req.workspaceId, {
+        category: category && category !== 'all' ? category : undefined,
+      })
+      if (!templates.length && !category) {
+        const seeded = await seedLibraryIfEmpty(req.workspaceId)
+        templates = seeded.templates
+      }
+      const categories = await listLibraryCategories(req.workspaceId)
+      return res.json({ ok: true, templates, categories, source: 'library' })
+    }
+
+    const type = String(req.query.type || '').trim()
     const templates = type
       ? templatesByType(type, meetingLink)
       : listEmailHtmlTemplates(meetingLink)
-    res.json({ ok: true, templates })
+    res.json({ ok: true, templates, source: 'builtin' })
   } catch (err) {
     next(err)
   }
@@ -1860,12 +1961,15 @@ router.get('/email/templates', async (req, res, next) => {
 
 router.get('/email/templates/:id', async (req, res, next) => {
   try {
+    const fromLibrary = await getLibraryTemplate(req.workspaceId, req.params.id)
+    if (fromLibrary) return res.json({ ok: true, template: fromLibrary, source: 'library' })
+
     const meetingLink = String(
       req.query.meetingLink || (await resolveBookingUrl(req.workspaceId)),
     )
     const template = getEmailHtmlTemplate(req.params.id, meetingLink)
     if (!template) return res.status(404).json({ ok: false, error: 'Template not found' })
-    res.json({ ok: true, template })
+    res.json({ ok: true, template, source: 'builtin' })
   } catch (err) {
     next(err)
   }

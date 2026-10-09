@@ -48,8 +48,8 @@ function formatWhen(iso) {
 function StatPill({ label, value, accent }) {
   return (
     <div className="rounded-lg bg-white/[0.03] px-2.5 py-2 ring-1 ring-white/[0.06]">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">{label}</p>
-      <p className={`mt-0.5 font-display text-lg font-bold ${accent}`}>{value}</p>
+      <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className={`mt-0.5 text-lg font-bold ${accent}`}>{value}</p>
     </div>
   )
 }
@@ -58,12 +58,12 @@ function planBadge(plan, status) {
   const name = PLAN_META[plan]?.name || plan || 'None'
   const tone =
     status === 'active'
-      ? 'bg-emerald-500/15 text-emerald-300'
+      ? 'bg-white/[0.08] text-zinc-200'
       : status === 'pending'
         ? 'bg-amber-500/15 text-amber-300'
         : status === 'rejected'
           ? 'bg-rose-500/15 text-rose-300'
-          : 'bg-slate-500/15 text-slate-400'
+          : 'bg-slate-500/15 text-zinc-400'
   return (
     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${tone}`}>
       {name}
@@ -84,7 +84,7 @@ function UserCard({ user, index }) {
 
   return (
     <li className="saas-user-card" style={{ animationDelay: `${index * 40}ms` }}>
-      <div className="border-b border-white/[0.06] bg-gradient-to-br from-indigo-500/10 via-transparent to-sky-500/5 px-4 py-4">
+      <div className="border-b border-white/[0.06] bg-white/[0.02] px-4 py-4">
         <div className="flex items-start gap-3">
           {user.imageUrl ? (
             <img
@@ -93,14 +93,14 @@ function UserCard({ user, index }) {
               className="h-12 w-12 shrink-0 rounded-xl object-cover ring-2 ring-white/10"
             />
           ) : (
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 font-display text-sm font-bold text-indigo-200 ring-2 ring-white/10">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-white/[0.08] text-sm font-bold text-zinc-200 ring-1 ring-white/10">
               {initials || '?'}
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-base font-semibold text-white">{user.name}</p>
-            <p className="truncate text-xs text-slate-400">{user.email || 'No email'}</p>
-            <p className="mt-1 truncate font-mono text-[10px] text-slate-600">{user.workspaceId}</p>
+            <p className="truncate text-base font-semibold text-white">{user.name}</p>
+            <p className="truncate text-xs text-zinc-400">{user.email || 'No email'}</p>
+            <p className="mt-1 truncate font-mono text-[10px] text-zinc-600">{user.workspaceId}</p>
           </div>
           {planBadge(sub.plan, sub.status)}
         </div>
@@ -108,21 +108,21 @@ function UserCard({ user, index }) {
 
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div className="grid grid-cols-3 gap-2">
-          <StatPill label="Drafts" value={user.stats.drafts} accent="text-slate-200" />
+          <StatPill label="Drafts" value={user.stats.drafts} accent="text-zinc-200" />
           <StatPill label="Scheduled" value={user.stats.scheduled} accent="text-amber-300" />
           <StatPill label="Published" value={user.stats.published} accent="text-emerald-300" />
         </div>
 
         <div>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Connections</p>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Connections</p>
           {connected.length === 0 ? (
-            <p className="mt-2 text-xs text-slate-600">No platforms configured yet</p>
+            <p className="mt-2 text-xs text-zinc-600">No platforms configured yet</p>
           ) : (
             <div className="mt-2 flex flex-wrap gap-2">
               {connected.map(([key]) => (
                 <span
                   key={key}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-2 py-1 text-[10px] font-medium text-slate-300 ring-1 ring-white/[0.06]"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-2 py-1 text-[10px] font-medium text-zinc-300 ring-1 ring-white/[0.06]"
                 >
                   {key !== 'gmail' && key !== 'meta' ? (
                     <PlatformIcon platform={key} size="xs" />
@@ -134,14 +134,14 @@ function UserCard({ user, index }) {
           )}
         </div>
 
-        <div className="mt-auto space-y-1.5 border-t border-white/[0.06] pt-3 text-[11px] text-slate-500">
+        <div className="mt-auto space-y-1.5 border-t border-white/[0.06] pt-3 text-[11px] text-zinc-500">
           <div className="flex justify-between gap-2">
             <span>Joined</span>
-            <span className="text-slate-400">{formatWhen(user.createdAt)}</span>
+            <span className="text-zinc-400">{formatWhen(user.createdAt)}</span>
           </div>
           <div className="flex justify-between gap-2">
             <span>Last sign-in</span>
-            <span className="text-slate-400">{formatWhen(user.lastSignInAt)}</span>
+            <span className="text-zinc-400">{formatWhen(user.lastSignInAt)}</span>
           </div>
         </div>
       </div>
@@ -237,8 +237,8 @@ export default function AdminUsersPage() {
             onClick={() => setTab(t.id)}
             className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
               tab === t.id
-                ? 'bg-indigo-500/20 text-indigo-200 ring-1 ring-indigo-500/30'
-                : 'bg-white/[0.04] text-slate-400 hover:text-white'
+                ? 'bg-white/[0.1] text-zinc-100 ring-1 ring-white/15'
+                : 'bg-white/[0.04] text-zinc-400 hover:text-white'
             }`}
           >
             {t.label}
@@ -284,7 +284,7 @@ export default function AdminUsersPage() {
           signups.length === 0 ? (
             <EmptyState title="No signups yet" description="New accounts will show here with plan status." />
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-white/10">
+            <div className="overflow-x-auto saas-content-card">
               <div className="mobile-data-cards !border-0 !bg-transparent !p-3">
                 {signups.map((s) => (
                   <div key={s.id} className="mobile-data-card">
@@ -318,10 +318,10 @@ export default function AdminUsersPage() {
                     <tr key={s.id}>
                       <td className="px-3 py-2.5">
                         <p className="font-medium text-white">{s.name}</p>
-                        <p className="text-xs text-slate-500">{s.email || s.workspaceId}</p>
+                        <p className="text-xs text-zinc-500">{s.email || s.workspaceId}</p>
                       </td>
-                      <td className="px-3 py-2.5 text-slate-400">{formatWhen(s.createdAt)}</td>
-                      <td className="px-3 py-2.5 text-slate-300">
+                      <td className="px-3 py-2.5 text-zinc-400">{formatWhen(s.createdAt)}</td>
+                      <td className="px-3 py-2.5 text-zinc-300">
                         {PLAN_META[s.plan]?.name || s.plan || 'None'}
                       </td>
                       <td className="px-3 py-2.5">{planBadge(s.plan, s.status)}</td>
@@ -338,17 +338,17 @@ export default function AdminUsersPage() {
             {payments.map((p) => (
               <li
                 key={p.id}
-                className="rounded-2xl border border-white/10 bg-white/[0.02] p-4"
+                className="saas-content-card bg-white/[0.02] p-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-medium text-white">
                       {p.userEmail || p.workspaceId} · {PLAN_META[p.planRequested]?.name || p.planRequested}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-zinc-500">
                       {p.bankMethod} · {formatWhen(p.createdAt)}
                     </p>
-                    {p.note ? <p className="mt-2 text-xs text-slate-400">{p.note}</p> : null}
+                    {p.note ? <p className="mt-2 text-xs text-zinc-400">{p.note}</p> : null}
                   </div>
                   {planBadge(p.planRequested, p.status)}
                 </div>
@@ -357,7 +357,7 @@ export default function AdminUsersPage() {
                     <button
                       type="button"
                       onClick={() => setReceiptPreview(p.receiptUrl)}
-                      className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/5"
+                      className="btn-secondary px-3 py-1.5 text-xs"
                     >
                       View receipt
                     </button>
@@ -396,13 +396,13 @@ export default function AdminUsersPage() {
           onKeyDown={(e) => e.key === 'Escape' && setReceiptPreview(null)}
           role="dialog"
         >
-          <div className="max-h-[90vh] max-w-3xl overflow-auto rounded-2xl border border-white/10 bg-[#0c1220] p-4">
+          <div className="max-h-[90vh] max-w-3xl overflow-auto saas-content-card bg-[var(--bg-panel)] p-4">
             <img src={receiptPreview} alt="Payment receipt" className="max-h-[80vh] w-full object-contain" />
             <a
               href={receiptPreview}
               target="_blank"
               rel="noreferrer"
-              className="mt-3 inline-block text-sm text-indigo-300"
+              className="mt-3 inline-block text-sm text-zinc-300"
               onClick={(e) => e.stopPropagation()}
             >
               Open original

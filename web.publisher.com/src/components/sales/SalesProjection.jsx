@@ -4,29 +4,29 @@ import { formatMoney } from '../../lib/salesConstants'
 function CaseCard({ title, data, eom, accent }) {
   return (
     <div
-      className={`rounded-2xl border p-4 ${
+      className={`rounded-md border p-4 ${
         accent === 'best'
-          ? 'border-emerald-500/30 bg-emerald-500/[0.06]'
+          ? 'border-white/25 bg-white/[0.08]'
           : accent === 'worst'
             ? 'border-rose-500/30 bg-rose-500/[0.06]'
-            : 'border-indigo-500/30 bg-indigo-500/[0.06]'
+            : 'border-white/[0.12] bg-white/[0.04]'
       }`}
     >
-      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{title}</p>
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">{title}</p>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-white">
         {formatMoney(eom?.revenue ?? data?.revenue)}
       </p>
-      <p className="mt-1 text-xs text-slate-400">
+      <p className="mt-1 text-xs text-zinc-400">
         End-of-month revenue · Cash {formatMoney(eom?.cash ?? data?.cash)}
       </p>
-      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-400">
+      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-zinc-400">
         <div>
-          <p className="text-slate-500">Pipeline add</p>
-          <p className="font-semibold text-slate-200">{formatMoney(data?.revenue)}</p>
+          <p className="text-zinc-500">Pipeline add</p>
+          <p className="font-semibold text-zinc-200">{formatMoney(data?.revenue)}</p>
         </div>
         <div>
-          <p className="text-slate-500">Expected sales</p>
-          <p className="font-semibold text-slate-200">{data?.expectedSales ?? '—'}</p>
+          <p className="text-zinc-500">Expected sales</p>
+          <p className="font-semibold text-zinc-200">{data?.expectedSales ?? '—'}</p>
         </div>
       </div>
     </div>
@@ -52,7 +52,7 @@ export default function SalesProjection({ projection, onReload }) {
   }, [projection?.assumptions?.scheduledMeetings])
 
   if (!projection) {
-    return <p className="py-12 text-center text-sm text-slate-500">Loading projection…</p>
+    return <p className="py-12 text-center text-sm text-zinc-500">Loading projection…</p>
   }
 
   const a = projection.assumptions
@@ -60,10 +60,10 @@ export default function SalesProjection({ projection, onReload }) {
   return (
     <div className="space-y-5">
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500">
           Assumptions
         </p>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-zinc-400">
           {a.scheduledMeetings} meetings in pipeline · rates from trailing performance (editable)
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -73,7 +73,7 @@ export default function SalesProjection({ projection, onReload }) {
             { key: 'closeRate', label: 'Close %' },
             { key: 'avgDealSize', label: 'Avg deal $' },
           ].map((f) => (
-            <label key={f.key} className="text-xs text-slate-400">
+            <label key={f.key} className="text-xs text-zinc-400">
               {f.label}
               <input
                 type="number"
@@ -89,7 +89,7 @@ export default function SalesProjection({ projection, onReload }) {
         <button
           type="button"
           onClick={() => onReload?.(overrides)}
-          className="mt-3 rounded-lg bg-indigo-500 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-400"
+          className="mt-3 btn-primary px-3 py-2 text-xs"
         >
           Recalculate
         </button>
@@ -116,7 +116,7 @@ export default function SalesProjection({ projection, onReload }) {
         />
       </div>
 
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 text-sm text-slate-400">
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 text-sm text-zinc-400">
         Current net revenue {formatMoney(projection.current?.netRevenue)} · Cash collected{' '}
         {formatMoney(projection.current?.cashCollected)}. Projection adds forecasted closes from
         remaining pipeline meetings.

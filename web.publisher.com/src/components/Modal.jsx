@@ -34,7 +34,7 @@ export default function Modal({ open, onClose, title, children, footer, maxWidth
       <div
         role="dialog"
         aria-modal="true"
-        className={`glass-panel relative z-10 w-full ${maxWidth} max-h-[90vh] overflow-y-auto rounded-2xl p-4 shadow-2xl sm:p-6`}
+        className={`relative z-10 w-full ${maxWidth} max-h-[90vh] overflow-y-auto saas-content-card p-4 sm:p-6`}
       >
         {title && (
           <div className="mb-4 flex items-start justify-between gap-4">

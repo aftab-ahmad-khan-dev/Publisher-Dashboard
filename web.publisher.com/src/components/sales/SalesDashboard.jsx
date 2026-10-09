@@ -24,13 +24,13 @@ function Metric({ label, value, hint, danger }) {
           : 'border-white/[0.08] bg-white/[0.03]'
       }`}
     >
-      <p className={`text-[10px] font-semibold uppercase tracking-wide ${danger ? 'text-rose-400' : 'text-slate-500'}`}>
+      <p className={`text-[10px] font-semibold uppercase tracking-wide ${danger ? 'text-rose-400' : 'text-zinc-500'}`}>
         {label}
       </p>
       <p className={`mt-0.5 text-lg font-semibold tabular-nums ${danger ? 'text-rose-200' : 'text-white'}`}>
         {value}
       </p>
-      {hint ? <p className="mt-0.5 text-[10px] text-slate-500">{hint}</p> : null}
+      {hint ? <p className="mt-0.5 text-[10px] text-zinc-500">{hint}</p> : null}
     </div>
   )
 }
@@ -38,7 +38,7 @@ function Metric({ label, value, hint, danger }) {
 function Section({ title, children }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">{title}</h3>
+      <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500">{title}</h3>
       {children}
     </section>
   )
@@ -70,7 +70,7 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
   }, [setters, activity.setterName])
 
   if (!metrics) {
-    return <p className="py-12 text-center text-sm text-slate-500">Loading metrics…</p>
+    return <p className="py-12 text-center text-sm text-zinc-500">Loading metrics…</p>
   }
 
   const { setter, closer, money, leaks, agingLeads } = metrics
@@ -93,7 +93,7 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
-        <label className="text-xs text-slate-400">
+        <label className="text-xs text-zinc-400">
           From
           <input
             type="date"
@@ -102,7 +102,7 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
             className="mt-1 block rounded-lg border border-white/[0.1] bg-white/[0.04] px-2 py-1.5 text-sm text-white"
           />
         </label>
-        <label className="text-xs text-slate-400">
+        <label className="text-xs text-zinc-400">
           To
           <input
             type="date"
@@ -111,7 +111,7 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
             className="mt-1 block rounded-lg border border-white/[0.1] bg-white/[0.04] px-2 py-1.5 text-sm text-white"
           />
         </label>
-        <label className="text-xs text-slate-400">
+        <label className="text-xs text-zinc-400">
           Setter
           <select
             value={filters.setter || ''}
@@ -126,7 +126,7 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
             ))}
           </select>
         </label>
-        <label className="text-xs text-slate-400">
+        <label className="text-xs text-zinc-400">
           Closer
           <select
             value={filters.closer || ''}
@@ -141,7 +141,7 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
             ))}
           </select>
         </label>
-        <label className="min-w-[120px] flex-1 text-xs text-slate-400">
+        <label className="min-w-[120px] flex-1 text-xs text-zinc-400">
           Source
           <input
             value={filters.source || ''}
@@ -154,7 +154,7 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
 
       <Section title="Daily setter activity">
         <div className="flex flex-wrap items-end gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
-          <label className="text-xs text-slate-400">
+          <label className="text-xs text-zinc-400">
             Date
             <input
               type="date"
@@ -163,7 +163,7 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
               className="mt-1 block rounded-lg border border-white/[0.1] bg-white/[0.04] px-2 py-1.5 text-sm text-white"
             />
           </label>
-          <label className="text-xs text-slate-400">
+          <label className="text-xs text-zinc-400">
             Setter
             <input
               list="dash-setters"
@@ -178,7 +178,7 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
             </datalist>
           </label>
           {['dials', 'dmsSent', 'conversations'].map((key) => (
-            <label key={key} className="text-xs text-slate-400">
+            <label key={key} className="text-xs text-zinc-400">
               {key === 'dmsSent' ? 'DMs sent' : key.charAt(0).toUpperCase() + key.slice(1)}
               <input
                 type="number"
@@ -195,7 +195,7 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
             type="button"
             disabled={savingActivity || !activity.setterName}
             onClick={saveActivity}
-            className="rounded-lg bg-indigo-500 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-400 disabled:opacity-50"
+            className="btn-primary px-3 py-2 text-xs disabled:opacity-50"
           >
             {savingActivity ? 'Saving…' : 'Save activity'}
           </button>
@@ -244,7 +244,7 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
         {lossData.length ? (
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <div className="h-56 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
-              <p className="mb-2 text-[10px] font-semibold uppercase text-slate-500">Loss reasons</p>
+              <p className="mb-2 text-[10px] font-semibold uppercase text-zinc-500">Loss reasons</p>
               <ResponsiveContainer width="100%" height="90%">
                 <PieChart>
                   <Pie data={lossData} dataKey="value" nameKey="name" innerRadius={40} outerRadius={70}>
@@ -263,7 +263,7 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
               </ResponsiveContainer>
             </div>
             <div className="h-56 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
-              <p className="mb-2 text-[10px] font-semibold uppercase text-slate-500">Loss breakdown</p>
+              <p className="mb-2 text-[10px] font-semibold uppercase text-zinc-500">Loss breakdown</p>
               <ResponsiveContainer width="100%" height="90%">
                 <BarChart data={lossData}>
                   <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} />
@@ -300,13 +300,13 @@ export default function SalesDashboard({ metrics, filters, onFiltersChange, team
         </div>
         {Object.keys(money.commissionsByRep || {}).length ? (
           <div className="mt-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
-            <p className="mb-2 text-[10px] font-semibold uppercase text-slate-500">
+            <p className="mb-2 text-[10px] font-semibold uppercase text-zinc-500">
               Commissions earned (net of clawbacks)
             </p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {Object.entries(money.commissionsByRep).map(([rep, amt]) => (
                 <div key={rep} className="rounded-lg bg-white/[0.03] px-3 py-2">
-                  <p className="text-xs text-slate-400">{rep}</p>
+                  <p className="text-xs text-zinc-400">{rep}</p>
                   <p className="text-sm font-semibold text-emerald-300">{formatMoney(amt)}</p>
                 </div>
               ))}

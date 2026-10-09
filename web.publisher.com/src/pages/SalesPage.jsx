@@ -251,13 +251,13 @@ export default function SalesPage() {
       <PageShell>
         <PageHeader title="Sales Tracker" subtitle="Pipeline CRM for setters and closers" />
         <PageScroll>
-          <div className="mx-auto max-w-lg rounded-2xl border border-white/[0.08] bg-white/[0.03] p-8 text-center">
-            <p className="text-sm text-slate-300">
+          <div className="mx-auto max-w-lg saas-content-card p-8 text-center">
+            <p className="text-sm text-zinc-300">
               Sales Tracker is included with Growth and Pro plans (same as Mail Box).
             </p>
             <Link
               to="/billing"
-              className="mt-4 inline-flex rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold text-white"
+              className="btn-primary mt-4 px-4 py-2 text-sm"
             >
               View billing
             </Link>
@@ -279,7 +279,7 @@ export default function SalesPage() {
                 type="button"
                 disabled={importing}
                 onClick={handleImportMeetings}
-                className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-50"
+                className="btn-secondary px-3 py-2 text-xs disabled:opacity-50"
               >
                 {importing ? 'Importing…' : `Import meetings (${importableCount})`}
               </button>
@@ -287,14 +287,14 @@ export default function SalesPage() {
             <button
               type="button"
               onClick={() => setTeamOpen(true)}
-              className="rounded-lg border border-white/[0.1] px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-white/[0.04]"
+              className="rounded-lg border border-white/[0.1] px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/[0.04]"
             >
               Team
             </button>
             <button
               type="button"
               onClick={() => openCreate('new')}
-              className="rounded-lg bg-indigo-500 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-400"
+              className="btn-primary px-3 py-2 text-xs"
             >
               + Lead
             </button>
@@ -302,28 +302,22 @@ export default function SalesPage() {
         }
       />
 
-      <div className="border-b border-white/[0.06] px-1">
-        <div className="flex gap-1 overflow-x-auto">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={`shrink-0 rounded-t-lg px-4 py-2.5 text-sm font-medium transition ${
-                tab === t.id
-                  ? 'bg-white/[0.06] text-white'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+      <div className="saas-tabs mb-3 shrink-0">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`saas-tab ${tab === t.id ? 'saas-tab--active' : ''}`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       <PageScroll>
         {loading ? (
-          <p className="py-16 text-center text-sm text-slate-500">Loading board…</p>
+          <p className="py-16 text-center text-sm text-zinc-500">Loading board…</p>
         ) : null}
 
         {!loading && tab === 'board' ? (
@@ -421,9 +415,9 @@ export default function SalesPage() {
             aria-label="Close"
             onClick={() => setLossModal(null)}
           />
-          <div className="relative w-full max-w-sm rounded-2xl border border-white/[0.1] bg-[#0a0c14] p-5 shadow-xl">
+          <div className="relative w-full max-w-sm saas-content-card p-5">
             <h3 className="text-base font-semibold text-white">Loss reason required</h3>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-zinc-400">
               Select why {lossModal.lead.name || 'this lead'} was lost.
             </p>
             <select
@@ -442,7 +436,7 @@ export default function SalesPage() {
               <button
                 type="button"
                 onClick={() => setLossModal(null)}
-                className="px-3 py-2 text-xs text-slate-400"
+                className="px-3 py-2 text-xs text-zinc-400"
               >
                 Cancel
               </button>

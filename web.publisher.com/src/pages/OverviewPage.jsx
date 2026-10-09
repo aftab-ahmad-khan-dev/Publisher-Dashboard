@@ -8,7 +8,8 @@ import PageShell, { PageScroll } from '../components/PageShell'
 import { OverviewSkeleton } from '../components/Skeleton'
 import KpiCard from '../components/dashboard/KpiCard'
 import MailActivityChart from '../components/dashboard/MailActivityChart'
-import LinkMixBars from '../components/dashboard/LinkMixBars'
+import LinkMixRadar from '../components/dashboard/LinkMixRadar'
+import StatRing from '../components/dashboard/StatRing'
 
 const FOLLOW_UP_PAGE_SIZE = 5
 
@@ -191,23 +192,36 @@ export default function OverviewPage() {
                 value={formatCompact(mail.sent)}
                 hint={`${mail.period?.sent ?? 0} in last ${mail.period?.days ?? 10} days`}
                 trend={trends.sent}
+                series={series}
+                dataKey="sent"
+                featured
+                tone="zinc"
               />
               <KpiCard
                 label="Opened"
                 value={formatCompact(mail.opened)}
                 hint={`${mail.openRate ?? 0}% open rate`}
                 trend={trends.opened}
+                series={series}
+                dataKey="opened"
+                tone="rose"
               />
               <KpiCard
                 label="Clicked"
                 value={formatCompact(mail.clicked)}
                 hint={`${mail.clickRate ?? 0}% click rate`}
                 trend={trends.clicked}
+                series={series}
+                dataKey="clicked"
+                tone="sky"
               />
               <KpiCard
                 label="Upcoming meetings"
                 value={(meetings.upcoming || 0).toLocaleString()}
                 hint={`${meetings.booked || 0} booked · ${followUps.length} waiting`}
+                series={series}
+                dataKey="opened"
+                tone="emerald"
               />
             </div>
 
@@ -216,37 +230,67 @@ export default function OverviewPage() {
                 <MailActivityChart series={series} onDownload={downloadCsv} />
               </div>
               <div className="flex flex-col gap-3 xl:col-span-4">
-                <LinkMixBars links={links} />
-                <section className="saas-content-card">
-                  <h3 className="saas-section-title">Workspace</h3>
-                  <p className="saas-section-desc mb-4">Content and meeting load</p>
-                  <dl className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="text-zinc-500">Scheduled posts</dt>
-                      <dd className="font-medium tabular-nums text-zinc-100">
-                        {content.scheduledPosts || 0}
-                      </dd>
+                <LinkMixRadar links={links} />
+                <section className="saas-content-card space-y-4">
+                  <div>
+                    <h3 className="saas-section-title">Workspace</h3>
+                    <p className="saas-section-desc">Meetings and publishing load</p>
+                  </div>
+                  <StatRing
+                    value={meetings.upcoming || 0}
+                    max={Math.max((meetings.booked || 0) * 2, meetings.upcoming || 0, 4)}
+                    label="Meetings ahead"
+                    sublabel={`${meetings.booked || 0} booked overall`}
+                  />
+                  <StatRing
+                    value={content.scheduledPosts || 0}
+                    max={Math.max((content.drafts || 0) + (content.scheduledPosts || 0), 4)}
+                    label="Posts scheduled"
+                    sublabel={`${content.drafts || 0} drafts waiting`}
+                    tone="sky"
+                  />
+                  <div className="rounded-md border border-white/[0.08] bg-transparent px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-[11px] font-medium text-zinc-500">Warm leads</p>
+                        <p className="mt-0.5 text-lg font-semibold tabular-nums text-zinc-100">
+                          {followUps.length}
+                        </p>
+                      </div>
+                      <span className="text-[11px] text-zinc-500">need a reply</span>
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="text-zinc-500">Drafts</dt>
-                      <dd className="font-medium tabular-nums text-zinc-100">
-                        {content.drafts || 0}
-                      </dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="text-zinc-500">Meetings booked</dt>
-                      <dd className="font-medium tabular-nums text-zinc-100">
-                        {meetings.booked || 0}
-                      </dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
-                      <dt className="text-zinc-500">Warm leads</dt>
-                      <dd className="font-medium tabular-nums text-zinc-100">
-                        {followUps.length}
-                      </dd>
-                    </div>
-                  </dl>
+                  </div>
                 </section>
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-3">
+                <h3 className="saas-section-title">Top click destinations</h3>
+                <p className="saas-section-desc">Breakdown of tracked link interest</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {[
+                  { title: 'Calendar booking', value: links.calendar, pct: links.calendarPct },
+                  { title: 'Portfolio', value: links.portfolio, pct: links.portfolioPct },
+                  { title: 'Other links', value: links.other, pct: links.otherPct },
+                ].map((item) => (
+                  <div key={item.title} className="saas-content-card !py-4">
+                    <p className="text-[11px] font-medium text-zinc-500">{item.title}</p>
+                    <div className="mt-2 flex items-end justify-between gap-2">
+                      <p className="text-2xl font-semibold tabular-nums tracking-tight text-zinc-50">
+                        {formatCompact(item.value)}
+                      </p>
+                      <p className="pb-0.5 text-xs tabular-nums text-zinc-500">{item.pct ?? 0}%</p>
+                    </div>
+                    <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/[0.06]">
+                      <div
+                        className="h-full rounded-full bg-zinc-300"
+                        style={{ width: `${Math.max(4, Math.min(100, item.pct || 0))}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

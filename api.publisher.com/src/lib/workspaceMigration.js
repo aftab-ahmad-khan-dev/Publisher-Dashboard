@@ -8,6 +8,7 @@ import { Media } from '../models/Media.js'
 import { EmailCampaign } from '../models/EmailCampaign.js'
 import { EmailRecipient } from '../models/EmailRecipient.js'
 import { EmailTemplateDraft } from '../models/EmailTemplateDraft.js'
+import { EmailTemplate } from '../models/EmailTemplate.js'
 import { logger } from './logger.js'
 
 /** Pre-Clerk single-tenant workspace ids (platform-owner data only). */
@@ -104,7 +105,15 @@ async function migrateWorkspace(fromId, toId) {
   await moveUniqueDoc(ApiConfig, fromId, toId)
   await moveUniqueDoc(EmailTemplateDraft, fromId, toId)
 
-  const collections = [Draft, ScheduledPost, PublishedPost, Media, EmailCampaign, EmailRecipient]
+  const collections = [
+    Draft,
+    ScheduledPost,
+    PublishedPost,
+    Media,
+    EmailCampaign,
+    EmailRecipient,
+    EmailTemplate,
+  ]
   for (const Model of collections) {
     await Model.updateMany({ workspaceId: fromId }, { $set: { workspaceId: toId } })
   }

@@ -116,12 +116,12 @@ function GuideCard({ g }) {
           <PlatformIcon platform={g.key} size="lg" shape="squircle" />
         )}
         <div className="min-w-0">
-          <h3 className="font-display text-base font-bold text-white">{g.title}</h3>
+          <h3 className="text-base font-bold text-white">{g.title}</h3>
           <a
             href={g.portal[1]}
             target="_blank"
             rel="noreferrer"
-            className="text-xs text-indigo-300 hover:text-indigo-200"
+            className="text-xs text-zinc-300 hover:text-zinc-200"
           >
             {g.portal[0]} ↗
           </a>
@@ -135,18 +135,18 @@ function GuideCard({ g }) {
             href={g.fieldLinks?.[f] || g.portal[1]}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-medium text-indigo-200 transition hover:bg-indigo-500/20"
+            className="inline-flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium text-zinc-200 transition hover:bg-white/[0.08]"
           >
             {f}
-            <span className="text-indigo-400">↗</span>
+            <span className="text-zinc-400">↗</span>
           </a>
         ))}
       </div>
 
       <ol className="mt-4 space-y-2">
         {g.steps.map((s, i) => (
-          <li key={i} className="flex gap-2.5 text-[13px] leading-relaxed text-slate-400">
-            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-[10px] font-bold text-indigo-300">
+          <li key={i} className="flex gap-2.5 text-[13px] leading-relaxed text-zinc-400">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[10px] font-bold text-zinc-300">
               {i + 1}
             </span>
             {s}
@@ -156,8 +156,8 @@ function GuideCard({ g }) {
 
       {g.redirect && (
         <div className="mt-3">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-600">Redirect URI</p>
-          <code className="mt-1 block break-all rounded-lg bg-black/40 px-3 py-2 font-mono text-[11px] text-emerald-300/90">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-600">Redirect URI</p>
+          <code className="mt-1 block break-all rounded-lg bg-black/40 px-3 py-2 font-mono text-[11px] text-zinc-300/90">
             {g.redirect}
           </code>
         </div>
@@ -182,7 +182,7 @@ export default function GuidePage() {
       <PageScroll className="space-y-4 pb-4">
         <InfoBanner tone="violet">
           Connect each platform once in{' '}
-          <a href="/api-config" className="font-semibold text-indigo-200 hover:text-white">
+          <a href="/api-config" className="font-semibold text-zinc-200 hover:text-white">
             Integrations
           </a>
           . Tokens are encrypted per account and never shared across tenants.

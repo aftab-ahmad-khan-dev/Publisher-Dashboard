@@ -17,31 +17,31 @@ export function ScheduledPostListCard({ item, onPreview, onEdit, onDelete, style
             </span>
             <PlatformIconGroup platforms={item.platforms} size="md" />
             {item.poll?.enabled && (
-              <span className="rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
+              <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-zinc-300">
                 Poll
               </span>
             )}
           </div>
-          <p className="mt-3 text-base leading-relaxed text-slate-100 line-clamp-3">
+          <p className="mt-3 text-base leading-relaxed text-zinc-100 line-clamp-3">
             {item.poll?.enabled ? item.poll.question || item.body : item.body}
           </p>
           <p className="mt-3 text-sm font-medium text-white">
             {formatScheduledISO(item.scheduledAt, item.timezone)}
           </p>
-          <p className="mt-1 text-xs text-slate-500">{item.timezone}</p>
+          <p className="mt-1 text-xs text-zinc-500">{item.timezone}</p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => onPreview(item)}
-            className="rounded-xl px-2.5 py-1 text-xs font-semibold text-slate-300 ring-1 ring-white/15 transition-colors hover:bg-white/5 sm:px-3 sm:py-1.5"
+            className="btn-secondary px-2.5 py-1 text-xs sm:px-3 sm:py-1.5"
           >
             Preview
           </button>
           <button
             type="button"
             onClick={() => onEdit(item)}
-            className="rounded-xl px-2.5 py-1 text-xs font-semibold text-indigo-300 ring-1 ring-indigo-500/25 transition-colors hover:bg-indigo-500/10 sm:px-3 sm:py-1.5"
+            className="btn-secondary px-2.5 py-1 text-xs sm:px-3 sm:py-1.5"
           >
             Edit
           </button>
@@ -82,25 +82,25 @@ export function ScheduledPostGridCard({ item, onPreview, onEdit, onDelete, style
         </span>
         <PlatformIconGroup platforms={item.platforms} size="sm" />
         {item.poll?.enabled && (
-          <span className="rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
+          <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-zinc-300">
             Poll
           </span>
         )}
       </div>
 
-      <p className="mt-3 flex-1 line-clamp-4 text-sm leading-relaxed text-slate-200">
+      <p className="mt-3 flex-1 line-clamp-4 text-sm leading-relaxed text-zinc-200">
         {item.poll?.enabled ? item.poll.question || item.body : item.body}
       </p>
 
       <p className="mt-3 text-xs font-medium text-white line-clamp-2">
         {formatScheduledISO(item.scheduledAt, item.timezone)}
       </p>
-      <p className="mt-1 text-[10px] text-slate-600">{item.timezone}</p>
+      <p className="mt-1 text-[10px] text-zinc-600">{item.timezone}</p>
 
       <button
         type="button"
         onClick={() => onPreview(item)}
-        className="mt-4 w-full rounded-xl py-2 text-xs font-semibold text-slate-300 ring-1 ring-white/15 transition-colors hover:bg-white/5"
+        className="btn-secondary mt-4 w-full py-2 text-xs"
       >
         Preview
       </button>
@@ -108,7 +108,7 @@ export function ScheduledPostGridCard({ item, onPreview, onEdit, onDelete, style
         <button
           type="button"
           onClick={() => onEdit(item)}
-          className="flex-1 rounded-xl py-2 text-xs font-semibold text-indigo-300 ring-1 ring-indigo-500/25 transition-colors hover:bg-indigo-500/10"
+          className="btn-secondary flex-1 py-2 text-xs"
         >
           Edit
         </button>

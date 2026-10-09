@@ -68,8 +68,8 @@ export default function CalendarPage() {
       <PageBody className="saas-calendar-shell min-h-0 flex-1 overflow-y-auto lg:overflow-hidden">
         <ContentCard className="flex min-h-[320px] flex-col lg:min-h-0 lg:overflow-hidden">
           <div className="mb-3 flex shrink-0 items-center justify-between">
-            <h3 className="font-display text-lg font-bold text-white">
-              {MONTHS[month]} <span className="text-slate-500">{year}</span>
+            <h3 className="text-lg font-bold text-white">
+              {MONTHS[month]} <span className="text-zinc-500">{year}</span>
             </h3>
             <div className="flex gap-1">
               <button type="button" onClick={prevMonth} className="btn-icon" aria-label="Previous month">
@@ -84,7 +84,7 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          <div className="mb-2 grid shrink-0 grid-cols-7 gap-1 text-center text-[8px] font-bold uppercase tracking-wider text-slate-500 sm:text-[9px]">
+          <div className="mb-2 grid shrink-0 grid-cols-7 gap-1 text-center text-[8px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[9px]">
             {WEEKDAYS.map((d) => (
               <div key={d} className="truncate px-0.5">
                 <span className="sm:hidden">{d.slice(0, 1)}</span>
@@ -112,7 +112,7 @@ export default function CalendarPage() {
                     isSelected ? 'saas-calendar-day--selected' : posts.length ? 'calendar-day-has-post' : ''
                   } ${isToday ? 'saas-calendar-day--today' : ''}`}
                 >
-                  <span className={`text-xs font-bold ${isToday ? 'text-sky-400' : 'text-slate-400'}`}>
+                  <span className={`text-xs font-bold ${isToday ? 'text-sky-400' : 'text-zinc-400'}`}>
                     {day.getDate()}
                   </span>
                   {platforms.length > 0 && (
@@ -138,14 +138,14 @@ export default function CalendarPage() {
         </ContentCard>
 
         <ContentCard className="flex flex-col lg:min-h-0 lg:overflow-hidden">
-          <h3 className="shrink-0 font-display text-base font-bold text-white">
+          <h3 className="shrink-0 text-base font-bold text-white">
             {cursor.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
           </h3>
-          <p className="shrink-0 text-[11px] text-slate-500">{selectedPosts.length} post(s) scheduled</p>
+          <p className="shrink-0 text-[11px] text-zinc-500">{selectedPosts.length} post(s) scheduled</p>
 
           <ul className="scrollbar-none mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
             {selectedPosts.length === 0 ? (
-              <li className="rounded-xl border border-dashed border-white/10 py-10 text-center text-xs text-slate-500">
+              <li className="rounded-xl border border-dashed border-white/10 py-10 text-center text-xs text-zinc-500">
                 No posts on this day
               </li>
             ) : (
@@ -153,8 +153,8 @@ export default function CalendarPage() {
                 <li key={item.id}>
                   <button type="button" onClick={() => setPreviewing(item)} className="saas-list-item">
                     <PlatformIconGroup platforms={item.platforms} size="xs" maxVisible={5} />
-                    <p className="mt-1.5 line-clamp-2 text-xs text-slate-300">{item.body}</p>
-                    <p className="mt-1 text-[10px] font-medium text-indigo-300">
+                    <p className="mt-1.5 line-clamp-2 text-xs text-zinc-300">{item.body}</p>
+                    <p className="mt-1 text-[10px] font-medium text-zinc-300">
                       {formatScheduledISO(item.scheduledAt, item.timezone)}
                     </p>
                   </button>

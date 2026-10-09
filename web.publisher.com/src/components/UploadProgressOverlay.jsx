@@ -15,13 +15,13 @@ const MARKETING_PATHS = ['/', '/pricing', '/products', '/about', '/privacy', '/t
 function SoftProcessChip({ message }) {
   return (
     <div
-      className="pointer-events-none fixed bottom-4 right-4 z-[180] flex max-w-xs items-center gap-2.5 rounded-xl border border-white/10 bg-[#0c0e16]/95 px-3.5 py-2.5 shadow-lg shadow-black/40 backdrop-blur-md"
+      className="pointer-events-none fixed bottom-4 right-4 z-[180] flex max-w-xs items-center gap-2.5 rounded-xl border border-white/10 bg-[var(--bg-panel)]/95 px-3.5 py-2.5"
       role="status"
       aria-live="polite"
       aria-busy="true"
     >
-      <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-indigo-400" />
-      <p className="truncate text-xs font-medium text-slate-200">{message}</p>
+      <span className="h-2 w-2 shrink-0 rounded-full bg-zinc-400" />
+      <p className="truncate text-xs font-medium text-zinc-200">{message}</p>
     </div>
   )
 }

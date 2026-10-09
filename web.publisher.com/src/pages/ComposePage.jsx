@@ -89,7 +89,7 @@ export default function ComposePage() {
       {post.editingDraftId && (
         <div className="saas-info-banner saas-info-banner--amber mb-3 flex shrink-0 items-center justify-between gap-2 py-2">
           <span className="draft-badge">Editing draft</span>
-          <span className="truncate text-xs text-slate-300">{editingTitle}</span>
+          <span className="truncate text-xs text-zinc-300">{editingTitle}</span>
           <Link to="/drafts" className="shrink-0 text-xs font-medium text-amber-300 hover:text-amber-200">
             All drafts →
           </Link>

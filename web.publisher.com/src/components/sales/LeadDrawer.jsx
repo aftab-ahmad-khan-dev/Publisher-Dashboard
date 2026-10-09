@@ -7,8 +7,8 @@ import {
 } from '../../lib/salesConstants'
 
 const fieldClass =
-  'w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none placeholder:text-slate-600 focus:border-indigo-500/40'
-const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500'
+  'w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-white/20'
+const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500'
 
 function Field({ label, children }) {
   return (
@@ -50,14 +50,14 @@ export default function LeadDrawer({
         aria-label="Close"
         onClick={onClose}
       />
-      <div className="relative flex h-full w-full max-w-lg flex-col border-l border-white/[0.08] bg-[#0a0c14] shadow-2xl">
+      <div className="relative flex h-full w-full max-w-lg flex-col border-l border-white/[0.08] bg-[var(--bg-panel)] shadow-2xl">
         <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3">
           <div>
             <h2 className="text-lg font-semibold text-white">
               {isCreate ? 'New lead' : form.name || 'Lead'}
             </h2>
             {!isCreate && lead?.dateCreated ? (
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-zinc-500">
                 Created {new Date(lead.dateCreated).toLocaleDateString()}
               </p>
             ) : null}
@@ -65,7 +65,7 @@ export default function LeadDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.06] hover:text-white"
+            className="rounded-lg p-2 text-zinc-400 hover:bg-white/[0.06] hover:text-white"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -75,7 +75,7 @@ export default function LeadDrawer({
 
         <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4">
           <section className="space-y-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Contact</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">Contact</p>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Lead name">
                 <input className={fieldClass} value={form.name} onChange={(e) => set('name', e.target.value)} />
@@ -140,7 +140,7 @@ export default function LeadDrawer({
           </section>
 
           <section className="space-y-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Dates</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">Dates</p>
             <div className="grid grid-cols-2 gap-3">
               <Field label="First contact">
                 <input
@@ -178,7 +178,7 @@ export default function LeadDrawer({
           </section>
 
           <section className="space-y-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Outcomes</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">Outcomes</p>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Meeting status">
                 <select
@@ -206,7 +206,7 @@ export default function LeadDrawer({
                   ))}
                 </select>
               </Field>
-              <label className="flex items-center gap-2 pt-5 text-sm text-slate-300">
+              <label className="flex items-center gap-2 pt-5 text-sm text-zinc-300">
                 <input
                   type="checkbox"
                   checked={Boolean(form.offerMade)}
@@ -235,7 +235,7 @@ export default function LeadDrawer({
           </section>
 
           <section className="space-y-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Money</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">Money</p>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Deposit">
                 <input
@@ -297,7 +297,7 @@ export default function LeadDrawer({
             <button
               type="button"
               onClick={onTouch}
-              className="rounded-lg border border-white/[0.1] px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-white/[0.04]"
+              className="rounded-lg border border-white/[0.1] px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/[0.04]"
             >
               Mark touched
             </button>
@@ -315,7 +315,7 @@ export default function LeadDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-400 hover:text-white"
+              className="rounded-lg px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white"
             >
               Cancel
             </button>
@@ -323,7 +323,7 @@ export default function LeadDrawer({
               type="button"
               disabled={saving}
               onClick={onSave}
-              className="rounded-lg bg-indigo-500 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-400 disabled:opacity-50"
+              className="btn-primary px-4 py-2 text-xs disabled:opacity-50"
             >
               {saving ? 'Saving…' : isCreate ? 'Create lead' : 'Save'}
             </button>

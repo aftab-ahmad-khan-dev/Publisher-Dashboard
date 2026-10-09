@@ -8,7 +8,7 @@ import {
 import { formatMoney } from '../../lib/salesConstants'
 
 const fieldClass =
-  'w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-indigo-500/40'
+  'w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-white/20'
 
 export default function TeamSettings({ open, team, onClose, onUpdated }) {
   const [members, setMembers] = useState([])
@@ -95,16 +95,16 @@ export default function TeamSettings({ open, team, onClose, onUpdated }) {
         aria-label="Close"
         onClick={onClose}
       />
-      <div className="relative flex h-full w-full max-w-md flex-col border-l border-white/[0.08] bg-[#0a0c14]">
+      <div className="relative flex h-full w-full max-w-md flex-col border-l border-white/[0.08] bg-[var(--bg-panel)]">
         <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3">
           <h2 className="text-lg font-semibold text-white">Sales team</h2>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:text-white">
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-zinc-400 hover:text-white">
             ✕
           </button>
         </div>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4">
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-zinc-400">
             Monthly revenue goal
             <input
               type="number"
@@ -113,14 +113,14 @@ export default function TeamSettings({ open, team, onClose, onUpdated }) {
               onChange={(e) => setGoal(e.target.value)}
               className={`mt-1 ${fieldClass}`}
             />
-            <span className="mt-1 block text-[11px] text-slate-600">
+            <span className="mt-1 block text-[11px] text-zinc-600">
               Current goal: {formatMoney(team?.revenueGoal || 0)}
             </span>
           </label>
 
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
                 Roster
               </p>
               {team?.isOwner ? (
@@ -132,7 +132,7 @@ export default function TeamSettings({ open, team, onClose, onUpdated }) {
                       { name: '', role: 'both', commissionPercent: 0, email: '' },
                     ])
                   }
-                  className="text-xs font-semibold text-indigo-300"
+                  className="text-xs font-semibold text-zinc-300"
                 >
                   + Add
                 </button>
@@ -219,14 +219,14 @@ export default function TeamSettings({ open, team, onClose, onUpdated }) {
                 </div>
               ))}
               {!members.length ? (
-                <p className="text-sm text-slate-600">No roster yet — add setters and closers.</p>
+                <p className="text-sm text-zinc-600">No roster yet — add setters and closers.</p>
               ) : null}
             </div>
           </div>
 
           {team?.isOwner ? (
             <div className="space-y-2 rounded-xl border border-white/[0.08] p-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
                 Invite to shared board
               </p>
               <input
@@ -254,12 +254,12 @@ export default function TeamSettings({ open, team, onClose, onUpdated }) {
                 type="button"
                 disabled={saving}
                 onClick={sendInvite}
-                className="rounded-lg border border-indigo-500/40 px-3 py-2 text-xs font-semibold text-indigo-200"
+                className="btn-secondary px-3 py-2 text-xs"
               >
                 Create invite token
               </button>
               {(team?.invites || []).length ? (
-                <ul className="space-y-1 pt-2 text-[11px] text-slate-500">
+                <ul className="space-y-1 pt-2 text-[11px] text-zinc-500">
                   {team.invites.map((i) => (
                     <li key={i.id || i.token}>
                       Pending: {i.email} · token {String(i.token).slice(0, 8)}…
@@ -271,7 +271,7 @@ export default function TeamSettings({ open, team, onClose, onUpdated }) {
           ) : null}
 
           <div className="space-y-2 rounded-xl border border-white/[0.08] p-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
               Accept invite
             </p>
             <input
@@ -292,7 +292,7 @@ export default function TeamSettings({ open, team, onClose, onUpdated }) {
         </div>
 
         <div className="flex justify-end gap-2 border-t border-white/[0.08] px-4 py-3">
-          <button type="button" onClick={onClose} className="px-3 py-2 text-xs text-slate-400">
+          <button type="button" onClick={onClose} className="px-3 py-2 text-xs text-zinc-400">
             Close
           </button>
           {team?.isOwner ? (
@@ -300,7 +300,7 @@ export default function TeamSettings({ open, team, onClose, onUpdated }) {
               type="button"
               disabled={saving}
               onClick={save}
-              className="rounded-lg bg-indigo-500 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+              className="btn-primary px-4 py-2 text-xs disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save team'}
             </button>
