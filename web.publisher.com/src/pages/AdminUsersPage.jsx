@@ -63,7 +63,7 @@ function planBadge(plan, status) {
         ? 'bg-amber-500/15 text-amber-300'
         : status === 'rejected'
           ? 'bg-rose-500/15 text-rose-300'
-          : 'bg-slate-500/15 text-zinc-400'
+          : 'bg-white/[0.04] text-zinc-400'
   return (
     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${tone}`}>
       {name}
@@ -368,7 +368,7 @@ export default function AdminUsersPage() {
                         type="button"
                         disabled={busyId === p.id}
                         onClick={() => onActivate(p.id)}
-                        className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                        className="btn-primary px-3 py-1.5 text-xs disabled:opacity-50"
                       >
                         Activate plan
                       </button>

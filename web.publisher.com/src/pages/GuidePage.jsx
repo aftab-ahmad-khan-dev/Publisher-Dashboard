@@ -180,7 +180,7 @@ export default function GuidePage() {
         subtitle="Step-by-step credentials for every platform integration"
       />
       <PageScroll className="space-y-4 pb-4">
-        <InfoBanner tone="violet">
+        <InfoBanner tone="indigo">
           Connect each platform once in{' '}
           <a href="/api-config" className="font-semibold text-zinc-200 hover:text-white">
             Integrations

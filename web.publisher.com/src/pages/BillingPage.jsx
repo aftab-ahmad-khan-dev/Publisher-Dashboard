@@ -479,8 +479,8 @@ export default function BillingPage() {
       </PageScroll>
 
       {thankYou && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="max-w-md saas-content-card bg-[var(--bg-panel)] p-8 text-center shadow-2xl">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4">
+          <div className="max-w-md saas-content-card bg-[var(--bg-panel)] p-8 text-center">
             <h3 className="text-xl font-bold text-white">Thank you!</h3>
             <p className="mt-3 text-sm text-zinc-400">
               We received your receipt. A confirmation email is on the way. Once we activate your plan,

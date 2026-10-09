@@ -56,10 +56,10 @@ function LeadCard({ lead, onOpen, dragProps, overlay }) {
       style={style}
       className={`group relative rounded-xl border transition ${
         lead.hasLeak
-          ? 'border-rose-500/45 bg-gradient-to-br from-rose-500/[0.1] to-transparent'
+          ? 'border-rose-500/45 bg-rose-500/[0.08]'
           : 'border-white/[0.08] bg-[var(--bg-panel)] hover:border-white/[0.14]'
       } ${isDragging ? 'opacity-30' : ''} ${
-        overlay ? 'scale-[1.02] shadow-2xl shadow-black/50 ring-1 ring-white/20' : ''
+        overlay ? 'scale-[1.02] shadow-lg shadow-black/40 ring-1 ring-white/20' : ''
       }`}
     >
       <div className="flex gap-1 p-2.5">
@@ -83,7 +83,7 @@ function LeadCard({ lead, onOpen, dragProps, overlay }) {
               ) : null}
             </div>
             {lead.totalDealValue > 0 ? (
-              <span className="shrink-0 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-emerald-300">
+              <span className="shrink-0 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-zinc-200">
                 {formatMoney(lead.totalDealValue)}
               </span>
             ) : null}
@@ -162,7 +162,7 @@ function Column({ stage, leads, onOpen, onQuickAdd }) {
           : 'border-white/[0.06] bg-white/[0.015]'
       }`}
     >
-      <div className="sticky top-0 z-10 rounded-t-md border-b border-white/[0.05] bg-[var(--bg-panel)]/95 px-3 py-2.5 backdrop-blur-md">
+      <div className="sticky top-0 z-10 rounded-t-md border-b border-white/[0.05] bg-[var(--bg-panel)]/95 px-3 py-2.5 ">
         <div className="flex items-center gap-2">
           <span
             className="h-2 w-2 shrink-0 rounded-full"
@@ -357,7 +357,7 @@ export default function SalesBoard({
         <span className="h-3 w-px bg-white/[0.08]" />
         <span>
           Won{' '}
-          <strong className="tabular-nums text-emerald-300">{formatMoney(totals.won)}</strong>
+          <strong className="tabular-nums text-zinc-200">{formatMoney(totals.won)}</strong>
         </span>
         {totals.leaks > 0 ? (
           <>

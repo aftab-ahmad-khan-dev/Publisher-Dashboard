@@ -101,7 +101,7 @@ export default function InstagramPreview({
 function PreviewShell({ title, gradient, collapsed, onToggle, disabled, children }) {
   return (
     <div
-      className={`glass-panel overflow-hidden rounded-2xl transition-opacity ${
+      className={`overflow-hidden rounded-md border border-white/[0.08] bg-[var(--bg-panel)] transition-opacity ${
         disabled ? 'opacity-40 pointer-events-none' : ''
       }`}
     >

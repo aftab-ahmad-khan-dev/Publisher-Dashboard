@@ -1,5 +1,5 @@
 import { SignUp, useAuth } from '@clerk/clerk-react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import BrandLogo from '../components/BrandLogo'
 import { clerkAppearance } from '../lib/clerkAppearance'
 
@@ -11,40 +11,35 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="relative flex min-h-[calc(100dvh-4rem)] overflow-hidden bg-[#05060a]">
-      <div className="mesh-bg pointer-events-none absolute inset-0" />
-      <div className="pointer-events-none absolute -left-32 top-1/4 h-96 w-96 rounded-full bg-sky-600/20 blur-[120px]" />
-      <div className="pointer-events-none absolute -right-24 bottom-1/4 h-80 w-80 rounded-full bg-indigo-600/15 blur-[100px]" />
-
-      <div className="relative hidden w-[52%] flex-col justify-between p-14 xl:flex">
-        <div className="flex items-center gap-3">
-          <BrandLogo className="h-11 w-11" />
-          <span className="font-display text-xl font-bold text-white">Publisher Suite</span>
-        </div>
+    <div className="relative flex min-h-[calc(100dvh-4rem)] overflow-hidden bg-[var(--bg-app)]">
+      <div className="relative hidden w-[52%] flex-col justify-between border-r border-white/[0.06] p-14 xl:flex">
+        <Link to="/" className="flex items-center gap-2.5">
+          <BrandLogo className="h-10 w-10" />
+          <span className="text-lg font-semibold tracking-tight text-white">Publisher Suite</span>
+        </Link>
 
         <div>
-          <h2 className="font-display max-w-lg text-[2.75rem] font-bold leading-[1.1] tracking-tight text-white">
+          <h2 className="max-w-lg text-[2.5rem] font-semibold leading-[1.12] tracking-tight text-white">
             Start publishing
-            <span className="mt-1 block bg-gradient-to-r from-sky-400 via-indigo-400 to-indigo-300 bg-clip-text text-transparent">
-              in minutes.
-            </span>
+            <span className="mt-1 block text-zinc-400">in minutes.</span>
           </h2>
-          <p className="mt-5 max-w-md text-base leading-relaxed text-slate-400">
-            Create your account, spin up a workspace, and invite your team. Your data stays isolated per workspace.
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-zinc-500">
+            Create your account, spin up a workspace, and invite your team. Data stays isolated per workspace.
           </p>
         </div>
 
-        <p className="text-xs text-slate-600">© 2026 Publisher Suite · PWA Ready</p>
+        <p className="text-xs text-zinc-600">© 2026 Publisher Suite</p>
       </div>
 
       <div className="relative flex w-full flex-col justify-center px-6 py-14 lg:w-[48%] lg:px-14">
         <div className="mx-auto w-full max-w-[420px]">
           <div className="mb-8 lg:hidden">
-            <BrandLogo className="mb-5 h-12 w-12" />
-            <h1 className="font-display text-3xl font-bold text-white">Create account</h1>
+            <BrandLogo className="mb-5 h-11 w-11" />
+            <h1 className="text-2xl font-semibold tracking-tight text-white">Create account</h1>
+            <p className="mt-1 text-sm text-zinc-500">Set up your publishing workspace</p>
           </div>
 
-          <div className="login-card rounded-3xl p-6 sm:p-8">
+          <div className="login-card p-6 sm:p-8">
             <SignUp
               routing="path"
               path="/sign-up"
@@ -54,9 +49,9 @@ export default function SignUpPage() {
             />
           </div>
 
-          <p className="mt-6 text-center text-xs text-slate-600">
+          <p className="mt-6 text-center text-xs text-zinc-600">
             Already have an account?{' '}
-            <a href="/sign-in" className="text-indigo-400 hover:text-indigo-300">
+            <a href="/sign-in" className="font-medium text-zinc-300 hover:text-white">
               Sign in
             </a>
           </p>

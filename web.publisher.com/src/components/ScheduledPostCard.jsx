@@ -48,7 +48,7 @@ export function ScheduledPostListCard({ item, onPreview, onEdit, onDelete, style
           <button
             type="button"
             onClick={() => onDelete(item)}
-            className="rounded-xl px-2.5 py-1 text-xs font-semibold text-rose-400 ring-1 ring-rose-500/25 transition-colors hover:bg-rose-500/10 sm:px-3 sm:py-1.5"
+            className="btn-danger px-2.5 py-1 text-xs transition-colors hover:bg-rose-500/10 sm:px-3 sm:py-1.5"
           >
             Delete
           </button>
@@ -115,7 +115,7 @@ export function ScheduledPostGridCard({ item, onPreview, onEdit, onDelete, style
         <button
           type="button"
           onClick={() => onDelete(item)}
-          className="flex-1 rounded-xl py-2 text-xs font-semibold text-rose-400 ring-1 ring-rose-500/25 transition-colors hover:bg-rose-500/10"
+          className="flex-1 btn-danger py-2 text-xs transition-colors hover:bg-rose-500/10"
         >
           Delete
         </button>
