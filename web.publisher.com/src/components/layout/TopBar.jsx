@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { OrganizationSwitcher, UserButton } from '@clerk/clerk-react'
 import { useAppData } from '../../contexts/AppDataContext'
 import { NAV_ITEMS } from '../../lib/constants'
@@ -17,18 +17,11 @@ const SEARCH_TARGETS = [
   { path: '/compose', label: 'Compose post', keywords: 'write post compose publish' },
 ]
 
-function Breadcrumb() {
+function PageLabel() {
   const { pathname } = useLocation()
   const allItems = [...NAV_ITEMS, ADMIN_NAV_ITEM]
   const match = allItems.find((n) => pathname.startsWith(n.path))
-  const page = match?.label ?? 'Dashboard'
-
-  return (
-    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-sm lg:hidden">
-      <BrandLogo className="h-7 w-7 shrink-0" />
-      <span className="truncate font-display text-base font-bold text-white">{page}</span>
-    </nav>
-  )
+  return match?.label ?? 'Dashboard'
 }
 
 export default function TopBar() {
@@ -38,14 +31,14 @@ export default function TopBar() {
   const draftCount = drafts?.length ?? 0
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
+  const page = PageLabel()
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return []
-    return SEARCH_TARGETS.filter((t) => t.keywords.includes(q) || t.label.toLowerCase().includes(q)).slice(
-      0,
-      6,
-    )
+    return SEARCH_TARGETS.filter(
+      (t) => t.keywords.includes(q) || t.label.toLowerCase().includes(q),
+    ).slice(0, 6)
   }, [query])
 
   const go = (path) => {
@@ -61,9 +54,12 @@ export default function TopBar() {
 
   return (
     <header className="saas-topbar z-30 shrink-0">
-      <div className="flex min-h-[3.5rem] items-center justify-between gap-3 px-3 sm:px-5 lg:px-6">
+      <div className="flex min-h-[3.5rem] items-center justify-between gap-3 px-3 sm:px-5 lg:px-8">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <Breadcrumb />
+          <div className="flex min-w-0 items-center gap-2 lg:hidden">
+            <BrandLogo className="h-6 w-6 shrink-0 rounded" />
+            <span className="truncate text-sm font-semibold text-zinc-100">{page}</span>
+          </div>
 
           <form
             onSubmit={onSubmit}
@@ -72,8 +68,18 @@ export default function TopBar() {
             onFocus={() => setOpen(true)}
             onBlur={() => setTimeout(() => setOpen(false), 150)}
           >
-            <svg className="h-4 w-4 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
+            <svg
+              className="h-3.5 w-3.5 shrink-0 text-zinc-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.75}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z"
+              />
             </svg>
             <input
               value={query}
@@ -81,21 +87,21 @@ export default function TopBar() {
                 setQuery(e.target.value)
                 setOpen(true)
               }}
-              placeholder="Search pages, campaigns, meetings…"
+              placeholder="Search…"
               aria-label="Search workspace"
             />
             {open && results.length > 0 ? (
-              <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-40 overflow-hidden rounded-xl border border-white/10 bg-[#0c101a] py-1 shadow-2xl">
+              <div className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-40 overflow-hidden rounded-md border border-white/10 bg-[#111113] py-1 shadow-2xl">
                 {results.map((r) => (
                   <button
                     key={r.path + r.label}
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-slate-300 hover:bg-white/[0.05] hover:text-white"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-zinc-300 hover:bg-white/[0.04] hover:text-white"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => go(r.path)}
                   >
                     <span className="truncate font-medium">{r.label}</span>
-                    <span className="ml-auto truncate text-[10px] text-slate-600">{r.path}</span>
+                    <span className="ml-auto truncate text-[10px] text-zinc-600">{r.path}</span>
                   </button>
                 ))}
               </div>
@@ -103,34 +109,23 @@ export default function TopBar() {
           </form>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+        <div className="flex shrink-0 items-center gap-2">
           {processing && (
-            <span className="hidden items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-zinc-400 lg:inline-flex">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal-400" />
+            <span className="hidden items-center gap-1.5 text-[11px] font-medium text-zinc-500 lg:inline-flex">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-zinc-300" />
               {processingLabel || 'Processing'}
             </span>
           )}
 
-          <div className="hidden items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.02] p-1 lg:flex">
-            <span className="rounded-full px-2 py-1 text-[10px] font-semibold text-zinc-400">
-              <span className="text-teal-300">{scheduled}</span> queued
+          <div className="hidden items-center gap-2 text-[11px] text-zinc-500 lg:flex">
+            <span>
+              <span className="font-medium text-zinc-300">{scheduled}</span> queued
             </span>
-            <span className="h-3 w-px bg-white/10" />
-            <span className="rounded-full px-2 py-1 text-[10px] font-semibold text-zinc-400">
-              <span className="text-amber-300">{draftCount}</span> drafts
+            <span className="text-zinc-700">·</span>
+            <span>
+              <span className="font-medium text-zinc-300">{draftCount}</span> drafts
             </span>
           </div>
-
-          <Link
-            to="/email?tab=mailbox"
-            className="saas-icon-btn hidden sm:flex"
-            aria-label="Open mailbox"
-            title="Mailbox"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </Link>
 
           <NotificationPanel />
 

@@ -8,31 +8,27 @@ import PageShell, { PageScroll } from '../components/PageShell'
 import { OverviewSkeleton } from '../components/Skeleton'
 import KpiCard from '../components/dashboard/KpiCard'
 import MailActivityChart from '../components/dashboard/MailActivityChart'
-import LinkMixRadar from '../components/dashboard/LinkMixRadar'
-import StatRing from '../components/dashboard/StatRing'
+import LinkMixBars from '../components/dashboard/LinkMixBars'
 
 const FOLLOW_UP_PAGE_SIZE = 5
 
 const NUDGE_LABELS = {
-  follow_up: 'Gentle nudge',
-  final_call: 'Last chance',
+  follow_up: 'Follow up',
+  final_call: 'Final note',
   reason: 'Check in',
 }
 
 const NUDGE_TOOLTIPS = {
-  follow_up:
-    'Gentle nudge — a warm reminder that a few slots remain. Also auto-sends after Check in if meeting status is still unchanged.',
-  final_call:
-    'Last chance — final slot + 10% off, written like a real human close. Auto-sends if meeting status stays the same.',
-  reason:
-    'Check in — asks what got in the way of booking, without pressure. Auto-sends after Last chance if status is still unchanged.',
+  follow_up: 'Send a short follow-up while interest is warm.',
+  final_call: 'Send a final note with the limited-slot offer.',
+  reason: 'Ask what blocked booking — no pressure.',
 }
 
 function formatCompact(n) {
   const num = Number(n) || 0
   if (num >= 1000) {
     const k = num / 1000
-    return `${k >= 10 ? Math.round(k) : Math.round(k * 10) / 10}k+`
+    return `${k >= 10 ? Math.round(k) : Math.round(k * 10) / 10}k`
   }
   return num.toLocaleString()
 }
@@ -52,48 +48,19 @@ function NudgeActions({ row, busyId, onNudge, align = 'end' }) {
         align === 'end' ? 'justify-end' : 'justify-start'
       }`}
     >
-      {(['follow_up', 'final_call', 'reason']).map((type) => {
-        const tones = {
-          follow_up: 'bg-sky-500/15 text-sky-200',
-          final_call: 'bg-violet-500/15 text-violet-200',
-          reason: 'bg-amber-500/15 text-amber-200',
-        }
-        return (
-          <button
-            key={type}
-            type="button"
-            className={`has-tip rounded-lg px-2.5 py-1 text-[10px] font-semibold disabled:opacity-50 ${tones[type]}`}
-            disabled={disabled}
-            aria-label={NUDGE_TOOLTIPS[type]}
-            data-tip={NUDGE_TOOLTIPS[type]}
-            onClick={() => onNudge(row, type)}
-          >
-            {busyId === `${row.id}:${type}` ? '…' : NUDGE_LABELS[type]}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function TopInsightCard({ title, eyebrow, value, icon }) {
-  return (
-    <div className="kpi-spotlight flex min-h-[112px] flex-col justify-between rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#12151f] to-[#0a0c12] p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            {eyebrow}
-          </p>
-          <p className="mt-1 font-display text-sm font-semibold text-white">{title}</p>
-        </div>
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-500/12 text-teal-300">
-          {icon}
-        </span>
-      </div>
-      <p className="mt-3 font-display text-2xl font-bold tabular-nums text-white">
-        {value}
-        <span className="ml-1 text-xs font-medium text-slate-500">/ clicks</span>
-      </p>
+      {(['follow_up', 'final_call', 'reason']).map((type) => (
+        <button
+          key={type}
+          type="button"
+          className="has-tip rounded-md border border-white/10 bg-transparent px-2 py-1 text-[11px] font-medium text-zinc-300 hover:bg-white/[0.04] disabled:opacity-50"
+          disabled={disabled}
+          aria-label={NUDGE_TOOLTIPS[type]}
+          data-tip={NUDGE_TOOLTIPS[type]}
+          onClick={() => onNudge(row, type)}
+        >
+          {busyId === `${row.id}:${type}` ? '…' : NUDGE_LABELS[type]}
+        </button>
+      ))}
     </div>
   )
 }
@@ -174,7 +141,10 @@ export default function OverviewPage() {
       showToast('No activity to export yet', 'info')
       return
     }
-    const lines = ['date,sent,opened,clicked', ...series.map((r) => `${r.date},${r.sent},${r.opened},${r.clicked}`)]
+    const lines = [
+      'date,sent,opened,clicked',
+      ...series.map((r) => `${r.date},${r.sent},${r.opened},${r.clicked}`),
+    ]
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -184,27 +154,28 @@ export default function OverviewPage() {
     URL.revokeObjectURL(url)
   }
 
-  const meetingTarget = Math.max(meetings.booked || 0, meetings.upcoming || 0, 1) * 2
-  const postTarget = Math.max(content.scheduledPosts || 0, content.drafts || 0, 1) * 2
-
   return (
     <PageShell>
       <PageHeader
         title="Overview"
-        subtitle="A calm read on mail, meetings, and the people who need a human follow-up"
+        subtitle="Mail performance, meetings, and follow-ups that need attention"
         action={
-          <button type="button" className="btn-secondary px-3 py-1.5 text-xs" onClick={load}>
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <Link to="/email?tab=campaigns" className="btn-secondary px-3 py-1.5 text-xs">
+              New campaign
+            </Link>
+            <button type="button" className="btn-secondary px-3 py-1.5 text-xs" onClick={load}>
+              Refresh
+            </button>
+          </div>
         }
       />
       <PageScroll className="pb-8">
         {!live ? (
           <div className="saas-empty-state">
-            <p className="font-display text-base text-slate-300">Connect your workspace</p>
-            <p className="mt-1 max-w-sm text-sm text-slate-500">
-              Hook up the live API and this view becomes your daily pulse — sends, opens, and
-              warm leads waiting on a reply.
+            <p className="text-sm font-medium text-zinc-200">Connect the API</p>
+            <p className="mt-1 max-w-sm text-sm text-zinc-500">
+              Workspace stats appear once the live backend is connected.
             </p>
             <Link to="/api-config" className="btn-primary mt-4 px-4 py-2 text-xs">
               Open integrations
@@ -213,44 +184,30 @@ export default function OverviewPage() {
         ) : loading && !data ? (
           <OverviewSkeleton />
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-6">
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <KpiCard
-                label="Emails sent"
+                label="Sent"
                 value={formatCompact(mail.sent)}
                 hint={`${mail.period?.sent ?? 0} in last ${mail.period?.days ?? 10} days`}
                 trend={trends.sent}
-                series={series}
-                dataKey="sent"
-                featured
-                tone="teal"
               />
               <KpiCard
                 label="Opened"
                 value={formatCompact(mail.opened)}
                 hint={`${mail.openRate ?? 0}% open rate`}
                 trend={trends.opened}
-                series={series}
-                dataKey="opened"
-                tone="rose"
               />
               <KpiCard
                 label="Clicked"
                 value={formatCompact(mail.clicked)}
                 hint={`${mail.clickRate ?? 0}% click rate`}
                 trend={trends.clicked}
-                series={series}
-                dataKey="clicked"
-                tone="sky"
               />
               <KpiCard
                 label="Upcoming meetings"
                 value={(meetings.upcoming || 0).toLocaleString()}
-                hint={`${meetings.booked || 0} booked · ${content.scheduledPosts || 0} posts queued`}
-                trend={trends.openRate}
-                series={series}
-                dataKey="opened"
-                tone="emerald"
+                hint={`${meetings.booked || 0} booked · ${followUps.length} waiting`}
               />
             </div>
 
@@ -259,128 +216,61 @@ export default function OverviewPage() {
                 <MailActivityChart series={series} onDownload={downloadCsv} />
               </div>
               <div className="flex flex-col gap-3 xl:col-span-4">
-                <LinkMixRadar links={links} />
-                <section className="saas-content-card space-y-4">
-                  <div>
-                    <h3 className="saas-section-title">Pulse</h3>
-                    <p className="saas-section-desc">Live attention signals</p>
-                  </div>
-                  <StatRing
-                    value={meetings.upcoming || 0}
-                    max={meetingTarget}
-                    label="Meetings ahead"
-                    sublabel={`${meetings.booked || 0} booked overall`}
-                    tone="teal"
-                  />
-                  <StatRing
-                    value={content.scheduledPosts || 0}
-                    max={postTarget}
-                    label="Posts scheduled"
-                    sublabel={`${content.drafts || 0} drafts waiting`}
-                    tone="sky"
-                  />
-                  <div className="rounded-lg border border-teal-500/15 bg-teal-500/[0.06] px-3 py-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-teal-300/80">
-                          Warm leads
-                        </p>
-                        <p className="mt-0.5 font-display text-lg font-bold tabular-nums text-teal-100">
-                          {followUps.length}
-                        </p>
-                      </div>
-                      <span className="rounded bg-teal-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300">
-                        need a reply
-                      </span>
+                <LinkMixBars links={links} />
+                <section className="saas-content-card">
+                  <h3 className="saas-section-title">Workspace</h3>
+                  <p className="saas-section-desc mb-4">Content and meeting load</p>
+                  <dl className="space-y-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-zinc-500">Scheduled posts</dt>
+                      <dd className="font-medium tabular-nums text-zinc-100">
+                        {content.scheduledPosts || 0}
+                      </dd>
                     </div>
-                  </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-zinc-500">Drafts</dt>
+                      <dd className="font-medium tabular-nums text-zinc-100">
+                        {content.drafts || 0}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-zinc-500">Meetings booked</dt>
+                      <dd className="font-medium tabular-nums text-zinc-100">
+                        {meetings.booked || 0}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
+                      <dt className="text-zinc-500">Warm leads</dt>
+                      <dd className="font-medium tabular-nums text-zinc-100">
+                        {followUps.length}
+                      </dd>
+                    </div>
+                  </dl>
                 </section>
               </div>
             </div>
 
-            <div>
-              <div className="mb-3 flex items-end justify-between gap-2">
-                <div>
-                  <h3 className="saas-section-title">Top click destinations</h3>
-                  <p className="saas-section-desc">Where engaged leads are spending attention</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <TopInsightCard
-                  eyebrow="Top destination"
-                  title="Calendar booking"
-                  value={formatCompact(links.calendar)}
-                  icon={
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  }
-                />
-                <TopInsightCard
-                  eyebrow="Top destination"
-                  title="Portfolio"
-                  value={formatCompact(links.portfolio)}
-                  icon={
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                    </svg>
-                  }
-                />
-                <TopInsightCard
-                  eyebrow="Top destination"
-                  title="Other links"
-                  value={formatCompact(links.other)}
-                  icon={
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
-                  }
-                />
-              </div>
-            </div>
-
             <section className="saas-content-card">
-              <h3 className="saas-section-title mb-3">Quick actions</h3>
-              <div className="flex flex-wrap gap-2">
-                <Link to="/compose" className="btn-primary px-3 py-2 text-xs">
-                  Write a post
-                </Link>
-                <Link to="/email?tab=campaigns" className="btn-secondary px-3 py-2 text-xs">
-                  Start a campaign
-                </Link>
-                <Link to="/email?tab=meetings" className="btn-secondary px-3 py-2 text-xs">
-                  Review meetings
-                </Link>
-                <Link to="/email?tab=processed" className="btn-secondary px-3 py-2 text-xs">
-                  People who engaged
-                </Link>
-                <Link to="/scheduled" className="btn-secondary px-3 py-2 text-xs">
-                  Scheduled posts
-                </Link>
-              </div>
-            </section>
-
-            <section className="saas-content-card">
-              <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
                 <div>
-                  <h3 className="saas-section-title">People waiting on you</h3>
+                  <h3 className="saas-section-title">Follow-up needed</h3>
                   <p className="saas-section-desc">
-                    Opened or clicked — not booked yet. A short, human note usually wins.
+                    Engaged leads who have not booked yet
                   </p>
                 </div>
                 <Link
                   to="/email?tab=processed&engagement=engaged"
-                  className="text-[11px] font-medium text-teal-300 hover:text-white"
+                  className="text-[12px] font-medium text-zinc-400 hover:text-white"
                 >
-                  Open inbox →
+                  View all
                 </Link>
               </div>
 
               {followUps.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-white/[0.08] bg-white/[0.02] px-4 py-8 text-center">
-                  <p className="text-sm font-medium text-slate-300">You&apos;re caught up</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    No warm leads need a follow-up right now. Nice work.
+                <div className="rounded-md border border-dashed border-white/[0.08] px-4 py-10 text-center">
+                  <p className="text-sm font-medium text-zinc-300">No follow-ups waiting</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Warm leads will appear here when they engage.
                   </p>
                 </div>
               ) : (
@@ -400,23 +290,6 @@ export default function OverviewPage() {
                             {r.openCount} · {r.clickCount}
                           </span>
                         </div>
-                        <div className="mobile-data-card__row">
-                          <span className="mobile-data-card__label">Last link</span>
-                          <span className="mobile-data-card__value">
-                            {linkKindLabel(r.lastClickKind)}
-                          </span>
-                        </div>
-                        <div className="mobile-data-card__row">
-                          <span className="mobile-data-card__label">Meeting</span>
-                          <span className="mobile-data-card__value capitalize">
-                            {(r.meetingStatus || 'none').replace(/_/g, ' ')}
-                          </span>
-                        </div>
-                        {r.lastNudgeType ? (
-                          <p className="mt-2 text-[10px] text-slate-500">
-                            Last note: {NUDGE_LABELS[r.lastNudgeType] || String(r.lastNudgeType).replace(/_/g, ' ')}
-                          </p>
-                        ) : null}
                         <div className="mt-3">
                           <NudgeActions
                             row={r}
@@ -439,30 +312,30 @@ export default function OverviewPage() {
                           <th className="px-3 py-2.5">Clicks</th>
                           <th className="px-3 py-2.5">Last link</th>
                           <th className="px-3 py-2.5">Meeting</th>
-                          <th className="px-3 py-2.5 text-right">Reach out</th>
+                          <th className="px-3 py-2.5 text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {pagedFollowUps.map((r) => (
                           <tr key={r.id}>
-                            <td className="px-3 py-2">
-                              <p className="font-medium text-slate-200">{r.name || '—'}</p>
-                              <p className="text-slate-500">{r.email}</p>
+                            <td className="px-3 py-2.5">
+                              <p className="font-medium text-zinc-200">{r.name || '—'}</p>
+                              <p className="text-zinc-500">{r.email}</p>
                             </td>
-                            <td className="px-3 py-2 text-slate-400">{r.company || '—'}</td>
-                            <td className="px-3 py-2 tabular-nums text-slate-300">
+                            <td className="px-3 py-2.5 text-zinc-400">{r.company || '—'}</td>
+                            <td className="px-3 py-2.5 tabular-nums text-zinc-300">
                               {r.openCount}
                             </td>
-                            <td className="px-3 py-2 tabular-nums text-slate-300">
+                            <td className="px-3 py-2.5 tabular-nums text-zinc-300">
                               {r.clickCount}
                             </td>
-                            <td className="px-3 py-2 text-slate-300">
+                            <td className="px-3 py-2.5 text-zinc-300">
                               {linkKindLabel(r.lastClickKind)}
                             </td>
-                            <td className="px-3 py-2 text-slate-400 capitalize">
+                            <td className="px-3 py-2.5 capitalize text-zinc-400">
                               {(r.meetingStatus || 'none').replace(/_/g, ' ')}
                             </td>
-                            <td className="px-3 py-2 text-right">
+                            <td className="px-3 py-2.5 text-right">
                               <NudgeActions
                                 row={r}
                                 busyId={nudgeBusyId}
@@ -477,9 +350,9 @@ export default function OverviewPage() {
 
                   {followUps.length > FOLLOW_UP_PAGE_SIZE ? (
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[11px] text-zinc-500">
                         Page {Math.min(followPage, followTotalPages)} of {followTotalPages} ·{' '}
-                        {followUps.length} people
+                        {followUps.length} leads
                       </p>
                       <div className="flex items-center gap-2">
                         <button
@@ -502,11 +375,7 @@ export default function OverviewPage() {
                         </button>
                       </div>
                     </div>
-                  ) : (
-                    <p className="mt-3 text-[11px] text-slate-600">
-                      {followUps.length} person{followUps.length === 1 ? '' : 's'}
-                    </p>
-                  )}
+                  ) : null}
                 </>
               )}
             </section>
