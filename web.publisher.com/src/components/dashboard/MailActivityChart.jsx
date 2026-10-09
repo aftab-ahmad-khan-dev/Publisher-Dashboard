@@ -82,8 +82,8 @@ export default function MailActivityChart({ series = [], onDownload }) {
             <AreaChart data={data} margin={{ top: 12, right: 8, left: -12, bottom: 0 }}>
               <defs>
                 <linearGradient id="mail-sent-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#818cf8" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#2dd4bf" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#2dd4bf" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="mail-opened-fill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#34d399" stopOpacity={0.25} />
@@ -108,10 +108,10 @@ export default function MailActivityChart({ series = [], onDownload }) {
                 type="monotone"
                 dataKey="sent"
                 name="Sent"
-                stroke="#818cf8"
+                stroke="#2dd4bf"
                 strokeWidth={2.25}
                 fill="url(#mail-sent-fill)"
-                activeDot={{ r: 5, strokeWidth: 2, stroke: '#0b0e16', fill: '#a78bfa' }}
+                activeDot={{ r: 5, strokeWidth: 2, stroke: '#0c0d0f', fill: '#5eead4' }}
               />
               <Area
                 type="monotone"
@@ -120,14 +120,14 @@ export default function MailActivityChart({ series = [], onDownload }) {
                 stroke="#34d399"
                 strokeWidth={1.75}
                 fill="url(#mail-opened-fill)"
-                activeDot={{ r: 4, strokeWidth: 2, stroke: '#0b0e16', fill: '#6ee7b7' }}
+                activeDot={{ r: 4, strokeWidth: 2, stroke: '#0c0d0f', fill: '#6ee7b7' }}
               />
             </AreaChart>
           </ResponsiveContainer>
         )}
 
         {peak?.lift > 0 ? (
-          <div className="pointer-events-none absolute right-[18%] top-3 hidden rounded-lg border border-indigo-400/25 bg-indigo-500/15 px-2 py-1 text-[10px] font-semibold text-indigo-200 sm:block">
+          <div className="pointer-events-none absolute right-[18%] top-3 hidden rounded-lg border border-teal-400/25 bg-teal-500/10 px-2 py-1 text-[10px] font-semibold text-teal-200 sm:block">
             +{peak.lift}% · {peak.label}
           </div>
         ) : null}

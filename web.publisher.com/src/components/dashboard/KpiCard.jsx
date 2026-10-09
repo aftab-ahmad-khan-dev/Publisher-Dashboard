@@ -35,7 +35,7 @@ export default function KpiCard({
   series = [],
   dataKey = 'value',
   featured = false,
-  tone = 'indigo',
+  tone = 'teal',
 }) {
   const stroke =
     tone === 'rose'
@@ -44,7 +44,7 @@ export default function KpiCard({
         ? '#38bdf8'
         : tone === 'emerald'
           ? '#34d399'
-          : '#a78bfa'
+          : '#2dd4bf'
 
   const chartData = series.map((point, i) => ({
     i,
@@ -58,12 +58,12 @@ export default function KpiCard({
       }`}
     >
       <div className="relative z-[1] flex items-start justify-between gap-2">
-        <p className={`kpi-card__label ${featured ? 'text-indigo-200/80' : ''}`}>{label}</p>
+        <p className={`kpi-card__label ${featured ? 'text-teal-200/80' : ''}`}>{label}</p>
         <TrendBadge value={trend} />
       </div>
       <p className={`kpi-card__value relative z-[1] ${featured ? 'text-white' : ''}`}>{value}</p>
       {hint ? (
-        <p className={`kpi-card__hint relative z-[1] ${featured ? 'text-indigo-200/60' : ''}`}>
+        <p className={`kpi-card__hint relative z-[1] ${featured ? 'text-teal-200/55' : ''}`}>
           {hint}
         </p>
       ) : null}

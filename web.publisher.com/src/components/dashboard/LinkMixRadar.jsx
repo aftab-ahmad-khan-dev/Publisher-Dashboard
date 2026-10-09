@@ -43,9 +43,9 @@ export default function LinkMixRadar({ links = {} }) {
             <Radar
               name="Clicks"
               dataKey="value"
-              stroke="#a78bfa"
-              fill="#818cf8"
-              fillOpacity={0.35}
+              stroke="#5eead4"
+              fill="#14b8a6"
+              fillOpacity={0.3}
               strokeWidth={2}
             />
           </RadarChart>

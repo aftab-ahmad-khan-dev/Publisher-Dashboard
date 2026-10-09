@@ -98,14 +98,14 @@ function StatusChip({ status }) {
     sending: 'bg-amber-500/20 text-amber-300',
     sent: 'bg-sky-500/20 text-sky-300',
     opened: 'bg-emerald-500/20 text-emerald-300',
-    clicked: 'bg-indigo-500/20 text-indigo-300',
+    clicked: 'bg-teal-500/20 text-teal-300',
     failed: 'bg-rose-500/20 text-rose-300',
     cancelled: 'bg-slate-600/30 text-slate-500',
     paused: 'bg-amber-500/20 text-amber-200',
     draft: 'bg-slate-500/20 text-slate-400',
     completed: 'bg-emerald-500/20 text-emerald-300',
     invited: 'bg-sky-500/20 text-sky-300',
-    link_clicked: 'bg-indigo-500/20 text-indigo-300',
+    link_clicked: 'bg-teal-500/20 text-teal-300',
     scheduled: 'bg-emerald-500/20 text-emerald-300',
     no_show: 'bg-rose-500/20 text-rose-300',
     none: 'bg-white/5 text-slate-500',
@@ -273,7 +273,7 @@ function MeetingNotesField({ meeting, onSave, slim = true }) {
       <input
         id={`meeting-notes-${meeting.id}`}
         type="text"
-        className={`w-full rounded-md border border-white/10 bg-white/[0.04] text-[11px] text-white placeholder:text-slate-600 focus:border-indigo-400/40 focus:outline-none focus:ring-1 focus:ring-indigo-400/30 ${
+        className={`w-full rounded-md border border-white/10 bg-white/[0.04] text-[11px] text-white placeholder:text-slate-600 focus:border-teal-400/40 focus:outline-none focus:ring-1 focus:ring-teal-400/30 ${
           slim ? 'h-7 px-2 py-0' : 'px-2.5 py-1.5'
         }`}
         value={text}
@@ -375,8 +375,8 @@ function MeetingBookingBlock({
           )}
         </div>
 
-        <div className="flex min-w-0 flex-col rounded-lg border border-indigo-500/20 bg-indigo-500/[0.06] px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-300/90">
+        <div className="flex min-w-0 flex-col rounded-lg border border-teal-500/20 bg-teal-500/[0.06] px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-teal-300/90">
             Meet link
           </p>
           <div className="mt-1 flex flex-1 items-center">
@@ -385,7 +385,7 @@ function MeetingBookingBlock({
                 href={meetUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] font-semibold leading-snug text-indigo-200 underline hover:text-white"
+                className="text-[11px] font-semibold leading-snug text-teal-200 underline hover:text-white"
               >
                 Open Google Meet
               </a>
@@ -394,7 +394,7 @@ function MeetingBookingBlock({
                 href={otherLink}
                 target="_blank"
                 rel="noreferrer"
-                className="truncate text-[11px] text-indigo-300 underline"
+                className="truncate text-[11px] text-teal-300 underline"
               >
                 Open link
               </a>
@@ -422,7 +422,7 @@ function MeetingBookingBlock({
           />
           <button
             type="button"
-            className="mt-1.5 w-full rounded-lg bg-indigo-500/25 px-2 py-1.5 text-[10px] font-semibold text-indigo-100 ring-1 ring-indigo-400/35 hover:bg-indigo-500/35 disabled:opacity-50"
+            className="mt-1.5 w-full rounded-lg bg-teal-500/25 px-2 py-1.5 text-[10px] font-semibold text-teal-100 ring-1 ring-teal-400/35 hover:bg-teal-500/35 disabled:opacity-50"
             disabled={inviting || !canInvite || !when}
             onClick={() => {
               if (!when) return
@@ -1451,7 +1451,7 @@ export default function EmailPage() {
                   onClick={() => setFolder(f.id)}
                   className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
                     folder === f.id
-                      ? 'bg-indigo-500/15 font-semibold text-white ring-1 ring-indigo-400/25'
+                      ? 'bg-teal-500/15 font-semibold text-white ring-1 ring-teal-400/25'
                       : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
                   }`}
                 >
@@ -1519,8 +1519,8 @@ export default function EmailPage() {
             </div>
 
             {selectMode && tab === 'mailbox' && (
-              <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.06] bg-indigo-500/[0.07] px-3 py-2">
-                <label className="mr-1 flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-indigo-200">
+              <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.06] bg-teal-500/[0.07] px-3 py-2">
+                <label className="mr-1 flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-teal-200">
                   <input
                     type="checkbox"
                     checked={allSelected && messages.length > 0}
@@ -1578,7 +1578,7 @@ export default function EmailPage() {
                   key={m.id}
                   className={`flex w-full items-start gap-2 border-b border-white/[0.04] px-3 py-2.5 transition hover:bg-white/[0.03] ${
                     selectedId === m.id ? 'bg-white/[0.06]' : ''
-                  } ${selectMode && selectedMailIds.has(m.id) ? 'bg-indigo-500/[0.08]' : ''}`}
+                  } ${selectMode && selectedMailIds.has(m.id) ? 'bg-teal-500/[0.08]' : ''}`}
                 >
                   {selectMode && (
                     <input
@@ -1695,7 +1695,7 @@ export default function EmailPage() {
                             href={detail.recipient.meetingLink}
                             target="_blank"
                             rel="noreferrer"
-                            className="mt-1 block text-indigo-300 hover:underline"
+                            className="mt-1 block text-teal-300 hover:underline"
                           >
                             Meeting link
                           </a>
@@ -1811,7 +1811,7 @@ export default function EmailPage() {
                       onClick={() => setMode(m)}
                       className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold capitalize ${
                         mode === m
-                          ? 'bg-indigo-500/25 text-indigo-200'
+                          ? 'bg-teal-500/25 text-teal-200'
                           : 'bg-white/[0.04] text-slate-500'
                       }`}
                     >
@@ -1848,7 +1848,7 @@ export default function EmailPage() {
               {leadPayload?.source?.id && (
                 <button
                   type="button"
-                  className="mt-3 text-xs text-indigo-300 hover:underline"
+                  className="mt-3 text-xs text-teal-300 hover:underline"
                   onClick={() =>
                     downloadLeadSourceExport(
                       leadPayload.source.id,
@@ -1969,7 +1969,7 @@ export default function EmailPage() {
                       href={workspaceBooking}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-0.5 block truncate text-xs text-indigo-300 hover:underline"
+                      className="mt-0.5 block truncate text-xs text-teal-300 hover:underline"
                     >
                       {workspaceBooking}
                     </a>
@@ -2275,7 +2275,7 @@ export default function EmailPage() {
                         href={c.meetingLink}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-2 block truncate text-[10px] text-indigo-300 hover:underline"
+                        className="mt-2 block truncate text-[10px] text-teal-300 hover:underline"
                       >
                         Meeting: {c.meetingLink}
                       </a>
@@ -2565,7 +2565,7 @@ export default function EmailPage() {
               </button>
             ) : (
               <div className="ml-auto flex flex-wrap items-center gap-1.5">
-                <label className="flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-indigo-200">
+                <label className="flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-teal-200">
                   <input
                     type="checkbox"
                     checked={allSelected && filteredProcessed.length > 0}
@@ -2690,7 +2690,7 @@ export default function EmailPage() {
                           )}
                           <button
                             type="button"
-                            className="mt-1.5 block w-full rounded-lg bg-indigo-500/15 px-2 py-1 text-[10px] font-semibold text-indigo-200"
+                            className="mt-1.5 block w-full rounded-lg bg-teal-500/15 px-2 py-1 text-[10px] font-semibold text-teal-200"
                             onClick={() => handlePromoteToSales([r.id])}
                           >
                             Add to Sales
@@ -2799,7 +2799,7 @@ export default function EmailPage() {
                     <tr
                       key={r.id}
                       className={
-                        selectMode && selectedMailIds.has(r.id) ? 'bg-indigo-500/[0.06]' : ''
+                        selectMode && selectedMailIds.has(r.id) ? 'bg-teal-500/[0.06]' : ''
                       }
                     >
                       {selectMode && (
@@ -2864,7 +2864,7 @@ export default function EmailPage() {
                         )}
                         <button
                           type="button"
-                          className="mt-1.5 block w-full rounded-lg bg-indigo-500/15 px-2 py-1 text-[10px] font-semibold text-indigo-200 hover:bg-indigo-500/25"
+                          className="mt-1.5 block w-full rounded-lg bg-teal-500/15 px-2 py-1 text-[10px] font-semibold text-teal-200 hover:bg-teal-500/25"
                           onClick={() => handlePromoteToSales([r.id])}
                         >
                           Add to Sales
@@ -2988,7 +2988,7 @@ export default function EmailPage() {
                               href={r.meetingLink}
                               target="_blank"
                               rel="noreferrer"
-                              className="rounded-lg bg-indigo-500/15 px-2 py-1 text-[10px] font-semibold text-indigo-200 hover:bg-indigo-500/25"
+                              className="rounded-lg bg-teal-500/15 px-2 py-1 text-[10px] font-semibold text-teal-200 hover:bg-teal-500/25"
                             >
                               Meet
                             </a>
@@ -3187,7 +3187,7 @@ export default function EmailPage() {
                   <>
                     <button
                       type="button"
-                      className="rounded-lg bg-indigo-500/15 px-3 text-xs font-semibold text-indigo-200 ring-1 ring-indigo-500/30 hover:bg-indigo-500/25"
+                      className="rounded-lg bg-teal-500/15 px-3 text-xs font-semibold text-teal-200 ring-1 ring-teal-500/30 hover:bg-teal-500/25"
                       style={{ height: '2.125rem' }}
                       onClick={() => handlePromoteToSales([...selectedMeetingIds])}
                     >
@@ -3250,7 +3250,7 @@ export default function EmailPage() {
                       {b.meetingLink ? (
                         <>
                           {' · '}
-                          <a href={b.meetingLink} target="_blank" rel="noreferrer" className="text-indigo-300 underline">
+                          <a href={b.meetingLink} target="_blank" rel="noreferrer" className="text-teal-300 underline">
                             Open
                           </a>
                         </>
@@ -3273,13 +3273,13 @@ export default function EmailPage() {
                     <div
                       key={m.id}
                       className={`mobile-data-card ${
-                        selectedMeetingIds.has(m.id) ? 'ring-1 ring-indigo-500/40' : ''
+                        selectedMeetingIds.has(m.id) ? 'ring-1 ring-teal-500/40' : ''
                       }`}
                     >
                       <div className="flex items-start gap-2">
                         <input
                           type="checkbox"
-                          className="mt-0.5 h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-indigo-500"
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-teal-500"
                           checked={selectedMeetingIds.has(m.id)}
                           onChange={(e) => {
                             setSelectedMeetingIds((prev) => {
@@ -3337,7 +3337,7 @@ export default function EmailPage() {
                           )}
                           <button
                             type="button"
-                            className="mt-1.5 block w-full rounded-lg bg-indigo-500/15 px-2 py-1 text-[10px] font-semibold text-indigo-200"
+                            className="mt-1.5 block w-full rounded-lg bg-teal-500/15 px-2 py-1 text-[10px] font-semibold text-teal-200"
                             onClick={() => handlePromoteToSales([m.id])}
                           >
                             Add to Sales
@@ -3377,7 +3377,7 @@ export default function EmailPage() {
                       <label className="inline-flex cursor-pointer items-center gap-1.5" title="Select all">
                         <input
                           type="checkbox"
-                          className="h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-indigo-500"
+                          className="h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-teal-500"
                           checked={
                             meetings.length > 0 &&
                             meetings.every((row) => selectedMeetingIds.has(row.id))
@@ -3413,13 +3413,13 @@ export default function EmailPage() {
                     <tr
                       key={m.id}
                       className={`align-top ${
-                        selectedMeetingIds.has(m.id) ? 'bg-indigo-500/[0.06]' : ''
+                        selectedMeetingIds.has(m.id) ? 'bg-teal-500/[0.06]' : ''
                       }`}
                     >
                       <td className="px-3 py-2">
                         <input
                           type="checkbox"
-                          className="h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-indigo-500"
+                          className="h-3.5 w-3.5 rounded border-white/20 bg-white/5 text-teal-500"
                           checked={selectedMeetingIds.has(m.id)}
                           onChange={(e) => {
                             setSelectedMeetingIds((prev) => {
@@ -3475,7 +3475,7 @@ export default function EmailPage() {
                         )}
                         <button
                           type="button"
-                          className="mt-1.5 block w-full rounded-lg bg-indigo-500/15 px-2 py-1 text-[10px] font-semibold text-indigo-200 hover:bg-indigo-500/25"
+                          className="mt-1.5 block w-full rounded-lg bg-teal-500/15 px-2 py-1 text-[10px] font-semibold text-teal-200 hover:bg-teal-500/25"
                           onClick={() => handlePromoteToSales([m.id])}
                         >
                           Add to Sales

@@ -86,7 +86,7 @@ function TopInsightCard({ title, eyebrow, value, icon }) {
           </p>
           <p className="mt-1 font-display text-sm font-semibold text-white">{title}</p>
         </div>
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300">
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-500/12 text-teal-300">
           {icon}
         </span>
       </div>
@@ -223,7 +223,7 @@ export default function OverviewPage() {
                 series={series}
                 dataKey="sent"
                 featured
-                tone="indigo"
+                tone="teal"
               />
               <KpiCard
                 label="Opened"
@@ -270,7 +270,7 @@ export default function OverviewPage() {
                     max={meetingTarget}
                     label="Meetings ahead"
                     sublabel={`${meetings.booked || 0} booked overall`}
-                    tone="indigo"
+                    tone="teal"
                   />
                   <StatRing
                     value={content.scheduledPosts || 0}
@@ -279,17 +279,17 @@ export default function OverviewPage() {
                     sublabel={`${content.drafts || 0} drafts waiting`}
                     tone="sky"
                   />
-                  <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.06] px-3 py-2.5">
+                  <div className="rounded-lg border border-teal-500/15 bg-teal-500/[0.06] px-3 py-2.5">
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300/80">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-teal-300/80">
                           Warm leads
                         </p>
-                        <p className="mt-0.5 font-display text-lg font-bold tabular-nums text-emerald-100">
+                        <p className="mt-0.5 font-display text-lg font-bold tabular-nums text-teal-100">
                           {followUps.length}
                         </p>
                       </div>
-                      <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                      <span className="rounded bg-teal-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300">
                         need a reply
                       </span>
                     </div>
@@ -370,7 +370,7 @@ export default function OverviewPage() {
                 </div>
                 <Link
                   to="/email?tab=processed&engagement=engaged"
-                  className="text-[11px] font-medium text-indigo-300 hover:text-white"
+                  className="text-[11px] font-medium text-teal-300 hover:text-white"
                 >
                   Open inbox →
                 </Link>

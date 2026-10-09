@@ -1,14 +1,14 @@
-/** Dark theme for Clerk UI — matched to Publisher Suite (DM Sans + indigo). */
+/** Dark theme for Clerk UI — graphite + teal Publisher Suite. */
 export const clerkAppearance = {
   variables: {
-    colorPrimary: '#6366f1',
-    colorBackground: '#0b0e16',
-    colorText: '#f1f5f9',
-    colorTextSecondary: '#94a3b8',
+    colorPrimary: '#14b8a6',
+    colorBackground: '#141618',
+    colorText: '#f4f4f5',
+    colorTextSecondary: '#a1a1aa',
     colorInputBackground: 'rgba(255,255,255,0.04)',
-    colorInputText: '#f1f5f9',
-    colorNeutral: '#94a3b8',
-    borderRadius: '0.75rem',
+    colorInputText: '#f4f4f5',
+    colorNeutral: '#a1a1aa',
+    borderRadius: '0.625rem',
     fontFamily: '"DM Sans", ui-sans-serif, system-ui, sans-serif',
   },
   elements: {
@@ -16,22 +16,22 @@ export const clerkAppearance = {
     cardBox: 'w-full shadow-none',
     card: 'bg-transparent shadow-none border-0 p-0',
     headerTitle: 'text-white font-semibold',
-    headerSubtitle: 'text-slate-400',
+    headerSubtitle: 'text-zinc-400',
     socialButtonsBlockButton:
-      'border border-white/10 bg-white/[0.03] text-slate-200 hover:bg-white/[0.06]',
+      'border border-white/10 bg-white/[0.03] text-zinc-200 hover:bg-white/[0.06]',
     dividerLine: 'bg-white/10',
-    dividerText: 'text-slate-500',
-    formFieldLabel: 'text-slate-300',
+    dividerText: 'text-zinc-500',
+    formFieldLabel: 'text-zinc-300',
     formFieldInput:
-      'bg-white/[0.04] border border-white/10 text-white placeholder:text-slate-600 focus:border-indigo-400/50 focus:ring-indigo-500/20',
+      'bg-white/[0.04] border border-white/10 text-white placeholder:text-zinc-600 focus:border-teal-400/50 focus:ring-teal-500/20',
     formButtonPrimary:
-      'bg-indigo-500 hover:bg-indigo-400 text-white normal-case shadow-lg shadow-indigo-500/20',
-    footerActionLink: 'text-indigo-300 hover:text-indigo-200',
+      'bg-teal-500 hover:bg-teal-400 text-teal-950 normal-case shadow-none',
+    footerActionLink: 'text-teal-300 hover:text-teal-200',
     footer: 'hidden',
-    identityPreviewEditButton: 'text-indigo-300',
+    identityPreviewEditButton: 'text-teal-300',
     organizationSwitcherTrigger:
-      'text-slate-200 border border-white/10 bg-white/[0.03] hover:bg-white/[0.06]',
-    userButtonPopoverCard: 'bg-[#0b0e16] border border-white/10',
-    userButtonPopoverActionButton: 'text-slate-200 hover:bg-white/5',
+      'text-zinc-200 border border-white/10 bg-white/[0.03] hover:bg-white/[0.06]',
+    userButtonPopoverCard: 'bg-[#141618] border border-white/10',
+    userButtonPopoverActionButton: 'text-zinc-200 hover:bg-white/5',
   },
 }

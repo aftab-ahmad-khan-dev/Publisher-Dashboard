@@ -23,12 +23,12 @@ const PRIMARY = ['/overview', '/compose', '/email', '/scheduled']
 
 function NavIcon({ icon, count, active }) {
   return (
-    <span className={`relative flex h-9 w-9 items-center justify-center rounded-xl transition ${active ? 'bg-indigo-500/20 text-indigo-300' : ''}`}>
+    <span className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${active ? 'bg-teal-500/15 text-teal-300' : ''}`}>
       <svg className="h-[20px] w-[20px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         {ICONS[icon]}
       </svg>
       {count > 0 && (icon === 'drafts' || icon === 'scheduled') && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-500 px-1 text-[9px] font-bold text-white ring-2 ring-[#07080f]">
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-teal-500 px-1 text-[9px] font-bold text-teal-950 ring-2 ring-[#0c0d0f]">
           {count > 9 ? '9+' : count}
         </span>
       )}
@@ -71,8 +71,8 @@ export default function BottomNav() {
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
                     isActive
-                      ? 'bg-indigo-500/15 text-white ring-1 ring-indigo-500/25'
-                      : 'text-slate-300 hover:bg-white/[0.04]'
+                      ? 'bg-teal-500/12 text-white ring-1 ring-teal-500/25'
+                      : 'text-zinc-300 hover:bg-white/[0.04]'
                   }`
                 }
               >
@@ -101,7 +101,7 @@ export default function BottomNav() {
             onClick={() => setMoreOpen(false)}
             className={({ isActive }) =>
               `flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition ${
-                isActive ? 'text-indigo-300' : 'text-slate-500'
+                isActive ? 'text-teal-300' : 'text-zinc-500'
               }`
             }
           >
@@ -117,12 +117,12 @@ export default function BottomNav() {
           type="button"
           onClick={() => setMoreOpen((o) => !o)}
           className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition ${
-            moreOpen || moreActive ? 'text-indigo-300' : 'text-slate-500'
+            moreOpen || moreActive ? 'text-teal-300' : 'text-zinc-500'
           }`}
         >
           <span
-            className={`flex h-9 w-9 items-center justify-center rounded-xl ${
-              moreOpen || moreActive ? 'bg-indigo-500/20' : ''
+            className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+              moreOpen || moreActive ? 'bg-teal-500/15' : ''
             }`}
           >
             <svg className="h-[20px] w-[20px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>

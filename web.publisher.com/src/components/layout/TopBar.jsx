@@ -105,18 +105,18 @@ export default function TopBar() {
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
           {processing && (
-            <span className="hidden items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-slate-400 lg:inline-flex">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400" />
+            <span className="hidden items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-zinc-400 lg:inline-flex">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal-400" />
               {processingLabel || 'Processing'}
             </span>
           )}
 
-          <div className="hidden items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.02] p-1 lg:flex">
-            <span className="rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-400">
-              <span className="text-indigo-300">{scheduled}</span> queued
+          <div className="hidden items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.02] p-1 lg:flex">
+            <span className="rounded-full px-2 py-1 text-[10px] font-semibold text-zinc-400">
+              <span className="text-teal-300">{scheduled}</span> queued
             </span>
             <span className="h-3 w-px bg-white/10" />
-            <span className="rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-400">
+            <span className="rounded-full px-2 py-1 text-[10px] font-semibold text-zinc-400">
               <span className="text-amber-300">{draftCount}</span> drafts
             </span>
           </div>

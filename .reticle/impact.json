@@ -1,6 +1,6 @@
 {
   "counts": {
-    "calls": 4,
+    "calls": 6,
     "verdicts": 0,
     "passed": 0,
     "failed": 0,
@@ -8,14 +8,14 @@
     "refusals": 0,
     "marks": 0,
     "sessions": 0,
-    "tokensReturned": 744,
-    "drivingMs": 107
+    "tokensReturned": 784,
+    "drivingMs": 162
   },
   "days": [
     {
       "date": "2026-10-09",
       "counts": {
-        "calls": 4,
+        "calls": 6,
         "verdicts": 0,
         "passed": 0,
         "failed": 0,
@@ -23,8 +23,8 @@
         "refusals": 0,
         "marks": 0,
         "sessions": 0,
-        "tokensReturned": 744,
-        "drivingMs": 107
+        "tokensReturned": 784,
+        "drivingMs": 162
       }
     }
   ],

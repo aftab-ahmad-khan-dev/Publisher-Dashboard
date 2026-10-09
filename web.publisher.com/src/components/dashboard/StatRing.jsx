@@ -3,12 +3,12 @@ export default function StatRing({
   max = 100,
   label,
   sublabel,
-  tone = 'indigo',
+  tone = 'teal',
   size = 88,
 }) {
   const pct = max > 0 ? Math.min(100, Math.round((Number(value) / max) * 100)) : 0
   const stroke =
-    tone === 'sky' ? '#38bdf8' : tone === 'emerald' ? '#34d399' : '#818cf8'
+    tone === 'sky' ? '#38bdf8' : tone === 'emerald' ? '#34d399' : '#2dd4bf'
   const r = 34
   const c = 2 * Math.PI * r
   const offset = c - (pct / 100) * c

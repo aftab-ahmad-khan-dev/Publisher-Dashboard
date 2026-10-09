@@ -56,8 +56,8 @@ function ConnectionRow({ ready, label, children }) {
     <div className="flex items-center justify-between gap-2 py-1">
       <div className="flex items-center gap-2">{children}</div>
       <span
-        className={`rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
-          ready ? 'bg-emerald-500/15 text-emerald-400' : 'bg-white/[0.04] text-slate-600'
+        className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
+          ready ? 'bg-teal-500/15 text-teal-300' : 'bg-white/[0.04] text-zinc-600'
         }`}
       >
         {label}
@@ -90,22 +90,21 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
 
   return (
     <aside
-      className={`saas-sidebar flex h-full max-h-dvh w-full flex-col overflow-hidden transition-[width] duration-300 ${
-        collapsed ? 'lg:w-[76px]' : 'lg:w-[280px]'
+      className={`saas-sidebar flex h-[calc(100%-1.5rem)] max-h-[calc(100dvh-1.5rem)] w-full flex-col overflow-hidden transition-[width] duration-300 ${
+        collapsed ? 'lg:w-[72px]' : 'lg:w-[248px]'
       }`}
     >
-      <div className={`saas-sidebar__brand ${collapsed ? 'lg:justify-center lg:px-3' : ''}`}>
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="relative shrink-0">
-            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-indigo-500/25 to-sky-500/15 blur-md" />
-            <BrandLogo className="relative h-10 w-10 rounded-xl shadow-lg shadow-indigo-500/20" />
-          </div>
+      <div className={`saas-sidebar__brand ${collapsed ? 'lg:flex-col lg:gap-2 lg:px-2' : ''}`}>
+        <div className={`flex min-w-0 items-center ${collapsed ? 'lg:flex-col lg:gap-2' : 'gap-2.5'}`}>
+          <BrandLogo className="h-8 w-8 shrink-0 rounded-lg ring-1 ring-white/10" />
           {!collapsed && (
-            <div className="min-w-0 lg:block">
-              <p className="truncate font-display text-[15px] font-bold tracking-tight text-white">
-                Publisher Suite
+            <div className="min-w-0">
+              <p className="truncate font-display text-[13px] font-bold tracking-tight text-zinc-100">
+                Publisher
               </p>
-              <p className="truncate text-[11px] text-slate-500">Intelligent publishing</p>
+              <p className="truncate text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-500">
+                Workspace
+              </p>
             </div>
           )}
         </div>
@@ -114,36 +113,28 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
             type="button"
             onClick={onToggleCollapse}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className={`saas-icon-btn hidden lg:flex ${collapsed ? 'lg:hidden' : ''}`}
+            className="saas-icon-btn hidden lg:flex"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d={collapsed ? 'M9 5l7 7-7 7' : 'M15 19l-7-7 7-7'}
+              />
             </svg>
           </button>
         )}
       </div>
 
-      {collapsed && onToggleCollapse && (
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          aria-label="Expand sidebar"
-          className="saas-icon-btn mx-auto mt-3 hidden lg:flex"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      )}
-
-      <nav className="saas-sidebar__nav scrollbar-none flex-1 overflow-y-auto px-3 py-4">
+      <nav className="saas-sidebar__nav scrollbar-none flex-1 overflow-y-auto px-2 py-3">
         {navGroups.map((group) => (
-          <div key={group.id} className="mb-5 last:mb-2">
+          <div key={group.id} className="mb-4 last:mb-1">
             {!collapsed && (
-              <p className="saas-nav-section-label mb-2 px-2">{group.label}</p>
+              <p className="saas-nav-section-label mb-1.5 px-2.5">{group.label}</p>
             )}
+            {collapsed && <div className="mx-auto mb-2 h-px w-6 bg-white/[0.06]" />}
             <ul className="space-y-0.5">
-              {group.items.map(({ path, label, icon, description, locked }) => {
+              {group.items.map(({ path, label, icon, locked }) => {
                 const countFn = BADGE_COUNTS[icon]
                 const count = countFn ? countFn(app) : 0
 
@@ -166,26 +157,29 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
                               {ICONS[icon]}
                             </svg>
                             {count > 0 && (icon === 'drafts' || icon === 'scheduled') && (
-                              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-500 px-1 text-[9px] font-bold text-white">
+                              <span className="saas-nav-badge">
                                 {count > 9 ? '9+' : count}
                               </span>
                             )}
                           </span>
                           {!collapsed && (
-                            <span className="min-w-0 flex-1">
-                              <span className="flex items-center gap-1.5">
-                                <span className="truncate">{label}</span>
-                                {locked && (
-                                  <svg className="h-3 w-3 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                  </svg>
-                                )}
-                              </span>
-                              {description && (
-                                <span className="block truncate text-[10px] font-normal text-slate-600 group-[.saas-nav-link--active]:text-indigo-300/70">
-                                  {description}
-                                </span>
-                              )}
+                            <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
+                              {label}
+                              {locked ? (
+                                <svg
+                                  className="ml-1.5 inline h-3 w-3 text-zinc-500"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                  />
+                                </svg>
+                              ) : null}
                             </span>
                           )}
                         </>
@@ -200,23 +194,23 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
       </nav>
 
       {!collapsed && (
-        <div className="border-t border-white/[0.06] p-3">
+        <div className="border-t border-white/[0.06] p-2.5">
           <div className="saas-connection-card">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                Integrations
+            <div className="mb-2.5 flex items-center justify-between gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">
+                Connections
               </p>
-              <span className="rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
+              <span className="rounded bg-teal-500/15 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-teal-300">
                 {healthPct}%
               </span>
             </div>
             <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-sky-400 transition-all duration-500"
+                className="h-full rounded-full bg-teal-500 transition-all duration-500"
                 style={{ width: `${healthPct}%` }}
               />
             </div>
-            <div className="mt-3 space-y-0.5">
+            <div className="mt-2.5 space-y-0.5">
               <ConnectionRow ready={metaReady} label={metaReady ? 'Live' : 'Setup'}>
                 <MetaSuiteIcons size="sm" />
               </ConnectionRow>
