@@ -30,8 +30,8 @@ export default function ProtectedRoute() {
       return (
         <div className="flex h-dvh flex-col items-center justify-center gap-5 bg-[#06080f] px-6 text-center">
           <BrandLogo className="h-14 w-14" />
-          <h1 className="font-display text-2xl font-bold text-white">Can’t reach authentication</h1>
-          <p className="max-w-md text-sm leading-relaxed text-slate-400">
+          <h1 className="text-2xl font-bold text-white">Can’t reach authentication</h1>
+          <p className="max-w-md text-sm leading-relaxed text-zinc-400">
             We couldn’t load the sign-in service. Check your internet connection and try again.
           </p>
           <button

@@ -473,7 +473,7 @@ export default function ApiConfigPage() {
           <form id={FORM_ID} onSubmit={handleSave} className='space-y-3'>
             <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
               <div className='flex min-h-full flex-col gap-3'>
-                <section className='saas-content-card flex min-h-[320px] flex-1 flex-col rounded-xl p-4'>
+                <section className='saas-content-card flex min-h-[320px] flex-1 flex-col p-4'>
                   <div className='flex items-center justify-between gap-3'>
                     <div className='flex items-center gap-3'>
                       <MetaSuiteIcons size='lg' />
@@ -537,7 +537,7 @@ export default function ApiConfigPage() {
               </div>
 
               <div className='flex min-h-full flex-col gap-3'>
-                <section className='saas-content-card flex min-h-[320px] flex-1 flex-col rounded-xl p-4'>
+                <section className='saas-content-card flex min-h-[320px] flex-1 flex-col p-4'>
                   <div className='flex items-center justify-between gap-3'>
                     <div className='flex items-center gap-3'>
                       <PlatformIcon platform='linkedin' size='lg' />
@@ -659,7 +659,7 @@ export default function ApiConfigPage() {
 
             <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
               <div className='flex min-h-full flex-col gap-3'>
-                <section className='saas-content-card flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
+                <section className='saas-content-card flex min-h-[280px] flex-1 flex-col p-4'>
                   <div className='flex items-center justify-between gap-3'>
                     <div className='flex items-center gap-3'>
                       <PlatformIcon platform='reddit' size='lg' />
@@ -768,10 +768,10 @@ export default function ApiConfigPage() {
               </div>
 
               <div className='flex min-h-full flex-col gap-3'>
-                <section className='saas-content-card flex min-h-[280px] flex-1 flex-col rounded-xl p-4'>
+                <section className='saas-content-card flex min-h-[280px] flex-1 flex-col p-4'>
                   <div className='flex flex-wrap items-start justify-between gap-3'>
                     <div className='flex items-center gap-3'>
-                      <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EA4335] text-lg font-bold text-white'>
+                      <span className='flex h-10 w-10 shrink-0 items-center justify-center bg-[#EA4335] text-lg font-bold text-white'>
                         M
                       </span>
                       <div>
@@ -857,7 +857,7 @@ export default function ApiConfigPage() {
             <div className='grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch'>
               {/* Threads */}
               <div className='flex min-h-full flex-col gap-3'>
-                <section className='saas-content-card flex min-h-[240px] flex-1 flex-col rounded-xl p-4'>
+                <section className='saas-content-card flex min-h-[240px] flex-1 flex-col p-4'>
                   <div className='flex items-center justify-between gap-3'>
                     <div className='flex items-center gap-3'>
                       <PlatformIcon platform='threads' size='lg' />
@@ -923,7 +923,7 @@ export default function ApiConfigPage() {
               </div>
             </div>
 
-            <section className='saas-content-card rounded-xl p-4'>
+            <section className='saas-content-card p-4'>
               <h3 className='text-sm font-semibold text-white'>Webhooks</h3>
               <div className='mt-3 space-y-2'>
                 <Field
@@ -957,7 +957,7 @@ export default function ApiConfigPage() {
               </div>
             </section>
 
-            <section className='saas-content-card rounded-xl p-4'>
+            <section className='saas-content-card p-4'>
               <h3 className='text-sm font-semibold text-white'>Scheduling defaults</h3>
               <p className='mt-1 text-[11px] text-zinc-500'>
                 Default time of day used for the next open slot and bulk uploads.
@@ -1319,7 +1319,7 @@ function PlatformStatusCard({ status, platform }) {
 
   return (
     <div
-      className={`flex min-h-[7.5rem] shrink-0 flex-col rounded-xl border p-4 ${s.border} ${s.bg}`}
+      className={`flex min-h-[7.5rem] shrink-0 flex-col border p-4 ${s.border} ${s.bg}`}
     >
       <div className='flex flex-1 items-stretch gap-3'>
         <div className='flex min-w-0 flex-1 flex-col justify-center'>

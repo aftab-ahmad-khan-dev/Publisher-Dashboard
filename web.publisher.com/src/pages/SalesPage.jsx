@@ -287,7 +287,7 @@ export default function SalesPage() {
             <button
               type="button"
               onClick={() => setTeamOpen(true)}
-              className="rounded-lg border border-white/[0.1] px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/[0.04]"
+              className="btn-secondary px-3 py-2 text-xs"
             >
               Team
             </button>
@@ -317,7 +317,11 @@ export default function SalesPage() {
 
       <PageScroll>
         {loading ? (
-          <p className="py-16 text-center text-sm text-zinc-500">Loading board…</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="saas-content-card h-48 animate-pulse" />
+            ))}
+          </div>
         ) : null}
 
         {!loading && tab === 'board' ? (

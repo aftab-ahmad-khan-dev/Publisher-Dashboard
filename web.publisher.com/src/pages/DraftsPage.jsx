@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAppData } from '../contexts/AppDataContext'
 import { PlatformIconGroup } from '../components/PlatformIcon'
@@ -21,6 +21,7 @@ export default function DraftsPage() {
   const { drafts, deleteDraft } = useAppData()
   const navigate = useNavigate()
   const [view, setView] = useState(loadView)
+  const [query, setQuery] = useState('')
 
   const setViewAndPersist = (v) => {
     setView(v)
@@ -34,6 +35,15 @@ export default function DraftsPage() {
   const withPlatforms = drafts.filter((d) =>
     Object.values(d.platforms || {}).some(Boolean),
   ).length
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return drafts
+    return drafts.filter((d) => {
+      const hay = `${d.title || ''} ${d.body || ''}`.toLowerCase()
+      return hay.includes(q)
+    })
+  }, [drafts, query])
 
   return (
     <PageShell>
@@ -58,8 +68,19 @@ export default function DraftsPage() {
           value={drafts[0] ? formatDraftDate(drafts[0].updatedAt).split(',')[0] : '—'}
           tone="violet"
         />
-        <PageStat label="View" value={view === 'grid' ? 'Grid' : 'List'} hint="Toggle in toolbar" />
+        <PageStat label="Showing" value={filtered.length} hint={query ? 'Filtered' : 'All drafts'} />
       </PageStatsRow>
+
+      {drafts.length > 0 ? (
+        <div className="mb-3 shrink-0">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search drafts…"
+            className="saas-input h-9 max-w-sm text-xs"
+          />
+        </div>
+      ) : null}
 
       <PageScroll>
         {drafts.length === 0 ? (
@@ -77,9 +98,19 @@ export default function DraftsPage() {
               </Link>
             }
           />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            title="No matches"
+            description="Try a different search term, or clear the filter to see all drafts."
+            action={
+              <button type="button" className="btn-secondary px-3 py-1.5 text-xs" onClick={() => setQuery('')}>
+                Clear search
+              </button>
+            }
+          />
         ) : view === 'grid' ? (
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {drafts.map((draft, i) => (
+            {filtered.map((draft, i) => (
               <DraftGridCard
                 key={draft.id}
                 draft={draft}
@@ -91,7 +122,7 @@ export default function DraftsPage() {
           </ul>
         ) : (
           <ul className="space-y-2">
-            {drafts.map((draft, i) => (
+            {filtered.map((draft, i) => (
               <DraftListCard
                 key={draft.id}
                 draft={draft}

@@ -93,7 +93,7 @@ export default function PollEditor({ poll, platforms, setPoll, disabled = false,
             checked={poll.enabled}
             disabled={disabled}
             onChange={toggleEnabled}
-            accent="fuchsia"
+            accent="zinc"
           />
         </div>
       </div>
@@ -164,7 +164,7 @@ export default function PollEditor({ poll, platforms, setPoll, disabled = false,
                 disabled={disabled}
                 className="poll-add-option"
               >
-                <span className="text-lg leading-none text-indigo-400">+</span>
+                <span className="text-lg leading-none text-zinc-400">+</span>
                 Add option
               </button>
             )}
@@ -201,7 +201,7 @@ export default function PollEditor({ poll, platforms, setPoll, disabled = false,
                   disabled={disabled || platforms.reddit}
                   onChange={(v) => update({ allowMultiple: v })}
                   size="sm"
-                  accent="violet"
+                  accent="zinc"
                 />
               </div>
             </div>
@@ -213,7 +213,7 @@ export default function PollEditor({ poll, platforms, setPoll, disabled = false,
               <div className="poll-timeline__line" />
               <div className="poll-timeline__dot poll-timeline__dot--end" />
               <div className="poll-timeline__content">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-indigo-300/90">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-400">
                   Active window
                 </p>
                 <p className="mt-1 text-sm font-medium text-white">

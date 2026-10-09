@@ -112,7 +112,7 @@ export default function CalendarPage() {
                     isSelected ? 'saas-calendar-day--selected' : posts.length ? 'calendar-day-has-post' : ''
                   } ${isToday ? 'saas-calendar-day--today' : ''}`}
                 >
-                  <span className={`text-xs font-bold ${isToday ? 'text-sky-400' : 'text-zinc-400'}`}>
+                  <span className={`text-xs font-bold ${isToday ? 'text-zinc-100' : 'text-zinc-400'}`}>
                     {day.getDate()}
                   </span>
                   {platforms.length > 0 && (
@@ -145,8 +145,9 @@ export default function CalendarPage() {
 
           <ul className="scrollbar-none mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
             {selectedPosts.length === 0 ? (
-              <li className="rounded-xl border border-dashed border-white/10 py-10 text-center text-xs text-zinc-500">
-                No posts on this day
+              <li className="rounded-md border border-dashed border-white/10 px-4 py-10 text-center">
+                <p className="text-sm font-medium text-zinc-300">No posts this day</p>
+                <p className="mt-1 text-xs text-zinc-500">Schedule from Compose or open the queue.</p>
               </li>
             ) : (
               selectedPosts.map((item) => (

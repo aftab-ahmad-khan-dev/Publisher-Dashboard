@@ -576,7 +576,18 @@ router.get('/email/mailbox', async (req, res, next) => {
       limit,
       total,
       totalPages: Math.max(1, Math.ceil(total / limit)),
-      recipients: recipients.map(mapRecipient),
+      recipients: recipients.map((doc) => {
+        const row = mapRecipient(doc)
+        // List pane only needs a short preview — full HTML loads in the reader.
+        const text = String(row.renderedText || '')
+          .replace(/\s+/g, ' ')
+          .trim()
+        return {
+          ...row,
+          renderedHtml: undefined,
+          renderedText: text.slice(0, 180),
+        }
+      }),
       folderCounts,
       sent24h,
       meetingLink: await resolveBookingUrl(req.workspaceId),

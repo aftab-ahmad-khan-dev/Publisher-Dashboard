@@ -41,6 +41,7 @@ import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from '../lib/meet
 import { SIGNATURE } from '../lib/emailTemplates'
 import LeadSourcePanel from '../components/email/LeadSourcePanel'
 import TemplateLibraryPanel from '../components/email/TemplateLibraryPanel'
+import MailboxShell from '../components/email/MailboxShell'
 import ConfirmDialog from '../components/ConfirmDialog'
 import PageShell, { PageScroll } from '../components/PageShell'
 import PageHeader from '../components/PageHeader'
@@ -72,15 +73,6 @@ const NUDGE_TOOLTIPS = {
   reminder:
     'Remind — a friendly note that their meeting starts in ~10 minutes, with the Meet link. If you don’t send it, it auto-sends in that window and notifies you here.',
 }
-
-const MAILBOX_FOLDERS = [
-  { id: 'queued', label: 'Queued' },
-  { id: 'sent', label: 'Sent' },
-  { id: 'opened', label: 'Opened' },
-  { id: 'failed', label: 'Failed' },
-  { id: 'all', label: 'All mail' },
-  { id: 'junk', label: 'Junk' },
-]
 
 const MEETING_STATUSES = [
   { id: 'invited', label: 'Invited' },
@@ -932,10 +924,31 @@ export default function EmailPage() {
       if (tab !== 'mailbox') setDetail(null)
       return
     }
+    let cancelled = false
+    setDetail(null)
     fetchEmailMailboxMessage(selectedId)
-      .then((data) => setDetail(data))
-      .catch((err) => showToast(err.message, 'error'))
+      .then((data) => {
+        if (!cancelled) setDetail(data)
+      })
+      .catch((err) => {
+        if (!cancelled) showToast(err.message, 'error')
+      })
+    return () => {
+      cancelled = true
+    }
   }, [selectedId, live, showToast, tab])
+
+  // If the open message leaves the current folder/page, jump to the next row
+  useEffect(() => {
+    if (tab !== 'mailbox' || !selectedId || !messages.length) return
+    if (messages.some((m) => m.id === selectedId)) return
+    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches) {
+      setSelectedId(messages[0].id)
+    } else {
+      setSelectedId(null)
+      setDetail(null)
+    }
+  }, [tab, messages, selectedId])
 
   useEffect(() => {
     if (!live) return
@@ -1413,13 +1426,17 @@ export default function EmailPage() {
   return (
     <PageShell>
       <PageHeader
-        title="Inbox"
+        title={tab === 'mailbox' ? 'Mail' : 'Inbox'}
         subtitle={
-          mailReady
-            ? mailTransport === 'smtp'
-              ? 'Human outreach via SMTP · campaigns, tracking & meetings'
-              : 'Gmail connected · write like a person, track like a pro'
-            : 'Connect SMTP or Gmail to start conversations'
+          tab === 'mailbox'
+            ? mailReady
+              ? `${mailTransport === 'smtp' ? 'SMTP' : 'Gmail'} · ${mailboxTotal.toLocaleString()} in view`
+              : 'Connect SMTP or Gmail to open your mailbox'
+            : mailReady
+              ? mailTransport === 'smtp'
+                ? 'Human outreach via SMTP · campaigns, tracking & meetings'
+                : 'Gmail connected · write like a person, track like a pro'
+              : 'Connect SMTP or Gmail to start conversations'
         }
         action={
           <div className="saas-tabs">
@@ -1445,362 +1462,96 @@ export default function EmailPage() {
 
       {/* ─── Native Mail Box ─── */}
       {tab === 'mailbox' && (
-        <div className="mail-shell flex min-h-0 flex-1 overflow-hidden rounded-md border border-white/[0.08] bg-[var(--bg-panel)]">
-          <aside className="hidden w-48 shrink-0 flex-col border-r border-white/[0.06] bg-[var(--bg-app)] sm:flex">
-            <div className="p-3">
-              <button
-                type="button"
-                className="btn-primary w-full py-2 text-sm"
-                onClick={() => setTab('campaigns')}
-              >
-                Compose
-              </button>
-            </div>
-            <nav className="saas-scroll flex-1 space-y-px overflow-y-auto px-2">
-              {MAILBOX_FOLDERS.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setFolder(f.id)}
-                  className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-[13px] font-medium transition ${
-                    folder === f.id
-                      ? 'bg-white/[0.08] text-zinc-50'
-                      : 'text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200'
-                  }`}
-                >
-                  <span>{f.label}</span>
-                  <span className="tabular-nums text-[10px] text-zinc-500">
-                    {folderCounts[f.id] ?? ''}
-                  </span>
-                </button>
-              ))}
-            </nav>
-            <div className="border-t border-white/[0.06] p-3">
-              <DailyCapBar sent={sent24h} cap={dailyCap} compact />
-            </div>
-          </aside>
-
-          <section className="flex w-full min-w-0 flex-col border-r border-white/[0.06] sm:w-[340px] lg:w-[380px]">
-            <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-3 py-2">
-              <input
-                value={mailboxQuery}
-                onChange={(e) => setMailboxQuery(e.target.value)}
-                placeholder="Search mail…"
-                className="saas-input min-w-0 flex-1 basis-[10rem] py-0 text-xs h-[2.125rem]"
-              />
-              <select
-                className={`${selectClass()} !min-w-[7.5rem]`}
-                value={mailboxMeetingFilter}
-                onChange={(e) => setMailboxMeetingFilter(e.target.value)}
-                title="Meeting status"
-              >
-                <option value="all">All meetings</option>
-                <option value="none">No meeting</option>
-                <option value="invited">Invited</option>
-                <option value="link_clicked">Link clicked</option>
-                <option value="scheduled">Scheduled</option>
-              </select>
-              {!selectMode ? (
-                <button
-                  type="button"
-                  className="btn-secondary h-[2.125rem] shrink-0 px-2.5 text-[10px]"
-                  disabled={!messages.length}
-                  onClick={() => setSelectMode(true)}
-                >
-                  Select
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="btn-secondary h-[2.125rem] shrink-0 px-2.5 text-[10px]"
-                  onClick={exitSelectMode}
-                >
-                  Done
-                </button>
-              )}
-              <select
-                className={`${selectClass()} !min-w-[6.5rem] sm:hidden`}
-                value={folder}
-                onChange={(e) => setFolder(e.target.value)}
-              >
-                {MAILBOX_FOLDERS.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {selectMode && tab === 'mailbox' && (
-              <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                <label className="mr-1 flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-zinc-300">
-                  <input
-                    type="checkbox"
-                    checked={allSelected && messages.length > 0}
-                    onChange={toggleSelectAll}
-                    disabled={!messages.length}
-                    className="rounded border-white/20"
-                  />
-                  Select all
-                </label>
-                {selectedCount > 0 && (
-                  <span className="text-[10px] text-zinc-500">{selectedCount} selected</span>
-                )}
-                {selectedCount > 0 &&
-                  (folder === 'junk' ? (
-                    <>
-                      <button
-                        type="button"
-                        className="btn-secondary px-2 py-1 text-[10px] disabled:opacity-50"
-                        disabled={bulkBusy}
-                        onClick={() => runBulkMailbox('restore')}
-                      >
-                        Restore
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger px-2 py-1 text-[10px] disabled:opacity-50"
-                        disabled={bulkBusy}
-                        onClick={() => runBulkMailbox('delete')}
-                      >
-                        Delete forever
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn-secondary px-2 py-1 text-[10px] disabled:opacity-50"
-                      disabled={bulkBusy}
-                      onClick={() => runBulkMailbox('junk')}
-                    >
-                      Move to Junk
-                    </button>
-                  ))}
-              </div>
-            )}
-
-            <div className="saas-scroll min-h-0 flex-1 overflow-y-auto">
-              {!live && (
-                <p className="p-4 text-sm text-zinc-500">Connect the API to use the mailbox.</p>
-              )}
-              {live && messages.length === 0 && (
-                <p className="p-4 text-sm text-zinc-500">No messages in this folder.</p>
-              )}
-              {messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`flex w-full items-start gap-2 border-b border-white/[0.05] px-3 py-2.5 transition hover:bg-white/[0.03] ${
-                    selectedId === m.id ? 'bg-white/[0.06]' : ''
-                  } ${selectMode && selectedMailIds.has(m.id) ? 'bg-white/[0.05]' : ''}`}
-                >
-                  {selectMode && (
-                    <input
-                      type="checkbox"
-                      checked={selectedMailIds.has(m.id)}
-                      onChange={() => toggleMailSelect(m.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="mt-1 rounded border-white/20"
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectMode) {
-                        toggleMailSelect(m.id)
-                        return
-                      }
-                      setSelectedId(m.id)
-                    }}
-                    className="min-w-0 flex-1 text-left"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="truncate text-sm font-medium text-zinc-100">
-                        {m.name || m.email}
-                      </p>
-                      <span className="shrink-0 text-[10px] text-zinc-500">
-                        {fmtTime(m.sentAt || m.createdAt)}
-                      </span>
-                    </div>
-                    <p className="truncate text-xs text-zinc-500">
-                      {m.renderedSubject || m.company || m.email}
-                    </p>
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <StatusChip status={m.status} />
-                      {m.openCount > 0 && (
-                        <span className="text-[10px] text-zinc-500">
-                          {m.openCount} open{m.openCount > 1 ? 's' : ''}
-                        </span>
-                      )}
-                      {m.meetingStatus && m.meetingStatus !== 'none' && (
-                        <StatusChip status={m.meetingStatus} />
-                      )}
-                    </div>
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center justify-between gap-2 border-t border-white/[0.06] px-3 py-2">
-              <p className="text-[10px] text-zinc-500">
-                {mailboxTotal} · p.{mailboxPage}/{mailboxTotalPages}
-              </p>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  className="btn-secondary px-2 py-1 text-[10px] disabled:opacity-40"
-                  disabled={mailboxPage <= 1}
-                  onClick={() => setMailboxPage((p) => Math.max(1, p - 1))}
-                >
-                  Prev
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary px-2 py-1 text-[10px] disabled:opacity-40"
-                  disabled={mailboxPage >= mailboxTotalPages}
-                  onClick={() =>
-                    setMailboxPage((p) => Math.min(mailboxTotalPages, p + 1))
-                  }
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <section className="hidden min-w-0 flex-1 flex-col bg-[var(--bg-elevated)] lg:flex">
-            {!detail?.recipient ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-                <p className="text-sm font-medium text-zinc-300">Inbox</p>
-                <p className="max-w-sm text-sm text-zinc-500">
-                  Select a message to read it, or open Campaigns to compose and send.
-                </p>
-              </div>
-            ) : (
-              <>
-                <header className="border-b border-white/[0.06] px-5 py-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-base font-semibold tracking-tight text-zinc-50">
-                        {detail.recipient.renderedSubject || 'No subject'}
-                      </h2>
-                      <p className="mt-1 text-sm text-zinc-400">
-                        To:{' '}
-                        {detail.recipient.name
-                          ? `${detail.recipient.name} <${detail.recipient.email}>`
-                          : detail.recipient.email}
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-zinc-500">
-                        <StatusChip status={detail.recipient.status} />
-                        {detail.recipient.company && <span>{detail.recipient.company}</span>}
-                        {detail.recipient.location && <span>{detail.recipient.location}</span>}
-                        {detail.recipient.meetingStatus &&
-                          detail.recipient.meetingStatus !== 'none' && (
-                            <StatusChip status={detail.recipient.meetingStatus} />
-                          )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="text-right text-[11px] text-zinc-500">
-                        <p>Opens: {detail.recipient.openCount || 0}</p>
-                        <p>Clicks: {detail.recipient.clickCount || 0}</p>
-                        <p>Sent: {fmtTime(detail.recipient.sentAt)}</p>
-                        {detail.recipient.meetingLink && (
-                          <a
-                            href={detail.recipient.meetingLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-1 block text-zinc-200 hover:underline"
-                          >
-                            Meeting link
-                          </a>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap justify-end gap-1.5">
-                        {detail.recipient.mailboxFolder === 'junk' ? (
-                          <>
-                            <button
-                              type="button"
-                              className="btn-secondary px-2.5 py-1 text-[11px]"
-                              onClick={async () => {
-                                try {
-                                  await restoreMailboxFromJunk(detail.recipient.id)
-                                  showToast('Restored to inbox', 'success')
-                                  setSelectedId(null)
-                                  setDetail(null)
-                                  await loadMailbox()
-                                } catch (err) {
-                                  showToast(err.message, 'error')
-                                }
-                              }}
-                            >
-                              Move to inbox
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-danger px-2.5 py-1 text-[11px]"
-                              onClick={() => {
-                                setConfirmDialog({
-                                  title: 'Delete forever?',
-                                  message: 'Delete this message forever? This cannot be undone.',
-                                  confirmLabel: 'Delete forever',
-                                  onConfirm: async () => {
-                                    await deleteMailboxForever(detail.recipient.id)
-                                    showToast('Deleted forever', 'success')
-                                    setSelectedId(null)
-                                    setDetail(null)
-                                    await loadMailbox()
-                                  },
-                                })
-                              }}
-                            >
-                              Delete forever
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn-secondary px-2.5 py-1 text-[11px]"
-                            onClick={async () => {
-                              try {
-                                await moveMailboxToJunk(detail.recipient.id)
-                                showToast('Moved to Junk', 'success')
-                                setSelectedId(null)
-                                setDetail(null)
-                                await loadMailbox()
-                              } catch (err) {
-                                showToast(err.message, 'error')
-                              }
-                            }}
-                          >
-                            Move to Junk
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </header>
-                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-                  {detail.recipient.renderedHtml ? (
-                    <div
-                      className="prose prose-invert prose-sm max-w-none text-zinc-200"
-                      dangerouslySetInnerHTML={{
-                        __html: detail.recipient.renderedHtml,
-                      }}
-                    />
-                  ) : (
-                    <pre className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
-                      {detail.recipient.renderedText || 'Content not captured yet.'}
-                    </pre>
-                  )}
-                  {detail.recipient.error && (
-                    <p className="mt-4 rounded-lg bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
-                      {detail.recipient.error}
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
-          </section>
-        </div>
+        <MailboxShell
+          live={live}
+          folder={folder}
+          onFolderChange={setFolder}
+          folderCounts={folderCounts}
+          mailboxQuery={mailboxQuery}
+          onQueryChange={setMailboxQuery}
+          mailboxMeetingFilter={mailboxMeetingFilter}
+          onMeetingFilterChange={setMailboxMeetingFilter}
+          selectMode={selectMode}
+          onSelectModeChange={setSelectMode}
+          exitSelectMode={exitSelectMode}
+          selectedMailIds={selectedMailIds}
+          toggleMailSelect={toggleMailSelect}
+          toggleSelectAll={toggleSelectAll}
+          allSelected={allSelected}
+          selectedCount={selectedCount}
+          runBulkMailbox={runBulkMailbox}
+          bulkBusy={bulkBusy}
+          messages={messages}
+          selectedId={selectedId}
+          onSelectMessage={(id) => {
+            setSelectedId(id)
+            if (!id) setDetail(null)
+          }}
+          detail={detail}
+          mailboxTotal={mailboxTotal}
+          mailboxPage={mailboxPage}
+          mailboxTotalPages={mailboxTotalPages}
+          onPageChange={setMailboxPage}
+          sent24h={sent24h}
+          dailyCap={dailyCap}
+          onRefresh={loadMailbox}
+          onCompose={() => setTab('campaigns')}
+          onMoveToJunk={async () => {
+            if (!detail?.recipient?.id) return
+            try {
+              await moveMailboxToJunk(detail.recipient.id)
+              showToast('Moved to Junk', 'success')
+              setSelectedId(null)
+              setDetail(null)
+              await loadMailbox()
+            } catch (err) {
+              showToast(err.message, 'error')
+            }
+          }}
+          onRestore={async () => {
+            if (!detail?.recipient?.id) return
+            try {
+              await restoreMailboxFromJunk(detail.recipient.id)
+              showToast('Restored to inbox', 'success')
+              setSelectedId(null)
+              setDetail(null)
+              await loadMailbox()
+            } catch (err) {
+              showToast(err.message, 'error')
+            }
+          }}
+          onDeleteForever={() => {
+            if (!detail?.recipient?.id) return
+            setConfirmDialog({
+              title: 'Delete forever?',
+              message: 'Delete this message forever? This cannot be undone.',
+              confirmLabel: 'Delete forever',
+              onConfirm: async () => {
+                await deleteMailboxForever(detail.recipient.id)
+                showToast('Deleted forever', 'success')
+                setSelectedId(null)
+                setDetail(null)
+                await loadMailbox()
+              },
+            })
+          }}
+          onOpenPeople={() => {
+            const email = detail?.recipient?.email
+            setTab('processed')
+            if (email) {
+              setProcessedQuery(email)
+              setProcessedSearch(email)
+            }
+          }}
+          onOpenMeetings={() => {
+            const email = detail?.recipient?.email
+            setTab('meetings')
+            if (email) {
+              setMeetingsQuery(email)
+              setMeetingsSearch(email)
+            }
+          }}
+        />
       )}
 
       {/* ─── Template library ─── */}

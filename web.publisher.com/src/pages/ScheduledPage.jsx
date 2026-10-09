@@ -54,6 +54,14 @@ export default function ScheduledPage() {
         subtitle="Automatic publishing at your chosen times"
         action={
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refreshFromServer?.()}
+              disabled={processing}
+              className="btn-secondary px-3 py-1.5 text-xs disabled:opacity-50"
+            >
+              {processing ? 'Refreshing…' : 'Refresh'}
+            </button>
             {queue.length > 0 && <ViewToggle view={view} onChange={setViewAndPersist} />}
             {queue.length > 0 && (
               <button
@@ -79,7 +87,7 @@ export default function ScheduledPage() {
       </PageStatsRow>
 
       {missingImages > 0 && (
-        <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-amber-100/90">
+        <div className="mb-4 rounded-md border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-amber-100/90">
           <strong className="font-semibold">{missingImages} post(s)</strong> are missing images.
           Re-upload via{' '}
           <Link to="/bulk" className="text-amber-200 underline underline-offset-2 hover:text-white">

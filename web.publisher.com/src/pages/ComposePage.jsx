@@ -48,6 +48,20 @@ export default function ComposePage() {
     }
   }
 
+  useEffect(() => {
+    const onKey = (e) => {
+      const meta = e.metaKey || e.ctrlKey
+      if (!meta) return
+      if (e.key === 's') {
+        e.preventDefault()
+        if (!draftSaving) handleSaveDraft()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftSaving, post.state, post.editingDraftId])
+
   const editingTitle = post.editingDraftId
     ? app.getDraftById(post.editingDraftId)?.title
     : null
@@ -56,7 +70,7 @@ export default function ComposePage() {
     <PageShell>
       <PageHeader
         title={post.editingDraftId ? 'Edit Draft' : 'Compose'}
-        subtitle="Write once · preview every platform · publish or schedule"
+        subtitle="Write once · preview every platform · ⌘S save draft"
         action={
           <div className="flex items-center gap-1.5">
             <button
