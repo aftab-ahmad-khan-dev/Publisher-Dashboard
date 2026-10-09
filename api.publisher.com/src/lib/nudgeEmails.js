@@ -26,18 +26,18 @@ function escapeHtml(s) {
 const TYPES = {
   follow_up: {
     id: 'follow_up',
-    label: 'Follow Up',
-    subject: 'Quick update — a few project slots left',
+    label: 'Gentle nudge',
+    subject: 'Still thinking this through? Happy to help',
   },
   final_call: {
     id: 'final_call',
-    label: 'Final Call',
-    subject: 'Final development slot + 10% off',
+    label: 'Last chance',
+    subject: 'One open slot — and 10% off if now works',
   },
   reason: {
     id: 'reason',
-    label: 'Reason',
-    subject: 'Quick question about scheduling a call',
+    label: 'Check in',
+    subject: 'Quick check-in — no pressure',
   },
 }
 
@@ -78,15 +78,13 @@ export function buildNudgeEmail({ type, recipient, bookingUrl, signatureName = '
     text = [
       `${hi},`,
       '',
-      'I was about to onboard 8 projects this cycle — only 4 slots are available now.',
+      'Just circling back gently — I’ve got a couple of open build slots this cycle, and I didn’t want your note to get lost in the shuffle.',
       '',
-      'If you’re still exploring a custom product or site build, I’d love to reserve one of those remaining spots for you before they fill.',
-      '',
-      'Happy to walk through scope, timeline, and fit on a short call — no pressure.',
+      'If you’re still exploring a custom product or site, I’d be glad to hold a spot and walk through scope, timeline, and fit on a short call. Totally fine if the timing isn’t right yet.',
       '',
       bookLine,
       '',
-      'Looking forward to hearing from you.',
+      'Either way, wishing you a clear next step.',
       '',
       `— ${signatureName}`,
       signatureSite || '',
@@ -96,29 +94,28 @@ export function buildNudgeEmail({ type, recipient, bookingUrl, signatureName = '
 
     htmlBody = `
       <p>${escapeHtml(hi)},</p>
-      <p>I was about to onboard <strong>8 projects</strong> this cycle — only <strong>4 slots</strong> are available now.</p>
-      <p>If you’re still exploring a custom product or site build, I’d love to reserve one of those remaining spots for you before they fill.</p>
-      <p>Happy to walk through scope, timeline, and fit on a short call — no pressure.</p>
+      <p>Just circling back gently — I’ve got a couple of open build slots this cycle, and I didn’t want your note to get lost in the shuffle.</p>
+      <p>If you’re still exploring a custom product or site, I’d be glad to hold a spot and walk through scope, timeline, and fit on a short call. Totally fine if the timing isn’t right yet.</p>
       ${
         book
-          ? `<p style="margin:20px 0;"><a href="${escapeHtml(book)}" style="display:inline-block;padding:12px 18px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Schedule a meeting</a></p>
+          ? `<p style="margin:20px 0;"><a href="${escapeHtml(book)}" style="display:inline-block;padding:12px 18px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Pick a time that works</a></p>
              <p style="font-size:12px;word-break:break-all;"><a href="${escapeHtml(book)}">${escapeHtml(book)}</a></p>`
           : '<p>Reply to this email and I’ll send you a booking link.</p>'
       }
-      <p>Looking forward to hearing from you.</p>
+      <p>Either way, wishing you a clear next step.</p>
       <p>— ${escapeHtml(signatureName)}${signatureSite ? `<br/><a href="${escapeHtml(signatureSite)}">${escapeHtml(signatureSite)}</a>` : ''}</p>
     `
   } else if (type === 'final_call') {
     text = [
       `${hi},`,
       '',
-      'This is a final call — we have the last development booking slot open, and I’m offering 10% off project / product development cost if we lock it in now.',
+      'I’ll keep this short and honest — I have one development slot left for this cycle, and I’m offering 10% off if locking it in now would help.',
       '',
-      'If timing or budget was holding you back, this should make starting easier. We can still tailor scope to what you need.',
+      'If timing or budget was the blocker, this might make starting easier. We can still shape scope around what you actually need.',
       '',
       bookLine,
       '',
-      'If the timing isn’t right, just reply and I’ll close your spot — no hard feelings.',
+      'If now isn’t the moment, just reply and I’ll close the loop kindly — no hard feelings at all.',
       '',
       `— ${signatureName}`,
       signatureSite || '',
@@ -128,30 +125,30 @@ export function buildNudgeEmail({ type, recipient, bookingUrl, signatureName = '
 
     htmlBody = `
       <p>${escapeHtml(hi)},</p>
-      <p><strong>This is a final call</strong> — we have the last development booking slot open, and I’m offering <strong>10% off</strong> project / product development cost if we lock it in now.</p>
-      <p>If timing or budget was holding you back, this should make starting easier. We can still tailor scope to what you need.</p>
+      <p>I’ll keep this short and honest — I have <strong>one development slot</strong> left for this cycle, and I’m offering <strong>10% off</strong> if locking it in now would help.</p>
+      <p>If timing or budget was the blocker, this might make starting easier. We can still shape scope around what you actually need.</p>
       ${
         book
-          ? `<p style="margin:20px 0;"><a href="${escapeHtml(book)}" style="display:inline-block;padding:12px 18px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Claim the last slot</a></p>
+          ? `<p style="margin:20px 0;"><a href="${escapeHtml(book)}" style="display:inline-block;padding:12px 18px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Reserve the slot</a></p>
              <p style="font-size:12px;word-break:break-all;"><a href="${escapeHtml(book)}">${escapeHtml(book)}</a></p>`
           : '<p>Reply to this email and I’ll send you a booking link.</p>'
       }
-      <p>If the timing isn’t right, just reply and I’ll close your spot — no hard feelings.</p>
+      <p>If now isn’t the moment, just reply and I’ll close the loop kindly — no hard feelings at all.</p>
       <p>— ${escapeHtml(signatureName)}${signatureSite ? `<br/><a href="${escapeHtml(signatureSite)}">${escapeHtml(signatureSite)}</a>` : ''}</p>
     `
   } else {
     text = [
       `${hi},`,
       '',
-      'I noticed you reached the booking page but didn’t schedule a meeting yet.',
+      'I noticed you reached the booking page but didn’t schedule yet — totally fine.',
       '',
-      'No worries at all — I’d just love to know what got in the way so I can help:',
+      'I’m only checking in so I can be useful, not pushy. If something got in the way, I’d love a one-line reply:',
       '• Timing / timezone?',
-      '• Not sure about scope or budget yet?',
-      '• Prefer email first?',
-      '• Something else?',
+      '• Still figuring out scope or budget?',
+      '• Prefer to keep it on email for now?',
+      '• Something else entirely?',
       '',
-      'Reply with a quick note (even one line is perfect). If it helps, you can still book here anytime:',
+      'Whenever you’re ready, you can still book here:',
       book || '(reply and I’ll send a link)',
       '',
       'Happy to make this easy for you.',
@@ -164,18 +161,18 @@ export function buildNudgeEmail({ type, recipient, bookingUrl, signatureName = '
 
     htmlBody = `
       <p>${escapeHtml(hi)},</p>
-      <p>I noticed you reached the booking page but didn’t schedule a meeting yet.</p>
-      <p>No worries at all — I’d just love to know what got in the way so I can help:</p>
+      <p>I noticed you reached the booking page but didn’t schedule yet — totally fine.</p>
+      <p>I’m only checking in so I can be useful, not pushy. If something got in the way, I’d love a one-line reply:</p>
       <ul>
         <li>Timing / timezone?</li>
-        <li>Not sure about scope or budget yet?</li>
-        <li>Prefer email first?</li>
-        <li>Something else?</li>
+        <li>Still figuring out scope or budget?</li>
+        <li>Prefer to keep it on email for now?</li>
+        <li>Something else entirely?</li>
       </ul>
-      <p>Reply with a quick note (even one line is perfect). If it helps, you can still book here anytime:</p>
+      <p>Whenever you’re ready, you can still book here:</p>
       ${
         book
-          ? `<p style="margin:16px 0;"><a href="${escapeHtml(book)}" style="display:inline-block;padding:12px 18px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Schedule a meeting</a></p>`
+          ? `<p style="margin:16px 0;"><a href="${escapeHtml(book)}" style="display:inline-block;padding:12px 18px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Schedule when it suits you</a></p>`
           : ''
       }
       <p>Happy to make this easy for you.</p>

@@ -238,9 +238,14 @@ body {
 }
 
 .saas-nav-icon--active {
-  background: rgba(99, 102, 241, 0.2);
-  color: #c7d2fe;
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  box-shadow: 0 8px 20px -12px rgba(255, 255, 255, 0.55);
+}
+
+.saas-nav-link--active .saas-nav-icon--active {
+  background: rgba(255, 255, 255, 0.95);
+  color: #111827;
 }
 
 .saas-nav-badge {
@@ -664,6 +669,92 @@ body {
   .saas-page-stats {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+}
+
+/* Reference-style KPI scorecards */
+.kpi-card {
+  position: relative;
+  min-height: 7.5rem;
+  border-radius: 1rem;
+  padding: 0.875rem 1rem 2.75rem;
+  overflow: hidden;
+}
+
+.kpi-card--featured {
+  border: 1px solid rgba(129, 140, 248, 0.28);
+  background:
+    radial-gradient(ellipse 80% 70% at 80% 100%, rgba(129, 140, 248, 0.35), transparent 55%),
+    linear-gradient(165deg, #1a1630 0%, #0d101a 55%, #090b12 100%);
+  box-shadow: 0 18px 40px -24px rgba(99, 102, 241, 0.55);
+}
+
+.kpi-card--plain {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.045), rgba(0, 0, 0, 0.14));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.kpi-card__label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.kpi-card__value {
+  margin-top: 0.35rem;
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #f8fafc;
+  letter-spacing: -0.03em;
+}
+
+.kpi-card__hint {
+  margin-top: 0.3rem;
+  font-size: 10px;
+  color: #64748b;
+}
+
+.kpi-spotlight {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 16px 36px -28px rgba(0, 0, 0, 0.8);
+}
+
+.saas-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  width: min(100%, 22rem);
+  height: 2.375rem;
+  padding: 0 0.875rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.saas-search:focus-within {
+  border-color: rgba(129, 140, 248, 0.35);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.saas-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 0.8125rem;
+}
+
+.saas-search input::placeholder {
+  color: #64748b;
 }
 
 .saas-stat-card {

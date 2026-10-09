@@ -105,7 +105,7 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
               <p className="truncate font-display text-[15px] font-bold tracking-tight text-white">
                 Publisher Suite
               </p>
-              <p className="truncate text-[11px] text-slate-500">Cross-platform publishing</p>
+              <p className="truncate text-[11px] text-slate-500">Intelligent publishing</p>
             </div>
           )}
         </div>

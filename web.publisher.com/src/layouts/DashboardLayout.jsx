@@ -12,9 +12,12 @@ const COLLAPSE_KEY = 'pulse_sidebar_collapsed'
 export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(() => {
     try {
-      return localStorage.getItem(COLLAPSE_KEY) === '1'
+      const stored = localStorage.getItem(COLLAPSE_KEY)
+      // Default to icon-rail (collapsed) to match modern SaaS dashboards
+      if (stored == null) return true
+      return stored === '1'
     } catch {
-      return false
+      return true
     }
   })
   const location = useLocation()

@@ -50,21 +50,28 @@ import DateTimePicker from '../components/DateTimePicker'
 import { toDatetimeLocalValue, datetimeLocalToISO, parseDatetimeLocal } from '../lib/scheduleUtils'
 
 const TABS = [
-  { id: 'mailbox', label: 'Mail Box' },
+  { id: 'mailbox', label: 'Inbox' },
   { id: 'campaigns', label: 'Campaigns' },
-  { id: 'processed', label: 'Processed mail' },
+  { id: 'processed', label: 'People' },
   { id: 'meetings', label: 'Meetings' },
 ]
 
+const NUDGE_LABELS = {
+  follow_up: 'Gentle nudge',
+  final_call: 'Last chance',
+  reason: 'Check in',
+  reminder: 'Remind',
+}
+
 const NUDGE_TOOLTIPS = {
   follow_up:
-    'Follow Up — reminds them slots are limited. Also auto-sends 24h after Reason if meeting status is still unchanged.',
+    'Gentle nudge — a warm reminder that a few slots remain. Also auto-sends after Check in if meeting status is still unchanged.',
   final_call:
-    'Final Call — last slot + 10% off. Auto-sends after 48h if meeting status stays the same.',
+    'Last chance — final slot + 10% off, written like a real human close. Auto-sends if meeting status stays the same.',
   reason:
-    'Reason — asks why they haven’t booked. Auto-sends 36h after Final Call if status is still unchanged.',
+    'Check in — asks what got in the way of booking, without pressure. Auto-sends after Last chance if status is still unchanged.',
   reminder:
-    'Reminder — emails the lead that their booked meeting starts in ~10 minutes, with the Meet link. If you don’t send it, it auto-sends in the 10‑min window and notifies you in the app.',
+    'Remind — a friendly note that their meeting starts in ~10 minutes, with the Meet link. If you don’t send it, it auto-sends in that window and notifies you here.',
 }
 
 const MAILBOX_FOLDERS = [
@@ -691,7 +698,7 @@ export default function EmailPage() {
   }, [tab, live, loadProcessed])
 
   const handleNudge = async (row, type) => {
-    const labels = { follow_up: 'Follow Up', final_call: 'Final Call', reason: 'Reason' }
+    const labels = NUDGE_LABELS
     setNudgeBusyId(`${row.id}:${type}`)
     try {
       await sendEmailNudge(row.id, type)
@@ -1393,13 +1400,13 @@ export default function EmailPage() {
   return (
     <PageShell>
       <PageHeader
-        title="Mail Box"
+        title="Inbox"
         subtitle={
           mailReady
             ? mailTransport === 'smtp'
-              ? 'Sending via SMTP · campaigns, tracking & meetings'
-              : 'Gmail connected · campaigns, tracking & meetings'
-            : 'Configure SMTP or Gmail to send'
+              ? 'Human outreach via SMTP · campaigns, tracking & meetings'
+              : 'Gmail connected · write like a person, track like a pro'
+            : 'Connect SMTP or Gmail to start conversations'
         }
         action={
           <div className="saas-tabs">
@@ -1419,7 +1426,7 @@ export default function EmailPage() {
 
       {!live && (
         <p className="mb-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-          Connect the API (`VITE_API_BASE_URL`) to use Mail Box.
+          Connect the API (`VITE_API_BASE_URL`) to use Inbox.
         </p>
       )}
 
@@ -1649,7 +1656,7 @@ export default function EmailPage() {
           <section className="hidden min-w-0 flex-1 flex-col lg:flex">
             {!detail?.recipient ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-                <p className="font-display text-lg text-slate-400">Mail Box</p>
+                <p className="font-display text-lg text-slate-400">Inbox</p>
                 <p className="max-w-sm text-sm text-slate-600">
                   Select a message to read it, or open Campaigns to compose and send.
                 </p>
@@ -2337,7 +2344,7 @@ export default function EmailPage() {
             title="Emails already sent (or failed) out of all recipients in campaigns"
           >
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-              Processed mail
+              People who engaged
             </p>
             <p className="mt-0.5 text-lg font-semibold text-white tabular-nums">
               {processedCounts.processed.toLocaleString()}
@@ -2375,8 +2382,8 @@ export default function EmailPage() {
               </span>
             </p>
             <p className="mt-0.5 text-[10px] text-slate-500">
-              Auto nudges: Final Call {nudgeFinalCallHours}h → Reason +
-              {nudgeReasonHours}h → Follow Up +{nudgeFollowUpHours}h if status unchanged
+              Auto notes: Last chance {nudgeFinalCallHours}h → Check in +
+              {nudgeReasonHours}h → Gentle nudge +{nudgeFollowUpHours}h if status unchanged
             </p>
           </div>
         </div>
@@ -2418,12 +2425,12 @@ export default function EmailPage() {
         )}
 
         <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-          <h3 className="mb-2 text-sm font-semibold text-white">Auto nudge timing</h3>
+          <h3 className="mb-2 text-sm font-semibold text-white">Auto follow-up timing</h3>
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div>
                 <label className="mb-1 block text-[11px] text-slate-400">
-                  Final Call (hours)
+                  Last chance (hours)
                 </label>
                 <input
                   type="number"
@@ -2438,7 +2445,7 @@ export default function EmailPage() {
               </div>
               <div>
                 <label className="mb-1 block text-[11px] text-slate-400">
-                  Reason after (hours)
+                  Check in after (hours)
                 </label>
                 <input
                   type="number"
@@ -2451,7 +2458,7 @@ export default function EmailPage() {
               </div>
               <div>
                 <label className="mb-1 block text-[11px] text-slate-400">
-                  Follow Up after (hours)
+                  Gentle nudge after (hours)
                 </label>
                 <input
                   type="number"
@@ -2476,9 +2483,9 @@ export default function EmailPage() {
               </div>
             </div>
             <p className="text-[10px] text-slate-600">
-              Final Call sends after {nudgeFinalCallHours}h if meeting status is unchanged.
-              Reason sends {nudgeReasonHours}h after Final Call. Follow Up sends{' '}
-              {nudgeFollowUpHours}h after Reason. Updating meeting status stops the sequence.
+              Last chance sends after {nudgeFinalCallHours}h if meeting status is unchanged.
+              Check in sends {nudgeReasonHours}h after Last chance. Gentle nudge sends{' '}
+              {nudgeFollowUpHours}h after Check in. Updating meeting status stops the sequence.
             </p>
           </div>
         </div>
@@ -2719,7 +2726,7 @@ export default function EmailPage() {
                               data-tip={NUDGE_TOOLTIPS.follow_up}
                               onClick={() => handleNudge(r, 'follow_up')}
                             >
-                              {nudgeBusyId === `${r.id}:follow_up` ? '…' : 'Follow Up'}
+                              {nudgeBusyId === `${r.id}:follow_up` ? '…' : NUDGE_LABELS.follow_up}
                             </button>
                             <button
                               type="button"
@@ -2729,7 +2736,7 @@ export default function EmailPage() {
                               data-tip={NUDGE_TOOLTIPS.final_call}
                               onClick={() => handleNudge(r, 'final_call')}
                             >
-                              {nudgeBusyId === `${r.id}:final_call` ? '…' : 'Final Call'}
+                              {nudgeBusyId === `${r.id}:final_call` ? '…' : NUDGE_LABELS.final_call}
                             </button>
                             <button
                               type="button"
@@ -2739,7 +2746,7 @@ export default function EmailPage() {
                               data-tip={NUDGE_TOOLTIPS.reason}
                               onClick={() => handleNudge(r, 'reason')}
                             >
-                              {nudgeBusyId === `${r.id}:reason` ? '…' : 'Reason'}
+                              {nudgeBusyId === `${r.id}:reason` ? '…' : NUDGE_LABELS.reason}
                             </button>
                           </>
                         )}
@@ -2896,7 +2903,7 @@ export default function EmailPage() {
                                 data-tip={NUDGE_TOOLTIPS.follow_up}
                                 onClick={() => handleNudge(r, 'follow_up')}
                               >
-                                {nudgeBusyId === `${r.id}:follow_up` ? '…' : 'Follow Up'}
+                                {nudgeBusyId === `${r.id}:follow_up` ? '…' : NUDGE_LABELS.follow_up}
                               </button>
                               <button
                                 type="button"
@@ -2906,7 +2913,7 @@ export default function EmailPage() {
                                 data-tip={NUDGE_TOOLTIPS.final_call}
                                 onClick={() => handleNudge(r, 'final_call')}
                               >
-                                {nudgeBusyId === `${r.id}:final_call` ? '…' : 'Final Call'}
+                                {nudgeBusyId === `${r.id}:final_call` ? '…' : NUDGE_LABELS.final_call}
                               </button>
                               <button
                                 type="button"
@@ -2916,7 +2923,7 @@ export default function EmailPage() {
                                 data-tip={NUDGE_TOOLTIPS.reason}
                                 onClick={() => handleNudge(r, 'reason')}
                               >
-                                {nudgeBusyId === `${r.id}:reason` ? '…' : 'Reason'}
+                                {nudgeBusyId === `${r.id}:reason` ? '…' : NUDGE_LABELS.reason}
                               </button>
                             </>
                           )}
