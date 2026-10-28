@@ -1,0 +1,133 @@
+import { PlatformIconGroup } from './PlatformIcon'
+import { formatScheduledISO } from '../lib/scheduleUtils'
+import { useScheduledImageUrl, ScheduledImagePlaceholder } from '../lib/scheduledImage.jsx'
+
+export function ScheduledPostListCard({ item, onPreview, onEdit, onDelete, style }) {
+  const timeLabel =
+    formatScheduledISO(item.scheduledAt, item.timezone).split(',').pop()?.trim() || '12:00 PM'
+
+  return (
+    <li className="scheduled-card" style={style}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="scheduled-time-badge">
+              <ClockIcon />
+              {timeLabel}
+            </span>
+            <PlatformIconGroup platforms={item.platforms} size="md" />
+            {item.poll?.enabled && (
+              <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-zinc-300">
+                Poll
+              </span>
+            )}
+          </div>
+          <p className="mt-3 text-base leading-relaxed text-zinc-100 line-clamp-3">
+            {item.poll?.enabled ? item.poll.question || item.body : item.body}
+          </p>
+          <p className="mt-3 text-sm font-medium text-white">
+            {formatScheduledISO(item.scheduledAt, item.timezone)}
+          </p>
+          <p className="mt-1 text-xs text-zinc-500">{item.timezone}</p>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            onClick={() => onPreview(item)}
+            className="btn-secondary px-2.5 py-1 text-xs sm:px-3 sm:py-1.5"
+          >
+            Preview
+          </button>
+          <button
+            type="button"
+            onClick={() => onEdit(item)}
+            className="btn-secondary px-2.5 py-1 text-xs sm:px-3 sm:py-1.5"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(item)}
+            className="btn-danger px-2.5 py-1 text-xs transition-colors hover:bg-rose-500/10 sm:px-3 sm:py-1.5"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </li>
+  )
+}
+
+export function ScheduledPostGridCard({ item, onPreview, onEdit, onDelete, style }) {
+  const { url: thumbUrl, missing: imageMissing } = useScheduledImageUrl(item)
+
+  return (
+    <li className="scheduled-grid-card group flex flex-col" style={style}>
+      {(thumbUrl || imageMissing) && (
+        <div className="mb-3 overflow-hidden rounded-lg">
+          {thumbUrl ? (
+            <img src={thumbUrl} alt="" className="h-28 w-full object-cover" />
+          ) : (
+            <ScheduledImagePlaceholder className="py-4" />
+          )}
+        </div>
+      )}
+      <div className="flex items-start justify-between gap-2">
+        <span className="scheduled-time-badge shrink-0">
+          <ClockIcon />
+          {formatScheduledISO(item.scheduledAt, item.timezone)
+            .split(',')
+            .slice(-1)[0]
+            ?.trim() || '12:00 PM'}
+        </span>
+        <PlatformIconGroup platforms={item.platforms} size="sm" />
+        {item.poll?.enabled && (
+          <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-zinc-300">
+            Poll
+          </span>
+        )}
+      </div>
+
+      <p className="mt-3 flex-1 line-clamp-4 text-sm leading-relaxed text-zinc-200">
+        {item.poll?.enabled ? item.poll.question || item.body : item.body}
+      </p>
+
+      <p className="mt-3 text-xs font-medium text-white line-clamp-2">
+        {formatScheduledISO(item.scheduledAt, item.timezone)}
+      </p>
+      <p className="mt-1 text-[10px] text-zinc-600">{item.timezone}</p>
+
+      <button
+        type="button"
+        onClick={() => onPreview(item)}
+        className="btn-secondary mt-4 w-full py-2 text-xs"
+      >
+        Preview
+      </button>
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          onClick={() => onEdit(item)}
+          className="btn-secondary flex-1 py-2 text-xs"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(item)}
+          className="flex-1 btn-danger py-2 text-xs transition-colors hover:bg-rose-500/10"
+        >
+          Delete
+        </button>
+      </div>
+    </li>
+  )
+}
+
+function ClockIcon() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  )
+}
