@@ -1,0 +1,34 @@
+{
+  "name": "web.publisher.com",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node init && vite",
+    "build": "node init && node build.mjs",
+    "preview": "vite preview"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@clerk/clerk-react": "^5.61.8",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "framer-motion": "^12.40.0",
+    "gsap": "^3.15.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.15.1",
+    "recharts": "^3.9.2",
+    "sonner": "^2.0.7",
+    "vite-plugin-pwa": "^1.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.8",
+    "@vitejs/plugin-react": "^4.5.2",
+    "tailwindcss": "^4.1.8",
+    "vite": "^6.3.5"
+  }
+}

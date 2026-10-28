@@ -1,0 +1,2 @@
+export const DEFAULT_SCHEDULE_HOUR = 12
+export const DEFAULT_SCHEDULE_MINUTE = 0

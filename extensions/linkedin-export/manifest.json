@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Publisher Dashboard — LinkedIn Export",
+  "version": "1.0.0",
+  "description": "Export visible LinkedIn profile or search-result contacts to CSV for Publisher Dashboard lead import. Only reads pages you already opened while logged in.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["https://www.linkedin.com/*", "https://linkedin.com/*"],
+  "action": {
+    "default_title": "Export LinkedIn contacts",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/*", "https://linkedin.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

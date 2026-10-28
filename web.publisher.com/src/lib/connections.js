@@ -1,0 +1,166 @@
+export function isMetaConfigured(meta) {
+  const hasSecrets = meta?.hasAppSecret && meta?.hasPageToken;
+  const filled =
+    Boolean(meta?.appId?.trim()) &&
+    Boolean(meta?.appSecret?.trim()) &&
+    Boolean(meta?.pageToken?.trim());
+  return filled || (Boolean(meta?.appId?.trim()) && hasSecrets);
+}
+
+/** App credentials saved. Org URN is optional (profile posts use w_member_social). */
+export function isLinkedInConfigured(linkedin) {
+  const hasClientId = Boolean(linkedin?.clientId?.trim());
+  if (!hasClientId) return false;
+  const hasSecret =
+    Boolean(linkedin?.clientSecret?.trim()) || Boolean(linkedin?.hasClientSecret);
+  const hasToken =
+    Boolean(linkedin?.accessToken?.trim()) || Boolean(linkedin?.hasAccessToken);
+  return hasSecret || hasToken;
+}
+
+export function isLinkedInPublishReady(linkedin) {
+  return (
+    isLinkedInConfigured(linkedin) &&
+    (linkedin?.publishReady || linkedin?.hasAccessToken)
+  );
+}
+
+export function isRedditConfigured(reddit) {
+  const hasSecrets = reddit?.hasClientSecret && reddit?.hasRefreshToken;
+  const filled =
+    Boolean(reddit?.clientId?.trim()) &&
+    Boolean(reddit?.clientSecret?.trim()) &&
+    Boolean(reddit?.refreshToken?.trim()) &&
+    Boolean(reddit?.subreddit?.trim());
+  return (
+    Boolean(reddit?.publishReady || reddit?.connected) ||
+    filled ||
+    (Boolean(reddit?.clientId?.trim()) &&
+      Boolean(reddit?.subreddit?.trim()) &&
+      hasSecrets)
+  );
+}
+
+export function isRedditPublishReady(reddit) {
+  return (
+    isRedditConfigured(reddit) &&
+    Boolean(
+      reddit?.hasClientSecret &&
+      reddit?.hasRefreshToken &&
+      reddit?.subreddit?.trim(),
+    )
+  );
+}
+
+export function isQuoraConfigured(quora) {
+  return Boolean(quora?.profileUrl?.trim());
+}
+
+export function isPinterestConfigured(pinterest) {
+  const hasToken =
+    Boolean(pinterest?.accessToken?.trim()) || Boolean(pinterest?.hasAccessToken);
+  return Boolean(
+    pinterest?.publishReady ||
+      pinterest?.connected ||
+      (hasToken && pinterest?.boardId?.trim()),
+  );
+}
+
+export function isThreadsConfigured(threads) {
+  const hasToken =
+    Boolean(threads?.accessToken?.trim()) || Boolean(threads?.hasAccessToken);
+  return Boolean(
+    threads?.publishReady ||
+      threads?.connected ||
+      (hasToken && threads?.userId?.trim()),
+  );
+}
+
+export function isGmailConfigured(gmail) {
+  if (gmail?.smtpConfigured || gmail?.transport === 'smtp') return true
+  const hasSecrets = gmail?.hasClientSecret && gmail?.hasRefreshToken
+  return Boolean(
+    gmail?.sendReady ||
+      gmail?.connected ||
+      gmail?.hasRefreshToken ||
+      (Boolean(gmail?.clientId?.trim()) && hasSecrets),
+  )
+}
+
+export function isGmailSendReady(gmail) {
+  if (gmail?.smtpConfigured || gmail?.transport === 'smtp' || gmail?.sendReady) return true
+  return (
+    isGmailConfigured(gmail) && Boolean(gmail?.hasRefreshToken || gmail?.sendReady)
+  )
+}
+
+export function getConnectionSummary(apiConfig) {
+  const metaReady = isMetaConfigured(apiConfig?.meta);
+  const linkedInReady = isLinkedInConfigured(apiConfig?.linkedin);
+  const linkedInPublish = isLinkedInPublishReady(apiConfig?.linkedin);
+  const redditReady = isRedditConfigured(apiConfig?.reddit);
+  const quoraReady = isQuoraConfigured(apiConfig?.quora);
+  const pinterestReady = isPinterestConfigured(apiConfig?.pinterest);
+  const threadsReady = isThreadsConfigured(apiConfig?.threads);
+  const gmailReady = isGmailConfigured(apiConfig?.gmail);
+  const connectedCount = [
+    metaReady,
+    linkedInReady,
+    redditReady,
+    threadsReady,
+    gmailReady,
+  ].filter(Boolean).length;
+
+  return {
+    metaReady,
+    linkedInReady,
+    linkedInPublish,
+    redditReady,
+    quoraReady,
+    pinterestReady,
+    threadsReady,
+    gmailReady,
+    connectedCount,
+    anyConnected: connectedCount > 0,
+    allConnected: metaReady && linkedInPublish,
+  };
+}
+
+export function withDerivedConnectionFlags(config) {
+  return {
+    ...config,
+    meta: {
+      ...config.meta,
+      connected: isMetaConfigured(config.meta),
+    },
+    linkedin: {
+      ...config.linkedin,
+      connected: isLinkedInConfigured(config.linkedin),
+      publishReady: isLinkedInPublishReady(config.linkedin),
+    },
+    reddit: {
+      ...config.reddit,
+      connected: isRedditConfigured(config.reddit),
+      publishReady: isRedditPublishReady(config.reddit),
+    },
+    quora: {
+      ...config.quora,
+      connected: isQuoraConfigured(config.quora),
+    },
+    pinterest: {
+      ...config.pinterest,
+      connected: isPinterestConfigured(config.pinterest),
+      publishReady: isPinterestConfigured(config.pinterest),
+    },
+    threads: {
+      ...config.threads,
+      connected: isThreadsConfigured(config.threads),
+      publishReady: isThreadsConfigured(config.threads),
+    },
+    gmail: {
+      ...config.gmail,
+      connected: isGmailConfigured(config.gmail),
+      sendReady: isGmailSendReady(config.gmail),
+    },
+  };
+}
