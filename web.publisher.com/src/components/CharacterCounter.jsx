@@ -11,24 +11,24 @@ function getStatus(length, limit) {
 }
 
 const STATUS_STYLES = {
-  ok: 'text-slate-300',
-  approaching: 'text-amber-400/90',
-  warning: 'text-amber-300',
-  exceeded: 'text-red-400',
+  ok: 'text-[#2D0000]',
+  approaching: 'text-[#8a5a00]',
+  warning: 'text-[#9a3412]',
+  exceeded: 'text-[#b91c1c]',
 }
 
 function barColor(key, status) {
-  if (status === 'exceeded') return 'bg-red-500'
-  if (status === 'warning' || status === 'approaching') return 'bg-amber-400'
+  if (status === 'exceeded') return 'bg-[#b91c1c]'
+  if (status === 'warning' || status === 'approaching') return 'bg-[#b45309]'
   const meta = PLATFORM_META[key]
   if (meta.gradient) return 'instagram-gradient'
-  return meta.color || 'bg-indigo-500'
+  return meta.color || 'bg-[#6D0808]'
 }
 
 export default function CharacterCounter({ getFullLength }) {
   return (
     <div className="space-y-2.5">
-      <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+      <span className="text-xs font-semibold uppercase tracking-wider text-[#5a6258]">
         Character limits
       </span>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -41,8 +41,8 @@ export default function CharacterCounter({ getFullLength }) {
           return (
             <div
               key={key}
-              className={`rounded-xl border bg-white/[0.02] px-2.5 py-2 transition-colors ${
-                status === 'exceeded' ? 'border-red-500/40' : 'border-white/[0.07]'
+              className={`rounded-xl border bg-[#F7F4EA] px-2.5 py-2 transition-colors ${
+                status === 'exceeded' ? 'border-[#b91c1c]/45' : 'border-[#757D6F]/30'
               }`}
               title={`${meta.label}: ${length.toLocaleString()} / ${limit.toLocaleString()}`}
             >
@@ -50,10 +50,10 @@ export default function CharacterCounter({ getFullLength }) {
                 <PlatformIcon platform={key} size="xs" shape="squircle" />
                 <span className={`font-mono text-[10px] font-semibold tabular-nums sm:text-[11px] ${STATUS_STYLES[status]}`}>
                   {length.toLocaleString()}
-                  <span className="text-slate-600">/{limit >= 1000 ? `${limit / 1000}k` : limit}</span>
+                  <span className="text-[#5a6258]">/{limit >= 1000 ? `${limit / 1000}k` : limit}</span>
                 </span>
               </div>
-              <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-800/80">
+              <div className="mt-2 h-1 overflow-hidden rounded-full bg-[#d9d3bc]">
                 <div
                   className={`h-full rounded-full transition-all duration-300 ${barColor(key, status)}`}
                   style={{ width: `${pct}%` }}

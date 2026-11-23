@@ -110,8 +110,8 @@ export default function LinkedInPreview({
 function PreviewShell({ title, collapsed, onToggle, disabled, children }) {
   return (
     <div
-      className={`overflow-hidden rounded-md border border-white/[0.08] bg-[var(--bg-panel)] transition-opacity ${
-        disabled ? 'opacity-40 pointer-events-none' : ''
+      className={`overflow-hidden rounded-md border border-[#757D6F]/30 bg-[#F7F4EA] transition-opacity ${
+        disabled ? 'opacity-55 pointer-events-none' : ''
       }`}
     >
       <button
@@ -121,7 +121,7 @@ function PreviewShell({ title, collapsed, onToggle, disabled, children }) {
       >
         <span className="font-display text-sm font-semibold text-[#0A66C2]">{title}</span>
         <svg
-          className={`h-4 w-4 text-slate-400 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+          className={`h-4 w-4 text-[#5a6258] transition-transform ${collapsed ? '' : 'rotate-180'}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -130,12 +130,12 @@ function PreviewShell({ title, collapsed, onToggle, disabled, children }) {
         </svg>
       </button>
       {!collapsed && !disabled && (
-        <div className="animate-preview-update border-t border-white/5 px-4 pb-4 pt-2">
+        <div className="animate-preview-update border-t border-[#757D6F]/20 px-4 pb-4 pt-2">
           {children}
         </div>
       )}
       {disabled && (
-        <p className="px-4 pb-3 text-xs text-slate-500">Platform disabled</p>
+        <p className="px-4 pb-3 text-xs font-medium text-[#5a6258]">Platform disabled</p>
       )}
     </div>
   )

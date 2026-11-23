@@ -23,6 +23,7 @@ import {
   fetchSalesImportable,
   importSalesMeetings,
 } from '../lib/backendApi'
+import { withTimeout } from '../lib/fetchTimeout'
 import { useAppData } from '../contexts/AppDataContext'
 import { planAllowsFeature, effectivePlan } from '../lib/plans'
 import { useAuth } from '../contexts/AuthContext'
@@ -69,7 +70,11 @@ export default function SalesPage() {
 
   const loadLeads = useCallback(async () => {
     try {
-      const data = await listSalesLeads()
+      const data = await withTimeout(
+        listSalesLeads(),
+        25_000,
+        'Leads took too long to load (API cold start?). Try again.',
+      )
       setLeads(data.leads || [])
     } catch (err) {
       toast.error(err.message || 'Could not load leads')

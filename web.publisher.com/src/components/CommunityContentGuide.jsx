@@ -14,23 +14,23 @@ export default function CommunityContentGuide({ body, platforms }) {
 
   const toneColor =
     analysis.tone === 'informational'
-      ? 'text-emerald-400'
+      ? 'text-[#3f5d52]'
       : analysis.tone === 'promotional'
-        ? 'text-rose-400'
-        : 'text-amber-400/90'
+        ? 'text-[#9a3412]'
+        : 'text-[#8a5a00]'
 
   return (
-    <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-3 ring-1 ring-amber-500/10">
+    <div className="rounded-xl border border-[#757D6F]/35 bg-[#EEEAD7] p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold text-amber-200/95">Community platforms — informational tone</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+          <p className="text-xs font-semibold text-[#2D0000]">Community platforms — informational tone</p>
+          <p className="mt-1 text-[11px] font-medium leading-relaxed text-[#5a6258]">
             {enabledCommunity.map((p) => PLATFORM_META[p].label).join(' & ')} favor helpful depth over promotion.
             Lead with insight, context, or a genuine question — avoid CTAs, discounts, and pitch language.
           </p>
         </div>
         {analysis.needsCommunity && (
-          <span className={`shrink-0 rounded-full bg-black/30 px-2 py-0.5 text-[10px] font-bold ${toneColor}`}>
+          <span className={`shrink-0 rounded-full bg-[#F7F4EA] px-2 py-0.5 text-[10px] font-bold ring-1 ring-[#757D6F]/30 ${toneColor}`}>
             {analysis.tone === 'informational' ? 'Looks informational' : analysis.tone === 'promotional' ? 'Too promotional' : 'Neutral'} · {analysis.score}%
           </span>
         )}
@@ -41,8 +41,8 @@ export default function CommunityContentGuide({ body, platforms }) {
           {analysis.issues.map((issue, i) => (
             <li
               key={i}
-              className={`flex gap-1.5 text-[11px] ${
-                issue.severity === 'error' ? 'text-rose-400/95' : 'text-amber-400/80'
+              className={`flex gap-1.5 text-[11px] font-medium ${
+                issue.severity === 'error' ? 'text-[#b91c1c]' : 'text-[#8a5a00]'
               }`}
             >
               <span aria-hidden>{issue.severity === 'error' ? '✕' : '!'}</span>

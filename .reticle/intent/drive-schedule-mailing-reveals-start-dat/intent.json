@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-schedule-mailing-reveals-start-datetime-picker-a": {
+      "declaredAt": 1795439032389,
+      "id": "flow:drive-schedule-mailing-reveals-start-datetime-picker-a",
+      "state": "declared",
+      "statement": "Schedule mailing reveals start datetime picker and renames primary CTA",
+      "status": "proposed",
+      "subject": "drive-schedule-mailing-reveals-start-dat",
+      "surface": {
+        "flow": "drive-schedule-mailing-reveals-start-datetime-picker-a"
+      },
+      "updatedAt": 1795439032422
+    }
+  },
+  "subject": "drive-schedule-mailing-reveals-start-dat",
+  "version": 1
+}

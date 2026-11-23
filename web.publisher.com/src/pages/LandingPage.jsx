@@ -152,7 +152,7 @@ function PlatformTile({ p, size = "2xl" }) {
     const box = size === "2xl" ? "h-14 w-14" : "h-12 w-12";
     const ico = size === "2xl" ? "h-7 w-7" : "h-6 w-6";
     return (
-      <span className={`inline-flex shrink-0 items-center justify-center rounded-[28%] bg-white shadow-md ring-2 ring-[#05060a]/80 ${box}`}>
+      <span className={`inline-flex shrink-0 items-center justify-center rounded-[28%] bg-white shadow-md ring-2 ring-[#757D6F]/25 ${box}`}>
         <GmailIcon className={ico} />
       </span>
     );
@@ -163,7 +163,7 @@ function PlatformTile({ p, size = "2xl" }) {
 function PlatformCard({ p }) {
   return (
     <div
-      className='group relative flex flex-col items-center gap-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 text-center transition hover:-translate-y-1'
+      className='group relative flex flex-col items-center gap-3 overflow-hidden rounded-2xl border border-[#757D6F]/25 bg-[#F7F4EA] p-6 text-center transition hover:-translate-y-1'
       style={{ "--c": p.solid }}
     >
       <div
@@ -176,8 +176,8 @@ function PlatformCard({ p }) {
         <PlatformTile p={p} />
       </div>
       <div className='relative'>
-        <p className='font-display text-sm font-bold text-white'>{p.label}</p>
-        <p className='mt-0.5 text-[11px] text-slate-500'>{p.blurb}</p>
+        <p className='font-display text-sm font-bold text-[#2D0000]'>{p.label}</p>
+        <p className='mt-0.5 text-[11px] text-[#5a6258]'>{p.blurb}</p>
       </div>
     </div>
   );
@@ -387,15 +387,15 @@ const FAQS = [
 function FaqItem({ q, a }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className='overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]'>
+    <div className='overflow-hidden rounded-2xl border border-[#757D6F]/25 bg-[#F7F4EA]'>
       <button
         type='button'
         onClick={() => setOpen((o) => !o)}
         className='flex w-full items-center justify-between gap-4 px-6 py-5 text-left'
       >
-        <span className='font-display text-[15px] font-bold text-white'>{q}</span>
+        <span className='font-display text-[15px] font-bold text-[#2D0000]'>{q}</span>
         <span
-          className={`text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`text-[#5a6258] transition-transform ${open ? "rotate-180" : ""}`}
         >
           ⌄
         </span>
@@ -409,7 +409,7 @@ function FaqItem({ q, a }) {
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className='overflow-hidden'
           >
-            <p className='px-6 pb-5 text-sm leading-relaxed text-slate-400'>{a}</p>
+            <p className='px-6 pb-5 text-sm leading-relaxed text-[#5a6258]'>{a}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -423,7 +423,7 @@ function TrustpilotMark() {
       <span className='flex h-5 w-5 items-center justify-center rounded-[3px] bg-[#00B67A] text-xs text-white'>
         ★
       </span>
-      <span className='font-display text-sm font-bold text-white'>Trustpilot</span>
+      <span className='font-display text-sm font-bold text-[#2D0000]'>Trustpilot</span>
     </span>
   );
 }
@@ -450,10 +450,10 @@ function GoogleMark() {
 
 function ReviewCard({ t }) {
   return (
-    <div className='flex flex-col rounded-3xl border border-white/[0.08] bg-[#0b0d16] p-7 transition hover:-translate-y-1 hover:border-indigo-500/30'>
+    <div className='flex flex-col rounded-3xl border border-[#757D6F]/25 bg-[#F7F4EA] p-7 transition hover:-translate-y-1 hover:border-[#6D0808]/35'>
       <div className='flex items-center justify-between'>
         <Stars />
-        <span className='text-[11px] font-semibold text-slate-500'>
+        <span className='text-[11px] font-semibold text-[#5a6258]'>
           {t.source === "trustpilot" ? (
             <span className='text-[#00B67A]'>★ Trustpilot</span>
           ) : (
@@ -461,19 +461,19 @@ function ReviewCard({ t }) {
           )}
         </span>
       </div>
-      <p className='mt-4 flex-1 text-sm leading-relaxed text-slate-300'>
+      <p className='mt-4 flex-1 text-sm leading-relaxed text-[#4a3a3a]'>
         “{t.quote}”
       </p>
       <div className='mt-5 flex items-center gap-3'>
         <span
-          className='flex h-9 w-9 items-center justify-center rounded-full font-display text-xs font-bold text-white'
+          className='flex h-9 w-9 items-center justify-center rounded-full font-display text-xs font-bold text-[#EEEAD7]'
           style={{ background: t.color }}
         >
           {t.avatar}
         </span>
         <div>
-          <p className='text-[13px] font-bold text-white'>{t.name}</p>
-          <p className='text-[11px] text-slate-500'>{t.role}</p>
+          <p className='text-[13px] font-bold text-[#2D0000]'>{t.name}</p>
+          <p className='text-[11px] text-[#5a6258]'>{t.role}</p>
         </div>
       </div>
     </div>
@@ -510,22 +510,22 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div ref={rootRef} className='text-slate-200'>
+    <div ref={rootRef} className='text-[#2D0000]'>
       {/* Hero */}
       <header className='relative mx-auto max-w-4xl px-6 pb-16 pt-24 text-center'>
-        <div className='pointer-events-none absolute -left-32 top-10 h-96 w-96 rounded-full bg-sky-600/15 blur-[120px]' />
-        <div className='pointer-events-none absolute -right-24 top-32 h-80 w-80 rounded-full bg-indigo-600/15 blur-[100px]' />
+        <div className='pointer-events-none absolute -left-32 top-10 h-96 w-96 rounded-full bg-[#6D0808]/12 blur-[120px]' />
+        <div className='pointer-events-none absolute -right-24 top-32 h-80 w-80 rounded-full bg-[#757D6F]/15 blur-[100px]' />
         <div data-hero className='relative'>
-          <span className='inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-xs font-semibold text-slate-300'>
+          <span className='inline-flex items-center gap-2 rounded-full border border-[#757D6F]/25 bg-[#F7F4EA] px-4 py-1.5 text-xs font-semibold text-[#4a3a3a]'>
             Publish · Outreach · Sales CRM
           </span>
-          <h1 className='font-display mt-7 text-[2.6rem] font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl'>
+          <h1 className='font-display mt-7 text-[2.6rem] font-extrabold leading-[1.05] tracking-tight text-[#2D0000] sm:text-6xl'>
             Publish everywhere.
-            <span className='mt-1 block bg-gradient-to-r from-sky-400 via-indigo-400 to-indigo-300 bg-clip-text text-transparent'>
+            <span className='mt-1 block bg-gradient-to-r from-[#8A2A2A] via-[#6D0808] to-[#757D6F] bg-clip-text text-transparent'>
               Close what you book.
             </span>
           </h1>
-          <p className='mx-auto mt-6 max-w-xl text-base leading-relaxed text-slate-400 sm:text-lg'>
+          <p className='mx-auto mt-6 max-w-xl text-base leading-relaxed text-[#5a6258] sm:text-lg'>
             Publisher Suite combines social publishing, Gmail Mail Box outreach, and a
             Sales Tracker CRM — one workspace from compose to close, with metrics that
             auto-calculate from your lead cards.
@@ -533,7 +533,7 @@ export default function LandingPage() {
           <div className='mt-9 flex flex-col items-center gap-5'>
             <Link
               to='/sign-up'
-              className='inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-8 py-4 font-display text-base font-bold text-white shadow-xl shadow-sky-500/20 transition hover:-translate-y-0.5'
+              className='inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#6D0808] to-[#520606] px-8 py-4 font-display text-base font-bold text-[#EEEAD7] shadow-xl shadow-[#6D0808]/15 transition hover:-translate-y-0.5'
             >
               Start with a plan
             </Link>
@@ -550,7 +550,7 @@ export default function LandingPage() {
                   ].map((a) => (
                     <span
                       key={a.i}
-                      className='flex h-8 w-8 items-center justify-center rounded-full font-display text-[10px] font-bold text-white ring-2 ring-[#05060a]'
+                      className='flex h-8 w-8 items-center justify-center rounded-full font-display text-[10px] font-bold text-[#EEEAD7] ring-2 ring-[#EEEAD7]'
                       style={{ background: a.g }}
                     >
                       {a.i}
@@ -559,16 +559,16 @@ export default function LandingPage() {
                 </div>
                 <div className='text-left'>
                   <Stars size='text-xs' />
-                  <p className='text-[11px] text-slate-500'>
+                  <p className='text-[11px] text-[#5a6258]'>
                     Loved by 3,000+ creators & teams
                   </p>
                 </div>
               </div>
-              <p className='flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-500'>
-                <span className='text-emerald-400'>Bank transfer</span>
-                <span className='h-1 w-1 rounded-full bg-slate-600' />
+              <p className='flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-[#5a6258]'>
+                <span className='text-[#5a6b52]'>Bank transfer</span>
+                <span className='h-1 w-1 rounded-full bg-[#757D6F]' />
                 From $19.99/mo
-                <span className='h-1 w-1 rounded-full bg-slate-600' />
+                <span className='h-1 w-1 rounded-full bg-[#757D6F]' />
                 Set up in 5 minutes
               </p>
             </div>
@@ -578,7 +578,7 @@ export default function LandingPage() {
 
       {/* Platform showcase, respective brand themes */}
       <section id='platforms' className='mx-auto max-w-5xl px-6 pb-8'>
-        <p className='text-center text-xs font-semibold uppercase tracking-[0.15em] text-slate-600'>
+        <p className='text-center text-xs font-semibold uppercase tracking-[0.15em] text-[#5a6258]'>
           Publish natively to
         </p>
         <div className='mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7'>
@@ -589,26 +589,26 @@ export default function LandingPage() {
       </section>
 
       {/* Trust bar */}
-      <section className='border-y border-white/[0.06] bg-white/[0.015] py-6'>
+      <section className='border-y border-[#757D6F]/20 bg-[#F7F4EA]/80 py-6'>
         <div className='mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-10 gap-y-4 px-6 text-sm'>
           <div className='flex items-center gap-2'>
             <TrustpilotMark />
             <Stars size='text-xs' />
-            <strong className='text-white'>4.9</strong>
+            <strong className='text-[#2D0000]'>4.9</strong>
           </div>
           <div className='hidden h-5 w-px bg-white/10 sm:block' />
           <div className='flex items-center gap-2'>
             <GoogleMark />
             <Stars size='text-xs' />
-            <strong className='text-white'>4.8</strong>
+            <strong className='text-[#2D0000]'>4.8</strong>
           </div>
           <div className='hidden h-5 w-px bg-white/10 sm:block' />
-          <div className='flex items-center gap-2 text-slate-400'>
-            <Icon name='shield' className='h-4 w-4 text-emerald-400' /> 30-day
+          <div className='flex items-center gap-2 text-[#5a6258]'>
+            <Icon name='shield' className='h-4 w-4 text-[#5a6b52]' /> 30-day
             money-back
           </div>
           <div className='hidden h-5 w-px bg-white/10 sm:block' />
-          <div className='flex items-center gap-2 text-slate-400'>
+          <div className='flex items-center gap-2 text-[#5a6258]'>
             <Icon name='bolt' className='h-4 w-4 text-amber-400' /> 3,000+ creators
           </div>
         </div>
@@ -619,10 +619,10 @@ export default function LandingPage() {
         <div className='grid grid-cols-2 gap-6 sm:grid-cols-4'>
           {STATS.map(([n, l]) => (
             <div key={l} className='text-center'>
-              <p className='font-display bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-3xl font-extrabold text-transparent sm:text-4xl'>
+              <p className='font-display bg-gradient-to-r from-[#6D0808] to-[#8A2A2A] bg-clip-text text-3xl font-extrabold text-transparent sm:text-4xl'>
                 {n}
               </p>
-              <p className='mt-1 text-xs text-slate-500'>{l}</p>
+              <p className='mt-1 text-xs text-[#5a6258]'>{l}</p>
             </div>
           ))}
         </div>
@@ -630,25 +630,25 @@ export default function LandingPage() {
 
       {/* Pain */}
       <section className='mx-auto max-w-5xl px-6 py-24'>
-        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>
+        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-[#6D0808]'>
           The old way is exhausting
         </p>
-        <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
+        <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-[#2D0000] sm:text-4xl'>
           Five social tabs, a separate CRM, and a spreadsheet for meetings.
         </h2>
         <div className='mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4'>
           {PAINS.map((p) => (
             <div
               key={p.title}
-              className='rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6'
+              className='rounded-2xl border border-[#757D6F]/25 bg-[#F7F4EA] p-6'
             >
-              <div className='flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.04] text-slate-300'>
+              <div className='flex h-11 w-11 items-center justify-center rounded-xl bg-[#EEEAD7] text-[#4a3a3a]'>
                 <Icon name={p.icon} className='h-5 w-5' />
               </div>
-              <h3 className='font-display mt-4 text-base font-bold text-white'>
+              <h3 className='font-display mt-4 text-base font-bold text-[#2D0000]'>
                 {p.title}
               </h3>
-              <p className='mt-2 text-sm leading-relaxed text-slate-400'>{p.body}</p>
+              <p className='mt-2 text-sm leading-relaxed text-[#5a6258]'>{p.body}</p>
             </div>
           ))}
         </div>
@@ -657,31 +657,31 @@ export default function LandingPage() {
       {/* Features */}
       <section
         id='features'
-        className='border-t border-white/[0.06] bg-white/[0.015] py-24'
+        className='border-t border-[#757D6F]/20 bg-[#F7F4EA]/80 py-24'
       >
         <div className='mx-auto max-w-5xl px-6'>
-          <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>
+          <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-[#6D0808]'>
             Everything included
           </p>
-          <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
+          <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-[#2D0000] sm:text-4xl'>
             Publish, outreach, and sales pipeline — in one product.
           </h2>
           <div className='mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className='group rounded-3xl border border-white/[0.07] bg-[#0b0d16] p-7 transition hover:-translate-y-1 hover:border-indigo-500/30'
+                className='group rounded-3xl border border-[#757D6F]/25 bg-[#F7F4EA] p-7 transition hover:-translate-y-1 hover:border-[#6D0808]/35'
               >
-                <div className='flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500/15 to-indigo-600/15 text-indigo-300'>
+                <div className='flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6D0808]/12 to-[#757D6F]/15 text-[#6D0808]'>
                   <Icon name={f.icon} className='h-6 w-6' />
                 </div>
-                <h3 className='font-display mt-5 text-lg font-bold text-white'>
+                <h3 className='font-display mt-5 text-lg font-bold text-[#2D0000]'>
                   {f.title}
                 </h3>
-                <p className='mt-2 text-sm leading-relaxed text-slate-400'>
+                <p className='mt-2 text-sm leading-relaxed text-[#5a6258]'>
                   {f.body}
                 </p>
-                <span className='mt-4 inline-block rounded-full bg-indigo-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-indigo-300'>
+                <span className='mt-4 inline-block rounded-full bg-[#6D0808]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-[#6D0808]'>
                   {f.tag}
                 </span>
               </div>
@@ -692,14 +692,14 @@ export default function LandingPage() {
 
       {/* Sales Tracker spotlight */}
       <section id='sales' className='mx-auto max-w-5xl px-6 py-24'>
-        <div className='overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-indigo-500/[0.12] via-[#0b0d16] to-sky-500/[0.08] p-8 sm:p-12'>
-          <p className='text-xs font-bold uppercase tracking-[0.12em] text-indigo-300'>
+        <div className='overflow-hidden rounded-3xl border border-[#757D6F]/25 bg-gradient-to-br from-[#6D0808]/10 via-[#F7F4EA] to-[#757D6F]/12 p-8 sm:p-12'>
+          <p className='text-xs font-bold uppercase tracking-[0.12em] text-[#6D0808]'>
             Growth+ · Sales Tracker
           </p>
-          <h2 className='font-display mt-3 max-w-2xl text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
+          <h2 className='font-display mt-3 max-w-2xl text-3xl font-extrabold tracking-tight text-[#2D0000] sm:text-4xl'>
             A Kanban CRM that never asks you to enter the same data twice.
           </h2>
-          <p className='mt-4 max-w-2xl text-sm leading-relaxed text-slate-400 sm:text-base'>
+          <p className='mt-4 max-w-2xl text-sm leading-relaxed text-[#5a6258] sm:text-base'>
             Import Mail Box meetings onto the board. Drag cards through New, Proposal,
             Deposit, Follow-Up, Meeting Follow-Up, Won, and Lost. Lead Log, setter/closer
             metrics, leak alerts, and end-of-month projections all flow from those cards.
@@ -712,16 +712,16 @@ export default function LandingPage() {
             ].map(([t, b]) => (
               <div
                 key={t}
-                className='rounded-2xl border border-white/[0.08] bg-black/20 px-4 py-4'
+                className='rounded-2xl border border-[#757D6F]/25 bg-black/20 px-4 py-4'
               >
-                <p className='font-display text-sm font-bold text-white'>{t}</p>
-                <p className='mt-1 text-xs leading-relaxed text-slate-400'>{b}</p>
+                <p className='font-display text-sm font-bold text-[#2D0000]'>{t}</p>
+                <p className='mt-1 text-xs leading-relaxed text-[#5a6258]'>{b}</p>
               </div>
             ))}
           </div>
           <Link
             to='/sign-up'
-            className='mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-display text-sm font-bold text-[#0a0c14] transition hover:-translate-y-0.5'
+            className='mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-display text-sm font-bold text-[#2D0000] transition hover:-translate-y-0.5'
           >
             Get Growth with Sales Tracker
           </Link>
@@ -730,10 +730,10 @@ export default function LandingPage() {
 
       {/* Per-platform SEO content */}
       <section className='mx-auto max-w-5xl px-6 py-24'>
-        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>
+        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-[#6D0808]'>
           One tool, every network
         </p>
-        <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
+        <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-[#2D0000] sm:text-4xl'>
           A social media scheduler for LinkedIn, Meta, Reddit, Pinterest, Threads & email.
         </h2>
         <div className='mt-14 grid gap-5 md:grid-cols-2'>
@@ -742,14 +742,14 @@ export default function LandingPage() {
             return (
               <div
                 key={row.key}
-                className='flex gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6'
+                className='flex gap-4 rounded-2xl border border-[#757D6F]/25 bg-[#F7F4EA] p-6'
               >
                 <PlatformTile p={p} size='xl' />
                 <div>
-                  <h3 className='font-display text-base font-bold text-white'>
+                  <h3 className='font-display text-base font-bold text-[#2D0000]'>
                     {row.h}
                   </h3>
-                  <p className='mt-1.5 text-sm leading-relaxed text-slate-400'>
+                  <p className='mt-1.5 text-sm leading-relaxed text-[#5a6258]'>
                     {row.p}
                   </p>
                 </div>
@@ -761,39 +761,39 @@ export default function LandingPage() {
 
       {/* Social proof, ratings + reviews */}
       <section id='reviews' className='mx-auto max-w-6xl px-6 py-24'>
-        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>
+        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-[#6D0808]'>
           Don't take our word for it
         </p>
-        <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
+        <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-[#2D0000] sm:text-4xl'>
           Trusted by creators & teams worldwide.
         </h2>
 
         {/* Rating badges */}
         <div className='mx-auto mt-10 flex max-w-2xl flex-col gap-4 sm:flex-row'>
-          <div className='flex flex-1 items-center justify-center gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5'>
+          <div className='flex flex-1 items-center justify-center gap-4 rounded-2xl border border-[#757D6F]/25 bg-[#F7F4EA] p-5'>
             <TrustpilotMark />
             <div className='text-left'>
               <div className='flex items-center gap-2'>
-                <span className='font-display text-2xl font-extrabold text-white'>
+                <span className='font-display text-2xl font-extrabold text-[#2D0000]'>
                   4.9
                 </span>
                 <Stars />
               </div>
-              <p className='text-[11px] text-slate-500'>
+              <p className='text-[11px] text-[#5a6258]'>
                 Excellent · 1,800+ reviews
               </p>
             </div>
           </div>
-          <div className='flex flex-1 items-center justify-center gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5'>
+          <div className='flex flex-1 items-center justify-center gap-4 rounded-2xl border border-[#757D6F]/25 bg-[#F7F4EA] p-5'>
             <GoogleMark />
             <div className='text-left'>
               <div className='flex items-center gap-2'>
-                <span className='font-display text-2xl font-extrabold text-white'>
+                <span className='font-display text-2xl font-extrabold text-[#2D0000]'>
                   4.8
                 </span>
                 <Stars />
               </div>
-              <p className='text-[11px] text-slate-500'>Excellent · 600+ reviews</p>
+              <p className='text-[11px] text-[#5a6258]'>Excellent · 600+ reviews</p>
             </div>
           </div>
         </div>
@@ -809,28 +809,28 @@ export default function LandingPage() {
       {/* Comparison table */}
       <section
         id='compare'
-        className='border-t border-white/[0.06] bg-white/[0.015] py-24'
+        className='border-t border-[#757D6F]/20 bg-[#F7F4EA]/80 py-24'
       >
         <div className='mx-auto max-w-3xl px-6'>
-          <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>
+          <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-[#6D0808]'>
             How we compare
           </p>
-          <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
+          <h2 className='font-display mx-auto mt-3 max-w-2xl text-center text-3xl font-extrabold tracking-tight text-[#2D0000] sm:text-4xl'>
             Scheduler + outreach + CRM — without stacking three tools.
           </h2>
-          <div className='mt-12 overflow-x-auto rounded-2xl border border-white/[0.08]'>
+          <div className='mt-12 overflow-x-auto rounded-2xl border border-[#757D6F]/25'>
             <table className='w-full min-w-[360px] border-collapse text-xs sm:text-sm'>
               <thead>
-                <tr className='border-b border-white/[0.08]'>
-                  <th className='p-2.5 text-left font-medium text-slate-500 sm:p-4'></th>
+                <tr className='border-b border-[#757D6F]/25'>
+                  <th className='p-2.5 text-left font-medium text-[#5a6258] sm:p-4'></th>
                   {COMPETITORS.cols.map((c, i) => (
                     <th key={c} className='p-2.5 text-center sm:p-4'>
                       {i === 0 ? (
-                        <span className='rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-3 py-1 font-display text-xs font-bold text-white'>
+                        <span className='rounded-full bg-gradient-to-r from-[#6D0808] to-[#520606] px-3 py-1 font-display text-xs font-bold text-[#EEEAD7]'>
                           {c}
                         </span>
                       ) : (
-                        <span className='font-display text-sm font-bold text-slate-400'>
+                        <span className='font-display text-sm font-bold text-[#5a6258]'>
                           {c}
                         </span>
                       )}
@@ -840,19 +840,19 @@ export default function LandingPage() {
               </thead>
               <tbody>
                 {COMPETITORS.rows.map(([label, vals], r) => (
-                  <tr key={label} className={r % 2 ? "bg-white/[0.015]" : ""}>
-                    <td className='p-2.5 text-left text-slate-300 sm:p-4'>{label}</td>
+                  <tr key={label} className={r % 2 ? "bg-[#F7F4EA]/80" : ""}>
+                    <td className='p-2.5 text-left text-[#4a3a3a] sm:p-4'>{label}</td>
                     {vals.map((v, ci) => (
                       <td
                         key={ci}
-                        className={`p-2.5 text-center sm:p-4 ${ci === 0 ? "bg-indigo-500/[0.06]" : ""}`}
+                        className={`p-2.5 text-center sm:p-4 ${ci === 0 ? "bg-[#6D0808]/8" : ""}`}
                       >
                         {v ? (
-                          <span className='inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400'>
+                          <span className='inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/15 text-[#5a6b52]'>
                             <Icon name='check' className='h-4 w-4' />
                           </span>
                         ) : (
-                          <span className='inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/[0.04] text-slate-600'>
+                          <span className='inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#EEEAD7] text-[#5a6258]'>
                             <svg className='h-3 w-3' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={3}><path strokeLinecap='round' strokeLinejoin='round' d='M6 18 18 6M6 6l12 12' /></svg>
                           </span>
                         )}
@@ -863,7 +863,7 @@ export default function LandingPage() {
               </tbody>
             </table>
           </div>
-          <p className='mt-4 text-center text-[11px] text-slate-600'>
+          <p className='mt-4 text-center text-[11px] text-[#5a6258]'>
             Comparison reflects typical entry-level plans and is for illustration.
           </p>
         </div>
@@ -871,10 +871,10 @@ export default function LandingPage() {
 
       {/* How it works */}
       <section className='mx-auto max-w-4xl px-6 py-24'>
-        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>
+        <p className='text-center text-xs font-bold uppercase tracking-[0.12em] text-[#6D0808]'>
           How it works
         </p>
-        <h2 className='font-display mt-3 text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
+        <h2 className='font-display mt-3 text-center text-3xl font-extrabold tracking-tight text-[#2D0000] sm:text-4xl'>
           Three steps to everywhere.
         </h2>
         <div className='mt-14 grid gap-8 sm:grid-cols-3'>
@@ -896,13 +896,13 @@ export default function LandingPage() {
             ],
           ].map(([n, title, body]) => (
             <div key={n} className='text-center'>
-              <div className='mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 font-display text-lg font-bold text-white'>
+              <div className='mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#6D0808] to-[#520606] font-display text-lg font-bold text-[#EEEAD7]'>
                 {n}
               </div>
-              <h3 className='font-display mt-4 text-lg font-bold text-white'>
+              <h3 className='font-display mt-4 text-lg font-bold text-[#2D0000]'>
                 {title}
               </h3>
-              <p className='mt-2 text-sm leading-relaxed text-slate-400'>{body}</p>
+              <p className='mt-2 text-sm leading-relaxed text-[#5a6258]'>{body}</p>
             </div>
           ))}
         </div>
@@ -912,11 +912,11 @@ export default function LandingPage() {
       {/* Pricing preview */}
       <section id='pricing' className='mx-auto max-w-5xl px-6 py-24'>
         <div className='text-center'>
-          <p className='text-xs font-bold uppercase tracking-[0.12em] text-indigo-400'>Pricing</p>
-          <h2 className='font-display mt-3 text-3xl font-extrabold text-white sm:text-4xl'>
+          <p className='text-xs font-bold uppercase tracking-[0.12em] text-[#6D0808]'>Pricing</p>
+          <h2 className='font-display mt-3 text-3xl font-extrabold text-[#2D0000] sm:text-4xl'>
             $19.99 · $39.99 · $49.99
           </h2>
-          <p className='mx-auto mt-3 max-w-lg text-sm text-slate-400'>
+          <p className='mx-auto mt-3 max-w-lg text-sm text-[#5a6258]'>
             Starter (Compose + Bulk), Growth (+ Mail Box), or Pro (full platform). Pay by JazzCash,
             UBL, NayaPay, or Meezan — send your receipt on WhatsApp to activate.
           </p>
@@ -930,22 +930,22 @@ export default function LandingPage() {
             <div
               key={t.name}
               className={`rounded-2xl border p-6 text-center ${
-                t.hot ? 'border-indigo-500/40 bg-indigo-500/10' : 'border-white/10 bg-white/[0.02]'
+                t.hot ? 'border-[#6D0808]/40 bg-[#6D0808]/10' : 'border-[#757D6F]/25 bg-[#F7F4EA]'
               }`}
             >
-              <p className='text-sm font-semibold text-slate-300'>{t.name}</p>
-              <p className='font-display mt-2 text-3xl font-extrabold text-white'>
+              <p className='text-sm font-semibold text-[#4a3a3a]'>{t.name}</p>
+              <p className='font-display mt-2 text-3xl font-extrabold text-[#2D0000]'>
                 {t.price}
-                <span className='text-sm font-medium text-slate-500'>/mo</span>
+                <span className='text-sm font-medium text-[#5a6258]'>/mo</span>
               </p>
-              <p className='mt-2 text-xs text-slate-400'>{t.detail}</p>
+              <p className='mt-2 text-xs text-[#5a6258]'>{t.detail}</p>
             </div>
           ))}
         </div>
         <div className='mt-8 text-center'>
           <Link
             to='/pricing'
-            className='inline-flex rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/5'
+            className='inline-flex rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-[#2D0000] hover:bg-white/5'
           >
             See pricing, banks & WhatsApp
           </Link>
@@ -954,10 +954,10 @@ export default function LandingPage() {
 
       <section
         id='faq'
-        className='border-t border-white/[0.06] bg-white/[0.015] py-24'
+        className='border-t border-[#757D6F]/20 bg-[#F7F4EA]/80 py-24'
       >
         <div className='mx-auto max-w-2xl px-6'>
-          <h2 className='font-display text-center text-3xl font-extrabold tracking-tight text-white sm:text-4xl'>
+          <h2 className='font-display text-center text-3xl font-extrabold tracking-tight text-[#2D0000] sm:text-4xl'>
             Questions, answered.
           </h2>
           <div className='mt-12 flex flex-col gap-3'>
@@ -970,21 +970,21 @@ export default function LandingPage() {
 
       {/* Final CTA */}
       <section className='relative overflow-hidden px-6 py-28 text-center'>
-        <div className='pointer-events-none absolute inset-0 bg-gradient-to-b from-indigo-600/10 to-transparent' />
+        <div className='pointer-events-none absolute inset-0 bg-gradient-to-b from-[#6D0808]/10 to-transparent' />
         <div className='relative'>
-          <h2 className='font-display mx-auto max-w-2xl text-3xl font-extrabold tracking-tight text-white sm:text-5xl'>
+          <h2 className='font-display mx-auto max-w-2xl text-3xl font-extrabold tracking-tight text-[#2D0000] sm:text-5xl'>
             Stop posting five times.
-            <span className='block bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent'>
+            <span className='block bg-gradient-to-r from-[#6D0808] to-[#8A2A2A] bg-clip-text text-transparent'>
               Start publishing once.
             </span>
           </h2>
           <Link
             to='/sign-up'
-            className='mt-10 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-9 py-4 font-display text-base font-bold text-white shadow-xl shadow-sky-500/25 transition hover:-translate-y-0.5'
+            className='mt-10 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#6D0808] to-[#520606] px-9 py-4 font-display text-base font-bold text-[#EEEAD7] shadow-xl shadow-[#6D0808]/20 transition hover:-translate-y-0.5'
           >
             Create your workspace
           </Link>
-          <p className='mt-4 text-xs text-slate-600'>
+          <p className='mt-4 text-xs text-[#5a6258]'>
             Bank transfer · WhatsApp receipt · From $19.99/mo
           </p>
         </div>

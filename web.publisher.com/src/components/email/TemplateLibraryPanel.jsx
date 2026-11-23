@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   listEmailLibrary,
   createEmailLibraryTemplate,
@@ -6,6 +6,7 @@ import {
   deleteEmailLibraryTemplate,
   seedEmailLibrary,
 } from '../../lib/backendApi'
+import { withTimeout } from '../../lib/fetchTimeout'
 import ConfirmDialog from '../ConfirmDialog'
 
 const EMPTY_FORM = {
@@ -24,28 +25,44 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
   const [categories, setCategories] = useState([])
   const [filterCategory, setFilterCategory] = useState('all')
   const [loading, setLoading] = useState(false)
+  const [loadTimedOut, setLoadTimedOut] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState(null)
   const [customCategory, setCustomCategory] = useState('')
 
+  const onLibraryChangeRef = useRef(onLibraryChange)
+  const showToastRef = useRef(showToast)
+  useEffect(() => {
+    onLibraryChangeRef.current = onLibraryChange
+  }, [onLibraryChange])
+  useEffect(() => {
+    showToastRef.current = showToast
+  }, [showToast])
+
   const load = useCallback(async () => {
     if (!live) return
     setLoading(true)
+    setLoadTimedOut(false)
     try {
-      const res = await listEmailLibrary({
-        category: filterCategory !== 'all' ? filterCategory : undefined,
-      })
+      const res = await withTimeout(
+        listEmailLibrary({
+          category: filterCategory !== 'all' ? filterCategory : undefined,
+        }),
+        20_000,
+        'Templates took too long to load (cold start?). Tap retry.',
+      )
       setTemplates(res.templates || [])
       setCategories(res.categories || [])
-      onLibraryChange?.(res)
+      onLibraryChangeRef.current?.(res)
     } catch (err) {
-      showToast?.(err.message || 'Failed to load templates', 'error')
+      if (err?.timedOut) setLoadTimedOut(true)
+      showToastRef.current?.(err.message || 'Failed to load templates', 'error')
     } finally {
       setLoading(false)
     }
-  }, [live, filterCategory, showToast, onLibraryChange])
+  }, [live, filterCategory])
 
   useEffect(() => {
     load()
@@ -92,22 +109,22 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
       isDefault: form.isDefault,
     }
     if (!payload.name || !payload.subject || !payload.body.trim()) {
-      showToast?.('Name, subject, and body are required', 'error')
+      showToastRef.current?.('Name, subject, and body are required', 'error')
       return
     }
     setSaving(true)
     try {
       if (form.id) {
         await updateEmailLibraryTemplate(form.id, payload)
-        showToast?.('Template updated', 'success')
+        showToastRef.current?.('Template updated', 'success')
       } else {
         await createEmailLibraryTemplate(payload)
-        showToast?.('Template created', 'success')
+        showToastRef.current?.('Template created', 'success')
       }
       cancelEdit()
       await load()
     } catch (err) {
-      showToast?.(err.message || 'Save failed', 'error')
+      showToastRef.current?.(err.message || 'Save failed', 'error')
     } finally {
       setSaving(false)
     }
@@ -117,32 +134,32 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
     if (!deleteId) return
     try {
       await deleteEmailLibraryTemplate(deleteId)
-      showToast?.('Template deleted', 'success')
+      showToastRef.current?.('Template deleted', 'success')
       setDeleteId(null)
       if (form.id === deleteId) cancelEdit()
       await load()
     } catch (err) {
-      showToast?.(err.message || 'Delete failed', 'error')
+      showToastRef.current?.(err.message || 'Delete failed', 'error')
     }
   }
 
   const seed = async () => {
     try {
       const res = await seedEmailLibrary()
-      showToast?.(
+      showToastRef.current?.(
         res.seeded ? 'Starter templates added' : 'Library already has templates',
         res.seeded ? 'success' : 'info',
       )
       setFilterCategory('all')
       await load()
     } catch (err) {
-      showToast?.(err.message || 'Seed failed', 'error')
+      showToastRef.current?.(err.message || 'Seed failed', 'error')
     }
   }
 
   if (!live) {
     return (
-      <p className="rounded-md border border-white/[0.08] px-4 py-8 text-center text-sm text-zinc-500">
+      <p className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-4 py-8 text-center text-sm text-[var(--text-muted)]">
         Connect the API to manage your email templates.
       </p>
     )
@@ -150,14 +167,14 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden lg:flex-row">
-      <aside className="flex w-full shrink-0 flex-col rounded-md border border-white/[0.08] bg-[var(--bg-panel)] lg:w-72">
-        <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2.5">
-          <p className="text-sm font-medium text-zinc-100">Your templates</p>
+      <aside className="flex w-full shrink-0 flex-col rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] lg:w-72">
+        <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3 py-2.5">
+          <p className="text-sm font-medium text-[var(--text-primary)]">Your templates</p>
           <button type="button" className="btn-primary px-2.5 py-1 text-xs" onClick={openCreate}>
             New
           </button>
         </div>
-        <div className="border-b border-white/[0.06] px-3 py-2">
+        <div className="border-b border-[var(--border-subtle)] px-3 py-2">
           <select
             className="saas-select w-full py-1.5 text-xs"
             value={filterCategory}
@@ -173,10 +190,19 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
         </div>
         <div className="saas-scroll min-h-0 flex-1 overflow-y-auto p-2">
           {loading ? (
-            <p className="px-2 py-6 text-center text-xs text-zinc-500">Loading…</p>
+            <p className="px-2 py-6 text-center text-xs text-[var(--text-muted)]">Loading…</p>
+          ) : loadTimedOut ? (
+            <div className="px-2 py-6 text-center">
+              <p className="text-xs text-[var(--text-muted)]">
+                Templates timed out — the API may be cold-starting.
+              </p>
+              <button type="button" className="btn-secondary mt-3 px-3 py-1.5 text-xs" onClick={load}>
+                Retry
+              </button>
+            </div>
           ) : templates.length === 0 ? (
             <div className="px-2 py-6 text-center">
-              <p className="text-xs text-zinc-500">No templates in this category.</p>
+              <p className="text-xs text-[var(--text-muted)]">No templates in this category.</p>
               <button type="button" className="btn-secondary mt-3 px-3 py-1.5 text-xs" onClick={seed}>
                 Add starters
               </button>
@@ -190,12 +216,12 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
                     onClick={() => openEdit(t)}
                     className={`w-full rounded-md px-2.5 py-2 text-left transition ${
                       form.id === t.id
-                        ? 'bg-white/[0.08] text-white'
-                        : 'text-zinc-300 hover:bg-white/[0.04]'
+                        ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+                        : 'text-[#2D0000] hover:bg-[rgba(109,8,8,0.06)]'
                     }`}
                   >
-                    <p className="truncate text-xs font-medium">{t.name}</p>
-                    <p className="mt-0.5 truncate text-[10px] text-zinc-500">{t.category}</p>
+                    <p className="truncate text-xs font-semibold">{t.name}</p>
+                    <p className="mt-0.5 truncate text-[10px] font-medium text-[#4A3530]">{t.category}</p>
                   </button>
                 </li>
               ))}
@@ -204,11 +230,11 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
         </div>
       </aside>
 
-      <section className="saas-scroll min-h-0 flex-1 overflow-y-auto rounded-md border border-white/[0.08] bg-[var(--bg-panel)] p-4">
+      <section className="saas-scroll min-h-0 flex-1 overflow-y-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-4">
         {!editing ? (
           <div className="flex h-full min-h-[240px] flex-col items-center justify-center text-center">
-            <p className="text-sm font-medium text-zinc-200">Template library</p>
-            <p className="mt-1 max-w-sm text-xs text-zinc-500">
+            <p className="text-sm font-semibold text-[#2D0000]">Template library</p>
+            <p className="mt-1 max-w-sm text-xs font-medium leading-relaxed text-[#4A3530]">
               Create categories like CEO/CTO, Direct, or Product. Use them for bulk campaigns and
               single sends.
             </p>
@@ -224,16 +250,20 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
         ) : (
           <div className="mx-auto max-w-2xl space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-zinc-100">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                 {form.id ? 'Edit template' : 'New template'}
               </h3>
-              <button type="button" className="text-xs text-zinc-500 hover:text-white" onClick={cancelEdit}>
+              <button
+                type="button"
+                className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]"
+                onClick={cancelEdit}
+              >
                 Cancel
               </button>
             </div>
 
             <label className="block">
-              <span className="mb-1 block text-[11px] font-medium text-zinc-500">Name</span>
+              <span className="mb-1 block text-[11px] font-medium text-[var(--text-muted)]">Name</span>
               <input
                 className="saas-input"
                 value={form.name}
@@ -244,7 +274,9 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1 block text-[11px] font-medium text-zinc-500">Category</span>
+                <span className="mb-1 block text-[11px] font-medium text-[var(--text-muted)]">
+                  Category
+                </span>
                 <select
                   className="saas-select w-full"
                   value={categoryOptions.includes(form.category) ? form.category : '__custom__'}
@@ -266,7 +298,7 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-[11px] font-medium text-zinc-500">
+                <span className="mb-1 block text-[11px] font-medium text-[var(--text-muted)]">
                   Custom category
                 </span>
                 <input
@@ -279,7 +311,9 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
             </div>
 
             <label className="block">
-              <span className="mb-1 block text-[11px] font-medium text-zinc-500">Subject</span>
+              <span className="mb-1 block text-[11px] font-medium text-[var(--text-muted)]">
+                Subject
+              </span>
               <input
                 className="saas-input"
                 value={form.subject}
@@ -289,7 +323,7 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-[11px] font-medium text-zinc-500">Body</span>
+              <span className="mb-1 block text-[11px] font-medium text-[var(--text-muted)]">Body</span>
               <textarea
                 className="saas-input min-h-[220px] resize-y font-mono text-[12px] leading-relaxed"
                 value={form.body}
@@ -298,7 +332,7 @@ export default function TemplateLibraryPanel({ live, showToast, onLibraryChange 
               />
             </label>
 
-            <label className="flex items-center gap-2 text-xs text-zinc-400">
+            <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
               <input
                 type="checkbox"
                 checked={form.isDefault}

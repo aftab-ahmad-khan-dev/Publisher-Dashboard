@@ -41,40 +41,40 @@ export default function SplashScreen({
         <div className="splash-logo-wrap relative mb-8">
           <div className="splash-ring splash-ring--outer" aria-hidden />
           <div className="splash-ring splash-ring--inner" aria-hidden />
-          <div className="splash-logo relative flex h-[5.5rem] w-[5.5rem] items-center justify-center rounded-[1.35rem] bg-[#0b0e18]/80 shadow-2xl shadow-indigo-500/30 ring-1 ring-white/10 backdrop-blur-sm">
+          <div className="splash-logo relative flex h-[5.5rem] w-[5.5rem] items-center justify-center rounded-[1.35rem] bg-[#2D0000]/85 shadow-2xl shadow-[#6D0808]/35 ring-1 ring-[#EEEAD7]/15 backdrop-blur-sm">
             <BrandLogo className="h-14 w-14" />
           </div>
         </div>
 
-        <p className="splash-eyebrow mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-indigo-300/80">
+        <p className="splash-eyebrow mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#EEEAD7]/75">
           Publisher Suite
         </p>
-        <h1 className="splash-title font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
+        <h1 className="splash-title font-display text-3xl font-bold tracking-tight text-[#EEEAD7] sm:text-4xl">
           Publish once.
-          <span className="splash-title-accent mt-1 block bg-gradient-to-r from-indigo-300 via-sky-300 to-indigo-200 bg-clip-text text-transparent">
+          <span className="splash-title-accent mt-1 block text-[#c45c5c]">
             Reach everywhere.
           </span>
         </h1>
-        <p className="splash-subtitle mt-3 max-w-xs text-sm leading-relaxed text-slate-400">
+        <p className="splash-subtitle mt-3 max-w-xs text-sm leading-relaxed text-[#757D6F]">
           {subtitle}
         </p>
 
         {message && (
-          <p className="splash-message mt-5 max-w-sm text-xs font-medium text-slate-300">
+          <p className="splash-message mt-5 max-w-sm text-xs font-medium text-[#EEEAD7]/80">
             {message}
           </p>
         )}
 
-        <div className="splash-bar mt-9 h-1 w-52 overflow-hidden rounded-full bg-white/[0.08] sm:w-56">
+        <div className="splash-bar mt-9 h-1 w-52 overflow-hidden rounded-full bg-[#EEEAD7]/12 sm:w-56">
           <div
-            className={`splash-bar-fill h-full rounded-full bg-gradient-to-r from-indigo-500 via-sky-400 to-indigo-400 ${
+            className={`splash-bar-fill h-full rounded-full bg-gradient-to-r from-[#6D0808] via-[#9a3a3a] to-[#757D6F] ${
               hasProgress ? 'splash-bar-fill--determinate' : 'splash-bar-fill--indeterminate'
             }`}
             style={hasProgress ? { width: `${clamped}%` } : undefined}
           />
         </div>
         {hasProgress && (
-          <p className="mt-2 font-display text-xs font-semibold tabular-nums text-indigo-200/90">
+          <p className="mt-2 font-display text-xs font-semibold tabular-nums text-[#EEEAD7]/90">
             {clamped}%
           </p>
         )}

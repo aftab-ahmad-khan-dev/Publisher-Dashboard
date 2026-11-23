@@ -215,11 +215,11 @@ export default function NotificationPanel() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="notif-bell relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
+        className="notif-bell orbit-icon-btn"
         aria-label="Notifications"
         aria-expanded={open}
       >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+        <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -227,7 +227,7 @@ export default function NotificationPanel() {
           />
         </svg>
         {unreadNotificationCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-500 px-1 text-[9px] font-bold text-white shadow-lg shadow-indigo-500/40">
+          <span className="orbit-icon-btn__badge">
             {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
           </span>
         )}

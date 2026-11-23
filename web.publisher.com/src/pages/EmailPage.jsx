@@ -38,6 +38,7 @@ import {
 } from '../lib/backendApi'
 import { mergeTemplate } from '../lib/emailParse'
 import { forceScheduleMeetingHrefs, forceScheduleMeetingText } from '../lib/meetingCta'
+import { normalizeCampaignTemplateType } from '../lib/campaignTemplateType'
 import { SIGNATURE } from '../lib/emailTemplates'
 import LeadSourcePanel from '../components/email/LeadSourcePanel'
 import TemplateLibraryPanel from '../components/email/TemplateLibraryPanel'
@@ -85,25 +86,25 @@ const MEETING_STATUSES = [
 
 function StatusChip({ status }) {
   const styles = {
-    queued: 'bg-white/[0.06] text-zinc-400',
-    sending: 'bg-amber-500/15 text-amber-200',
-    sent: 'bg-white/[0.08] text-zinc-200',
-    opened: 'bg-white/[0.1] text-zinc-100',
-    clicked: 'bg-white/[0.1] text-zinc-100',
-    failed: 'bg-rose-500/15 text-rose-300',
-    cancelled: 'bg-white/[0.04] text-zinc-500',
-    paused: 'bg-amber-500/15 text-amber-200',
-    draft: 'bg-white/[0.05] text-zinc-400',
-    completed: 'bg-white/[0.1] text-zinc-100',
-    invited: 'bg-white/[0.08] text-zinc-200',
-    link_clicked: 'bg-white/[0.1] text-zinc-100',
-    scheduled: 'bg-white/[0.1] text-zinc-100',
-    no_show: 'bg-rose-500/15 text-rose-300',
-    none: 'bg-white/[0.04] text-zinc-500',
+    queued: 'bg-[#EEEAD7] text-[#757D6F] ring-1 ring-[#757D6F]/25',
+    sending: 'bg-amber-100 text-amber-900 ring-1 ring-amber-200',
+    sent: 'bg-[#F7F4EA] text-[#2D0000] ring-1 ring-[#757D6F]/20',
+    opened: 'bg-[#6D0808]/10 text-[#6D0808] ring-1 ring-[#6D0808]/20',
+    clicked: 'bg-[#6D0808]/15 text-[#6D0808] ring-1 ring-[#6D0808]/25',
+    failed: 'bg-rose-50 text-rose-800 ring-1 ring-rose-200',
+    cancelled: 'bg-[#EEEAD7] text-[#757D6F] ring-1 ring-[#757D6F]/20',
+    paused: 'bg-amber-100 text-amber-900 ring-1 ring-amber-200',
+    draft: 'bg-[#EEEAD7] text-[#757D6F] ring-1 ring-[#757D6F]/25',
+    completed: 'bg-[#6D0808]/10 text-[#6D0808] ring-1 ring-[#6D0808]/20',
+    invited: 'bg-[#F7F4EA] text-[#2D0000] ring-1 ring-[#757D6F]/20',
+    link_clicked: 'bg-[#6D0808]/10 text-[#6D0808] ring-1 ring-[#6D0808]/20',
+    scheduled: 'bg-[#6D0808]/10 text-[#6D0808] ring-1 ring-[#6D0808]/20',
+    no_show: 'bg-rose-50 text-rose-800 ring-1 ring-rose-200',
+    none: 'bg-[#EEEAD7] text-[#757D6F] ring-1 ring-[#757D6F]/20',
   }
   return (
     <span
-      className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium capitalize ${
+      className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold capitalize ${
         styles[status] || styles.queued
       }`}
     >
@@ -556,7 +557,10 @@ export default function EmailPage() {
     [templateList, templateId],
   )
 
-  const templateType = selectedTemplate?.category || templateCategory || 'custom'
+  /** Library category label (CEO/CTO, Direct, Product, …) — not the campaign enum. */
+  const templateCategoryLabel = selectedTemplate?.category || templateCategory || 'custom'
+  /** Mongoose EmailCampaign.templateType: outreach | product | custom */
+  const templateType = normalizeCampaignTemplateType(templateCategoryLabel)
   const typeLabel =
     templateCategory === 'all' ? 'All categories' : templateCategory || 'Templates'
 
@@ -579,6 +583,12 @@ export default function EmailPage() {
       }
     }
   }, [live, templateCategory, meetingLink, globalMeetingLink])
+
+  /** Stable — panel load must not re-fire when parent re-renders. */
+  const handleLibraryPanelChange = useCallback((res) => {
+    if (Array.isArray(res?.categories)) setLibraryCategories(res.categories)
+    if (Array.isArray(res?.templates)) setApiTemplates(res.templates)
+  }, [])
 
   const loadCampaigns = useCallback(async () => {
     if (!live) return
@@ -1260,7 +1270,7 @@ export default function EmailPage() {
       showToast('Set VITE_API_BASE_URL to send email.', 'error')
       return
     }
-    if (String(templateType).toLowerCase() === 'product' && !workspaceBooking) {
+    if (templateType === 'product' && !workspaceBooking) {
       showToast(
         'Save your Google Calendar booking link once in the Meetings tab (or connect Calendar).',
         'error',
@@ -1387,7 +1397,7 @@ export default function EmailPage() {
             leadSourceId: leadPayload?.source?.id,
             meetingLink: booking,
             trackOpens: true,
-            sendNow: true,
+            sendNow: !scheduledIso,
             scheduledAt: scheduledIso || undefined,
             cooldownMinutes: mode === 'single' ? 1 : cooldownMinutes,
             batchSize: mode === 'single' ? 18 : batchSize,
@@ -1409,7 +1419,11 @@ export default function EmailPage() {
       setTab('processed')
       await refreshAll()
     } catch (err) {
-      showToast(err.message, 'error')
+      const msg = String(err?.message || '').trim()
+      showToast(
+        msg || 'Campaign failed. Check Gmail/SMTP and try again.',
+        'error',
+      )
     } finally {
       setSending(false)
     }
@@ -1560,14 +1574,7 @@ export default function EmailPage() {
           <TemplateLibraryPanel
             live={live}
             showToast={showToast}
-            onLibraryChange={(res) => {
-              if (Array.isArray(res?.categories)) setLibraryCategories(res.categories)
-              if (templateCategory === 'all' && Array.isArray(res?.templates)) {
-                setApiTemplates(res.templates)
-              } else {
-                refreshLibrary()
-              }
-            }}
+            onLibraryChange={handleLibraryPanelChange}
           />
         </PageScroll>
       )}
@@ -1723,17 +1730,17 @@ export default function EmailPage() {
                 </div>
 
                 <div>
-                  <p className="mb-1.5 text-[11px] font-medium text-zinc-400">
-                    Start sending
+                  <p className="mb-1.5 text-[11px] font-semibold text-[#5a6258]">
+                    When to send
                   </p>
                   <div className="mb-2 flex flex-wrap gap-1.5">
                     <button
                       type="button"
                       onClick={() => setSendScheduleMode('now')}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                         sendScheduleMode === 'now'
-                          ? 'bg-white/[0.1] text-zinc-100 ring-1 ring-white/15'
-                          : 'bg-white/[0.04] text-zinc-400 hover:text-zinc-200'
+                          ? 'bg-[#6D0808] text-[#EEEAD7]'
+                          : 'bg-[#EEEAD7] text-[#2D0000] ring-1 ring-[#757D6F]/35 hover:bg-[#F7F4EA]'
                       }`}
                     >
                       Send now
@@ -1747,18 +1754,18 @@ export default function EmailPage() {
                           setCampaignStartAt(toDatetimeLocalValue(soon))
                         }
                       }}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                         sendScheduleMode === 'later'
-                          ? 'bg-white/[0.1] text-zinc-100 ring-1 ring-white/15'
-                          : 'bg-white/[0.04] text-zinc-400 hover:text-zinc-200'
+                          ? 'bg-[#6D0808] text-[#EEEAD7]'
+                          : 'bg-[#EEEAD7] text-[#2D0000] ring-1 ring-[#757D6F]/35 hover:bg-[#F7F4EA]'
                       }`}
                     >
-                      Pick date & time
+                      Schedule mailing
                     </button>
                   </div>
                   {sendScheduleMode === 'later' && (
                     <DateTimePicker
-                      label="Campaign start"
+                      label="Send starting at"
                       value={campaignStartAt}
                       onChange={setCampaignStartAt}
                       minDate={toDatetimeLocalValue(new Date())}
@@ -1899,7 +1906,13 @@ export default function EmailPage() {
                   disabled={sending || !mailReady}
                   onClick={handleStartCampaign}
                 >
-                  {sending ? 'Starting…' : 'Start campaign'}
+                  {sending
+                    ? sendScheduleMode === 'later'
+                      ? 'Scheduling…'
+                      : 'Starting…'
+                    : sendScheduleMode === 'later'
+                      ? 'Schedule mailing'
+                      : 'Start campaign'}
                 </button>
                 {!mailReady && (
                   <Link to="/api-config" className="btn-secondary px-3 py-2 text-xs">

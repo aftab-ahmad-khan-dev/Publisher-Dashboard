@@ -37,11 +37,84 @@ async function inspectToken(meta, token) {
   }
 }
 
+/**
+ * Exchange a short-lived Graph Explorer token for a long-lived Page token.
+ * User tokens → long-lived user → /me/accounts page token (does not expire).
+ * Page tokens → fb_exchange_token when Meta allows it.
+ * Returns { pageToken, exchanged, note } or null if exchange isn't possible.
+ */
+export async function exchangeMetaPageToken(meta) {
+  const appId = meta.appId?.trim()
+  const appSecret = meta.appSecret?.trim()
+  const input = meta.pageToken?.trim()
+  if (!appId || !appSecret || !input) return null
+
+  const exchangeUrl =
+    `https://graph.facebook.com/v21.0/oauth/access_token` +
+    `?grant_type=fb_exchange_token` +
+    `&client_id=${encodeURIComponent(appId)}` +
+    `&client_secret=${encodeURIComponent(appSecret)}` +
+    `&fb_exchange_token=${encodeURIComponent(input)}`
+
+  let longLived = input
+  let exchanged = false
+  try {
+    const res = await fetch(exchangeUrl)
+    const data = await res.json().catch(() => ({}))
+    if (res.ok && data.access_token) {
+      longLived = data.access_token
+      exchanged = true
+    }
+  } catch {
+    /* keep original token */
+  }
+
+  const info = await inspectToken(meta, longLived)
+  if (info?.type === 'USER' || (!info?.type && exchanged)) {
+    try {
+      const accountsRes = await fetch(
+        `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token&access_token=${encodeURIComponent(longLived)}`,
+      )
+      const accounts = await accountsRes.json().catch(() => ({}))
+      const pages = Array.isArray(accounts.data) ? accounts.data : []
+      const preferred =
+        pages.find((p) => p.access_token && String(p.id) === String(meta.pageId || '')) ||
+        pages.find((p) => p.access_token)
+      if (preferred?.access_token) {
+        return {
+          pageToken: preferred.access_token,
+          exchanged: true,
+          note: `Long-lived Page token for ${preferred.name || preferred.id}`,
+        }
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+
+  if (exchanged && longLived !== input) {
+    return {
+      pageToken: longLived,
+      exchanged: true,
+      note: 'Exchanged short-lived token for a longer-lived token',
+    }
+  }
+  return null
+}
+
 export async function testMetaConnection(meta) {
-  const token = meta.pageToken?.trim()
+  let token = meta.pageToken?.trim()
   if (!token) {
     return { ok: false, error: 'Page access token is required.' }
   }
+
+  let exchangeNote = ''
+  const exchanged = await exchangeMetaPageToken(meta)
+  if (exchanged?.pageToken) {
+    token = exchanged.pageToken
+    exchangeNote = exchanged.note ? ` ${exchanged.note}.` : ''
+  }
+
   const url = `https://graph.facebook.com/v21.0/me?fields=id,name&access_token=${encodeURIComponent(token)}`
   const res = await fetch(url)
   const data = await res.json().catch(() => ({}))
@@ -51,7 +124,7 @@ export async function testMetaConnection(meta) {
 
   // A valid /me response is not enough: a User token also answers here, but it
   // cannot publish a live Page post (the post lands as draft/scheduled instead).
-  const info = await inspectToken(meta, token)
+  const info = await inspectToken({ ...meta, pageToken: token }, token)
   if (info) {
     if (info.type && info.type !== 'PAGE') {
       return {
@@ -69,7 +142,11 @@ export async function testMetaConnection(meta) {
     }
   }
 
-  return { ok: true, message: `Meta connected as ${data.name || data.id}` }
+  return {
+    ok: true,
+    message: `Meta connected as ${data.name || data.id}.${exchangeNote}`,
+    pageToken: token !== meta.pageToken?.trim() ? token : undefined,
+  }
 }
 
 function dataUrlToBlob(dataUrl) {

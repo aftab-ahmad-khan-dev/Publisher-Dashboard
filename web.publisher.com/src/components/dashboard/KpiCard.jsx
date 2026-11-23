@@ -7,7 +7,7 @@ function TrendBadge({ value }) {
   return (
     <span
       className={`text-[11px] font-medium tabular-nums ${
-        up ? 'text-emerald-400' : 'text-rose-400'
+        up ? 'text-emerald-600' : 'text-rose-500'
       }`}
     >
       {up ? '+' : ''}
@@ -31,14 +31,14 @@ export default function KpiCard({
 }) {
   const stroke =
     tone === 'rose'
-      ? '#f87171'
+      ? '#86efac'
       : tone === 'sky'
-        ? '#7dd3fc'
+        ? '#22c55e'
         : tone === 'emerald'
-          ? '#34d399'
+          ? '#16a34a'
           : featured
-            ? '#fafafa'
-            : '#a1a1aa'
+            ? '#166534'
+            : '#4ade80'
 
   const chartData = series.map((point, i) => ({
     i,

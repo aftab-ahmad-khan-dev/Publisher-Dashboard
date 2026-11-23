@@ -8,24 +8,24 @@ export default function LinkMixBars({ links = {} }) {
   const empty = !links.total
 
   return (
-    <section className="saas-content-card">
-      <h3 className="saas-section-title">Click destinations</h3>
-      <p className="saas-section-desc mb-4">Where leads go after open</p>
+    <section className="orbit-panel h-full">
+      <h3 className="orbit-panel__title">Click destinations</h3>
+      <p className="orbit-panel__desc mb-4">Where leads go after they open</p>
       {empty ? (
-        <p className="py-8 text-center text-xs text-zinc-500">No tracked clicks yet.</p>
+        <p className="py-8 text-center text-xs text-[#5a6258]">No tracked clicks yet.</p>
       ) : (
         <ul className="space-y-3.5">
           {rows.map((row) => (
             <li key={row.label}>
               <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
-                <span className="font-medium text-zinc-300">{row.label}</span>
-                <span className="tabular-nums text-zinc-500">
+                <span className="font-semibold text-[#2D0000]">{row.label}</span>
+                <span className="tabular-nums text-[#5a6258]">
                   {row.value.toLocaleString()} · {row.pct}%
                 </span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+              <div className="orbit-platform-track">
                 <div
-                  className="h-full rounded-full bg-zinc-300"
+                  className="orbit-platform-fill"
                   style={{ width: `${Math.max(4, (row.value / max) * 100)}%` }}
                 />
               </div>

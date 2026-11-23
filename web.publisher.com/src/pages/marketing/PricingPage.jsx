@@ -77,11 +77,11 @@ export default function PricingPage() {
   return (
     <section className="mx-auto max-w-5xl px-6 py-24">
       <div className="text-center">
-        <p className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">Pricing</p>
-        <h1 className="font-display mx-auto mt-3 max-w-2xl text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#6D0808]">Pricing</p>
+        <h1 className="font-display mx-auto mt-3 max-w-2xl text-4xl font-extrabold tracking-tight text-[#2D0000] sm:text-5xl">
           Plans that scale with how you ship.
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-base text-slate-400">
+        <p className="mx-auto mt-4 max-w-xl text-base text-[#5a6258]">
           Starter $19.99 · Growth $39.99 · Pro $49.99. Pay by JazzCash, UBL, NayaPay, or Meezan —
           send your receipt on WhatsApp {WHATSAPP_DISPLAY} and we activate your plan.
         </p>
@@ -93,24 +93,24 @@ export default function PricingPage() {
             key={t.name}
             className={`relative flex flex-col rounded-3xl border p-8 ${
               t.highlight
-                ? 'border-indigo-500/40 bg-gradient-to-b from-indigo-600/10 to-transparent'
-                : 'border-white/[0.08] bg-white/[0.02]'
+                ? 'border-[#6D0808]/40 bg-gradient-to-b from-[#6D0808]/10 to-transparent'
+                : 'border-[#757D6F]/25 bg-[#F7F4EA]'
             }`}
           >
             {t.highlight && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#6D0808] to-[#520606] px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-[#EEEAD7]">
                 Most popular
               </span>
             )}
-            <h2 className="font-display text-lg font-bold text-white">{t.name}</h2>
-            <p className="mt-1 text-sm text-slate-400">{t.blurb}</p>
+            <h2 className="font-display text-lg font-bold text-[#2D0000]">{t.name}</h2>
+            <p className="mt-1 text-sm text-[#5a6258]">{t.blurb}</p>
             <div className="mt-5 flex items-end gap-1.5">
-              <span className="font-display text-4xl font-extrabold text-white">{t.price}</span>
-              <span className="pb-1 text-xs text-slate-500">/ {t.cadence}</span>
+              <span className="font-display text-4xl font-extrabold text-[#2D0000]">{t.price}</span>
+              <span className="pb-1 text-xs text-[#5a6258]">/ {t.cadence}</span>
             </div>
             <ul className="mt-6 flex-1 space-y-3">
               {t.features.map((f) => (
-                <li key={f} className="flex items-start gap-2.5 text-sm text-slate-300">
+                <li key={f} className="flex items-start gap-2.5 text-sm text-[#4a3a3a]">
                   <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M20 6 9 17l-5-5" />
@@ -126,15 +126,15 @@ export default function PricingPage() {
               rel="noreferrer"
               className={`mt-8 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-display text-sm font-bold transition ${
                 t.highlight
-                  ? 'bg-[#25D366] text-white hover:brightness-105'
-                  : 'border border-white/15 text-white hover:bg-white/5'
+                  ? 'bg-[#25D366] text-[#2D0000] hover:brightness-105'
+                  : 'border border-[#757D6F]/30 text-[#2D0000] hover:bg-[#EEEAD7]'
               }`}
             >
               <WhatsAppIcon /> {t.cta}
             </a>
             <Link
               to={`/sign-up?plan=${t.id}`}
-              className="mt-3 text-center text-xs font-medium text-slate-500 hover:text-slate-300"
+              className="mt-3 text-center text-xs font-medium text-[#5a6258] hover:text-[#4a3a3a]"
             >
               Or create an account first
             </Link>
@@ -144,10 +144,10 @@ export default function PricingPage() {
 
       <div id="pay" className="mt-16">
         <div className="text-center">
-          <h2 className="font-display text-2xl font-extrabold text-white sm:text-3xl">
+          <h2 className="font-display text-2xl font-extrabold text-[#2D0000] sm:text-3xl">
             Pay by bank transfer
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-slate-400">
+          <p className="mx-auto mt-3 max-w-xl text-sm text-[#5a6258]">
             Transfer, then send your receipt on WhatsApp {WHATSAPP_DISPLAY}. We activate your plan —
             no card required.
           </p>
@@ -155,7 +155,7 @@ export default function PricingPage() {
             href={whatsappUrlForPlan('Growth')}
             target="_blank"
             rel="noreferrer"
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(37,211,102,0.35)] transition hover:brightness-105"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-semibold text-[#2D0000] shadow-[0_10px_28px_rgba(37,211,102,0.35)] transition hover:brightness-105"
           >
             <WhatsAppIcon /> WhatsApp {WHATSAPP_DISPLAY}
           </a>
@@ -165,24 +165,24 @@ export default function PricingPage() {
           {BANK_ACCOUNTS.map((acct) => (
             <div
               key={acct.id}
-              className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4"
+              className="rounded-2xl border border-[#757D6F]/25 bg-[#F7F4EA] p-4"
             >
-              <p className="text-sm font-semibold text-white">{acct.label}</p>
-              <p className="mt-1 text-xs text-slate-500">Name: {acct.name}</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm font-semibold text-[#2D0000]">{acct.label}</p>
+              <p className="mt-1 text-xs text-[#5a6258]">Name: {acct.name}</p>
+              <p className="text-xs text-[#5a6258]">
                 {acct.iban ? 'Account' : 'Number'}: {acct.number}
               </p>
               {acct.iban && (
-                <p className="break-all text-[11px] text-slate-500">IBAN: {acct.iban}</p>
+                <p className="break-all text-[11px] text-[#5a6258]">IBAN: {acct.iban}</p>
               )}
               {acct.branch && (
-                <p className="text-[11px] text-slate-500">Branch: {acct.branch}</p>
+                <p className="text-[11px] text-[#5a6258]">Branch: {acct.branch}</p>
               )}
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => copyText(acct.id, acct.number)}
-                  className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] font-medium text-slate-300 hover:bg-white/5"
+                  className="rounded-lg border border-[#757D6F]/25 px-2.5 py-1.5 text-[11px] font-medium text-[#4a3a3a] hover:bg-[#EEEAD7]"
                 >
                   {copied === acct.id ? 'Copied' : 'Copy number'}
                 </button>
@@ -190,7 +190,7 @@ export default function PricingPage() {
                   <button
                     type="button"
                     onClick={() => copyText(`${acct.id}-iban`, acct.iban)}
-                    className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] font-medium text-slate-300 hover:bg-white/5"
+                    className="rounded-lg border border-[#757D6F]/25 px-2.5 py-1.5 text-[11px] font-medium text-[#4a3a3a] hover:bg-[#EEEAD7]"
                   >
                     {copied === `${acct.id}-iban` ? 'Copied' : 'Copy IBAN'}
                   </button>
@@ -201,16 +201,16 @@ export default function PricingPage() {
         </div>
       </div>
 
-      <div className="mt-10 rounded-3xl border border-white/[0.08] bg-white/[0.02] p-8 sm:p-10">
+      <div className="mt-10 rounded-3xl border border-[#757D6F]/25 bg-[#F7F4EA] p-8 sm:p-10">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-amber-300/90">
               Beyond SaaS plans
             </p>
-            <h2 className="font-display mt-2 text-2xl font-extrabold text-white sm:text-3xl">
+            <h2 className="font-display mt-2 text-2xl font-extrabold text-[#2D0000] sm:text-3xl">
               Custom · Enterprise · CRM · SaaS builds
             </h2>
-            <p className="mt-3 text-sm leading-relaxed text-slate-400">
+            <p className="mt-3 text-sm leading-relaxed text-[#5a6258]">
               Need a tailored product, internal CRM, multi-tenant SaaS, or enterprise delivery —
               not just Publisher Suite seats? We design and ship custom software scoped to your niche.
             </p>
@@ -218,7 +218,7 @@ export default function PricingPage() {
           <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
             <Link
               to="/contact"
-              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-6 py-3 font-display text-sm font-bold text-white hover:opacity-90"
+              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#6D0808] to-[#520606] px-6 py-3 font-display text-sm font-bold text-[#EEEAD7] hover:opacity-90"
             >
               Talk enterprise / custom
             </Link>
@@ -226,7 +226,7 @@ export default function PricingPage() {
               href="https://aftabahmadkhan.online"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white hover:bg-white/5"
+              className="inline-flex items-center justify-center rounded-full border border-[#757D6F]/30 px-6 py-3 text-sm font-semibold text-[#2D0000] hover:bg-[#EEEAD7]"
             >
               View portfolio
             </a>

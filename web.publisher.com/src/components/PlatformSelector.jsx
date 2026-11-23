@@ -25,11 +25,11 @@ export default function PlatformSelector({ platforms, togglePlatform }) {
             >
               <PlatformIcon platform={key} size="md" className="!ring-0" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-white">{meta.label}</p>
-                <p className="truncate text-[11px] text-slate-500">
+                <p className="truncate text-sm font-semibold text-[#2D0000]">{meta.label}</p>
+                <p className="truncate text-[11px] text-[#5a6258]">
                   {meta.suite}
                   {meta.supportsPoll ? (
-                    <span className="text-indigo-400/80"> · Polls</span>
+                    <span className="text-[#6D0808]"> · Polls</span>
                   ) : (
                     ''
                   )}
@@ -38,7 +38,7 @@ export default function PlatformSelector({ platforms, togglePlatform }) {
               <ToggleSwitch
                 checked={enabled}
                 onChange={() => togglePlatform(key)}
-                accent={isCommunity ? 'emerald' : 'violet'}
+                accent={isCommunity ? 'sage' : 'maroon'}
                 size="sm"
               />
             </div>

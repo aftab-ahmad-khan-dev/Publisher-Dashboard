@@ -38,16 +38,16 @@ export default function QuoraPreview({ enabled, body, defaultCollapsed = true })
 
 function PreviewShell({ title, collapsed, onToggle, disabled, children }) {
   return (
-    <div className={`rounded-xl border transition ${disabled ? 'border-white/[0.04] opacity-40' : 'border-white/[0.08]'}`}>
+    <div className={`rounded-xl border bg-[#F7F4EA] transition ${disabled ? 'border-[#757D6F]/20 opacity-55' : 'border-[#757D6F]/30'}`}>
       <button
         type="button"
         onClick={onToggle}
         className="flex w-full items-center justify-between px-3 py-2 text-left"
       >
-        <span className="text-xs font-semibold text-white">{title}</span>
-        <span className="text-[10px] text-zinc-500">{collapsed ? 'Show' : 'Hide'}</span>
+        <span className="text-xs font-semibold text-[#2D0000]">{title}</span>
+        <span className="text-[10px] font-medium text-[#5a6258]">{collapsed ? 'Show' : 'Hide'}</span>
       </button>
-      {!collapsed && !disabled && <div className="border-t border-white/[0.06] px-3 pb-3 pt-2">{children}</div>}
+      {!collapsed && !disabled && <div className="border-t border-[#757D6F]/20 px-3 pb-3 pt-2">{children}</div>}
     </div>
   )
 }

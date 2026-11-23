@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-active-overview-header-glyph-stays-cream-on-maro": {
+      "declaredAt": 1795439591135,
+      "id": "flow:drive-active-overview-header-glyph-stays-cream-on-maro",
+      "state": "declared",
+      "statement": "Active Overview header glyph stays cream on maroon while hovered",
+      "status": "proposed",
+      "subject": "drive-active-overview-header-glyph-stays",
+      "surface": {
+        "flow": "drive-active-overview-header-glyph-stays-cream-on-maro"
+      },
+      "updatedAt": 1795439591867
+    }
+  },
+  "subject": "drive-active-overview-header-glyph-stays",
+  "version": 1
+}

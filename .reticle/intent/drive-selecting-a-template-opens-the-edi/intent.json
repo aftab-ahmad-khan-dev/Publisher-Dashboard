@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-selecting-a-template-opens-the-edit-form": {
+      "declaredAt": 1795440903618,
+      "id": "flow:drive-selecting-a-template-opens-the-edit-form",
+      "state": "declared",
+      "statement": "Selecting a template opens the edit form",
+      "status": "proposed",
+      "subject": "drive-selecting-a-template-opens-the-edi",
+      "surface": {
+        "flow": "drive-selecting-a-template-opens-the-edit-form"
+      },
+      "updatedAt": 1795440903652
+    }
+  },
+  "subject": "drive-selecting-a-template-opens-the-edi",
+  "version": 1
+}

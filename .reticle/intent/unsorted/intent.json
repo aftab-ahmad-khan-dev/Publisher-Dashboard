@@ -1,0 +1,386 @@
+{
+  "intents": {
+    "inline:active-overview-header-glyph-stays-cream-on-maro-3ccb5065": {
+      "binding": {
+        "kind": "element",
+        "query": {
+          "name": "Overview",
+          "role": "link"
+        }
+      },
+      "declaredAt": 1795439533810,
+      "id": "inline:active-overview-header-glyph-stays-cream-on-maro-3ccb5065",
+      "state": "bound",
+      "statement": "Active Overview header glyph stays cream on maroon while hovered",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795439597357
+    },
+    "inline:bulk-is-a-primary-header-link-outside-more-accou-16fc0f82": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "name": "Bulk",
+              "role": "link"
+            }
+          },
+          {
+            "contains": "OverviewComposeMailSalesBulkDraftsScheduledCalendarMore",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Main navigation",
+              "role": "navigation"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795441352165,
+      "id": "inline:bulk-is-a-primary-header-link-outside-more-accou-16fc0f82",
+      "state": "bound",
+      "statement": "Bulk is a primary header link outside More; account control is a short avatar chip",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795441352175
+    },
+    "inline:compose-route-loads-after-header-nav-click-23a9f395": {
+      "binding": {
+        "contains": "/compose",
+        "kind": "route"
+      },
+      "declaredAt": 1795442124022,
+      "id": "inline:compose-route-loads-after-header-nav-click-23a9f395",
+      "state": "bound",
+      "statement": "Compose route loads after header nav click",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795442124027
+    },
+    "inline:dashboard-chrome-has-in-panel-header-with-search-9e21d88e": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "role": "search"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Main navigation",
+              "role": "navigation"
+            }
+          },
+          {
+            "contains": "Live",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795437581376,
+      "id": "inline:dashboard-chrome-has-in-panel-header-with-search-9e21d88e",
+      "state": "bound",
+      "statement": "Dashboard chrome has in-panel header with search and icon rail navigation",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795437581379
+    },
+    "inline:email-campaigns-page-shows-schedule-mailing-and-cb34c1b2": {
+      "binding": {
+        "kind": "anyOf",
+        "predicates": [
+          {
+            "contains": "Schedule mailing",
+            "kind": "text"
+          },
+          {
+            "contains": "Start sending",
+            "kind": "text"
+          },
+          {
+            "contains": "When to send",
+            "kind": "text"
+          },
+          {
+            "contains": "Campaigns",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795438879025,
+      "id": "inline:email-campaigns-page-shows-schedule-mailing-and-cb34c1b2",
+      "state": "bound",
+      "statement": "Email campaigns page shows schedule mailing and campaign UI",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795438879030
+    },
+    "inline:hovering-active-overview-header-nav-keeps-icon-a-44c2ff1a": {
+      "binding": {
+        "contains": "Overview",
+        "kind": "text"
+      },
+      "declaredAt": 1795439413064,
+      "id": "inline:hovering-active-overview-header-nav-keeps-icon-a-44c2ff1a",
+      "state": "bound",
+      "statement": "Hovering active Overview header nav keeps icon and label visible on maroon",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795439413073
+    },
+    "inline:landing-cta-is-named-get-started-free-with-maroo-05b946b5": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Publisher Suite",
+            "kind": "text"
+          },
+          {
+            "contains": "Publish everywhere",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Get started free",
+              "role": "link"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795439883831,
+      "id": "inline:landing-cta-is-named-get-started-free-with-maroo-05b946b5",
+      "provenBy": {
+        "at": 1795439884012,
+        "grade": "presence",
+        "runId": "drive-52a50c87db0ec570",
+        "verdictId": "reticle_assert:1795439884012"
+      },
+      "state": "proved",
+      "statement": "Landing CTA is named Get started free with maroon cream theme",
+      "status": "proved",
+      "subject": "unsorted",
+      "updatedAt": 1795439884095
+    },
+    "inline:landing-shows-maroon-cream-brand-theme-with-publ-d3200854": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Publisher Suite",
+            "kind": "text"
+          },
+          {
+            "contains": "Publish everywhere",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Get started free",
+              "role": "link"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795439379352,
+      "id": "inline:landing-shows-maroon-cream-brand-theme-with-publ-d3200854",
+      "state": "bound",
+      "statement": "Landing shows maroon cream brand theme with Publisher Suite",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795439379375
+    },
+    "inline:landing-uses-maroon-cream-brand-theme-with-publi-ab847df0": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Publisher Suite",
+            "kind": "text"
+          },
+          {
+            "contains": "Publish everywhere",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Start with a plan",
+              "role": "link"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795439616178,
+      "id": "inline:landing-uses-maroon-cream-brand-theme-with-publi-ab847df0",
+      "provenBy": {
+        "at": 1795439616332,
+        "grade": "presence",
+        "runId": "drive-df0c9a7fdd720b50",
+        "verdictId": "reticle_assert:1795439616332"
+      },
+      "state": "proved",
+      "statement": "Landing uses maroon cream brand theme with Publisher Suite hero",
+      "status": "proved",
+      "subject": "unsorted",
+      "updatedAt": 1795439616381
+    },
+    "inline:more-opens-a-dropdown-with-integrations-billing-eb887adb": {
+      "binding": {
+        "contains": "Integrations",
+        "kind": "text"
+      },
+      "declaredAt": 1795440477811,
+      "id": "inline:more-opens-a-dropdown-with-integrations-billing-eb887adb",
+      "state": "bound",
+      "statement": "More opens a dropdown with Integrations Billing and Setup Guide",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795440477818
+    },
+    "inline:navigating-to-compose-crossfades-smoothly-into-t-8209fdc3": {
+      "binding": {
+        "kind": "anyOf",
+        "predicates": [
+          {
+            "contains": "/compose",
+            "kind": "route"
+          },
+          {
+            "contains": "Compose",
+            "kind": "text"
+          },
+          {
+            "contains": "Platforms",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795442109751,
+      "id": "inline:navigating-to-compose-crossfades-smoothly-into-t-8209fdc3",
+      "state": "bound",
+      "statement": "Navigating to Compose crossfades smoothly into the compose view",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795442109756
+    },
+    "inline:new-campaign-cta-opens-email-campaigns-tab-67c9fedd": {
+      "binding": {
+        "contains": "/email",
+        "kind": "route"
+      },
+      "declaredAt": 1795438873811,
+      "id": "inline:new-campaign-cta-opens-email-campaigns-tab-67c9fedd",
+      "state": "bound",
+      "statement": "New campaign CTA opens email campaigns tab",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795438873821
+    },
+    "inline:overview-shell-has-labeled-main-navigation-searc-b99a5ff1": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Search here",
+            "kind": "text"
+          },
+          {
+            "contains": "Live",
+            "kind": "text"
+          },
+          {
+            "contains": "Open performance",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Main navigation",
+              "role": "navigation"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "search"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Compose",
+              "role": "link"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795439794405,
+      "id": "inline:overview-shell-has-labeled-main-navigation-searc-b99a5ff1",
+      "state": "bound",
+      "statement": "Overview shell has labeled Main navigation Search here Live and Open performance",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795439860010
+    },
+    "inline:overview-uses-a-live-open-rate-gauge-and-arcedia-c8398d53": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Live",
+            "kind": "text"
+          },
+          {
+            "contains": "Open performance",
+            "kind": "text"
+          },
+          {
+            "contains": "Search here",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "navigation"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795436535804,
+      "id": "inline:overview-uses-a-live-open-rate-gauge-and-arcedia-c8398d53",
+      "state": "bound",
+      "statement": "Overview uses a live open-rate gauge and Arcedia icon-rail sidebar with lime active state",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795436535807
+    },
+    "inline:schedule-mailing-toggles-primary-cta-to-schedule-a93e3e55": {
+      "binding": {
+        "kind": "element",
+        "query": {
+          "name": "Schedule mailing",
+          "role": "button"
+        }
+      },
+      "declaredAt": 1795438887560,
+      "id": "inline:schedule-mailing-toggles-primary-cta-to-schedule-a93e3e55",
+      "state": "bound",
+      "statement": "Schedule mailing toggles primary CTA to Schedule mailing",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795438887563
+    }
+  },
+  "subject": "unsorted",
+  "version": 1
+}

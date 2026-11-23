@@ -1,0 +1,233 @@
+{
+  "entries": [
+    {
+      "id": "inline:compose-exposes-publish-now-and-schedule-actions-416c526e",
+      "statement": "Compose exposes Publish Now and Schedule actions",
+      "status": "proved",
+      "subject": "compose"
+    },
+    {
+      "id": "inline:compose-page-finishes-transition-and-shows-platf-477e3f2f",
+      "statement": "Compose page finishes transition and shows platforms or editor",
+      "status": "proved",
+      "subject": "compose"
+    },
+    {
+      "id": "inline:compose-platform-labels-and-live-preview-headers-a008801f",
+      "statement": "Compose platform labels and live preview headers are readable ink on cr…",
+      "status": "proved",
+      "subject": "compose"
+    },
+    {
+      "id": "inline:compose-platforms-show-brand-platformicon-tiles-6599ccaa",
+      "statement": "Compose platforms show brand PlatformIcon tiles with Instagram Facebook…",
+      "status": "proved",
+      "subject": "compose"
+    },
+    {
+      "id": "flow:drive-active-overview-header-glyph-stays-cream-on-maro",
+      "statement": "Active Overview header glyph stays cream on maroon while hovered",
+      "status": "proposed",
+      "subject": "drive-active-overview-header-glyph-stays"
+    },
+    {
+      "id": "flow:drive-more-opens-a-dropdown-with-integrations-billing",
+      "statement": "More opens a dropdown with Integrations Billing and Setup Guide",
+      "status": "proposed",
+      "subject": "drive-more-opens-a-dropdown-with-integra"
+    },
+    {
+      "id": "flow:drive-new-campaign-cta-opens-email-campaigns-tab",
+      "statement": "New campaign CTA opens email campaigns tab",
+      "status": "proposed",
+      "subject": "drive-new-campaign-cta-opens-email-campa"
+    },
+    {
+      "id": "flow:drive-schedule-mailing-reveals-start-datetime-picker-a",
+      "statement": "Schedule mailing reveals start datetime picker and renames primary CTA",
+      "status": "proposed",
+      "subject": "drive-schedule-mailing-reveals-start-dat"
+    },
+    {
+      "id": "flow:drive-selecting-a-template-opens-the-edit-form",
+      "statement": "Selecting a template opens the edit form",
+      "status": "proposed",
+      "subject": "drive-selecting-a-template-opens-the-edi"
+    },
+    {
+      "id": "inline:bulk-is-outside-more-in-primary-nav-short-user-a-34f183a2",
+      "statement": "Bulk is outside More in primary nav; short user account chip is present",
+      "status": "proved",
+      "subject": "email"
+    },
+    {
+      "id": "inline:bulk-stays-in-primary-header-nav-outside-more-sh-8176f445",
+      "statement": "Bulk stays in primary header nav outside More; short account control vi…",
+      "status": "proved",
+      "subject": "email"
+    },
+    {
+      "id": "inline:header-shows-publisher-suite-templates-ui-is-vis-894541ee",
+      "statement": "Header shows Publisher Suite; templates UI is visible in daylight shell",
+      "status": "proved",
+      "subject": "email"
+    },
+    {
+      "id": "inline:mailbox-uses-cream-light-theme-with-visible-fold-4dad12c9",
+      "statement": "Mailbox uses cream light theme with visible folder labels and Inbox tab",
+      "status": "proved",
+      "subject": "email"
+    },
+    {
+      "id": "inline:schedule-mailing-reveals-start-datetime-picker-a-0ed844bd",
+      "statement": "Schedule mailing reveals start datetime picker and renames primary CTA",
+      "status": "proved",
+      "subject": "email"
+    },
+    {
+      "id": "inline:selecting-a-template-opens-the-edit-form-dcac5822",
+      "statement": "Selecting a template opens the edit form",
+      "status": "proved",
+      "subject": "email"
+    },
+    {
+      "id": "inline:templates-tab-remains-stable-after-theme-polish-f45feb9a",
+      "statement": "Templates tab remains stable after theme polish — list visible without…",
+      "status": "proved",
+      "subject": "email"
+    },
+    {
+      "id": "inline:templates-tab-stays-stable-list-visible-no-loadi-fbf8af69",
+      "statement": "Templates tab stays stable — list visible, no Loading flicker",
+      "status": "proved",
+      "subject": "email"
+    },
+    {
+      "id": "inline:more-dropdown-shows-integrations-billing-bulk-up-273bed59",
+      "statement": "More dropdown shows Integrations Billing Bulk Upload Setup Guide menu i…",
+      "status": "proved",
+      "subject": "overview"
+    },
+    {
+      "id": "inline:overview-metric-labels-and-campaign-cta-remain-r-f21b6f55",
+      "statement": "Overview metric labels and campaign CTA remain readable on cream shell",
+      "status": "proved",
+      "subject": "overview"
+    },
+    {
+      "id": "inline:overview-shows-arcedia-style-lime-metric-card-ha-67406329",
+      "statement": "Overview shows Arcedia-style lime metric card, hatched bar chart, and s…",
+      "status": "proved",
+      "subject": "overview"
+    },
+    {
+      "id": "inline:overview-uses-a-live-open-rate-gauge-and-labeled-8a287b34",
+      "statement": "Overview uses a live open-rate gauge and labeled header Main navigation…",
+      "status": "proved",
+      "subject": "overview"
+    },
+    {
+      "id": "inline:overview-uses-maroon-cream-theme-with-live-insig-17f7b394",
+      "statement": "Overview uses maroon cream theme with live insight strip and open perfo…",
+      "status": "proved",
+      "subject": "overview"
+    },
+    {
+      "id": "inline:shell-shows-icon-rail-with-lime-active-state-liv-283154e7",
+      "statement": "Shell shows icon rail with lime active state, live open-rate gauge, and…",
+      "status": "proved",
+      "subject": "overview"
+    },
+    {
+      "id": "inline:active-overview-header-glyph-stays-cream-on-maro-3ccb5065",
+      "statement": "Active Overview header glyph stays cream on maroon while hovered",
+      "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:bulk-is-a-primary-header-link-outside-more-accou-16fc0f82",
+      "statement": "Bulk is a primary header link outside More; account control is a short…",
+      "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:compose-route-loads-after-header-nav-click-23a9f395",
+      "statement": "Compose route loads after header nav click",
+      "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:dashboard-chrome-has-in-panel-header-with-search-9e21d88e",
+      "statement": "Dashboard chrome has in-panel header with search and icon rail navigati…",
+      "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:email-campaigns-page-shows-schedule-mailing-and-cb34c1b2",
+      "statement": "Email campaigns page shows schedule mailing and campaign UI",
+      "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:hovering-active-overview-header-nav-keeps-icon-a-44c2ff1a",
+      "statement": "Hovering active Overview header nav keeps icon and label visible on mar…",
+      "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:landing-cta-is-named-get-started-free-with-maroo-05b946b5",
+      "statement": "Landing CTA is named Get started free with maroon cream theme",
+      "status": "proved",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:landing-shows-maroon-cream-brand-theme-with-publ-d3200854",
+      "statement": "Landing shows maroon cream brand theme with Publisher Suite",
+      "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:landing-uses-maroon-cream-brand-theme-with-publi-ab847df0",
+      "statement": "Landing uses maroon cream brand theme with Publisher Suite hero",
+      "status": "proved",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:more-opens-a-dropdown-with-integrations-billing-eb887adb",
+      "statement": "More opens a dropdown with Integrations Billing and Setup Guide",
+      "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:navigating-to-compose-crossfades-smoothly-into-t-8209fdc3",
+      "statement": "Navigating to Compose crossfades smoothly into the compose view",
+      "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:new-campaign-cta-opens-email-campaigns-tab-67c9fedd",
+      "statement": "New campaign CTA opens email campaigns tab",
+      "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:overview-shell-has-labeled-main-navigation-searc-b99a5ff1",
+      "statement": "Overview shell has labeled Main navigation Search here Live and Open pe…",
+      "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:overview-uses-a-live-open-rate-gauge-and-arcedia-c8398d53",
+      "statement": "Overview uses a live open-rate gauge and Arcedia icon-rail sidebar with…",
+      "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:schedule-mailing-toggles-primary-cta-to-schedule-a93e3e55",
+      "statement": "Schedule mailing toggles primary CTA to Schedule mailing",
+      "status": "proposed",
+      "subject": "unsorted"
+    }
+  ],
+  "version": 1
+}

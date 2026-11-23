@@ -1,0 +1,270 @@
+{
+  "intents": {
+    "inline:more-dropdown-shows-integrations-billing-bulk-up-273bed59": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "name": "Integrations",
+              "role": "menuitem"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Billing",
+              "role": "menuitem"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Bulk Upload",
+              "role": "menuitem"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Overview",
+              "role": "link"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795440487590,
+      "id": "inline:more-dropdown-shows-integrations-billing-bulk-up-273bed59",
+      "provenBy": {
+        "at": 1795440487718,
+        "grade": "presence",
+        "runId": "drive-8bb6157a19af8fcd",
+        "verdictId": "reticle_assert:1795440487718"
+      },
+      "state": "proved",
+      "statement": "More dropdown shows Integrations Billing Bulk Upload Setup Guide menu items",
+      "status": "proved",
+      "subject": "overview",
+      "surface": {
+        "route": "/overview"
+      },
+      "updatedAt": 1795440487784
+    },
+    "inline:overview-metric-labels-and-campaign-cta-remain-r-f21b6f55": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Overview",
+            "kind": "text"
+          },
+          {
+            "contains": "Mail sent",
+            "kind": "text"
+          },
+          {
+            "contains": "New campaign",
+            "kind": "text"
+          },
+          {
+            "contains": "Platform pulse",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795438690981,
+      "id": "inline:overview-metric-labels-and-campaign-cta-remain-r-f21b6f55",
+      "provenBy": {
+        "at": 1795438691154,
+        "grade": "presence",
+        "runId": "drive-df0c9a7fdd720b50",
+        "verdictId": "reticle_assert:1795438691154"
+      },
+      "state": "proved",
+      "statement": "Overview metric labels and campaign CTA remain readable on cream shell",
+      "status": "proved",
+      "subject": "overview",
+      "surface": {
+        "route": "/overview"
+      },
+      "updatedAt": 1795438691191
+    },
+    "inline:overview-shows-arcedia-style-lime-metric-card-ha-67406329": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Total sent",
+            "kind": "text"
+          },
+          {
+            "contains": "Mail statistics",
+            "kind": "text"
+          },
+          {
+            "contains": "Open performance",
+            "kind": "text"
+          },
+          {
+            "contains": "Follow-up needed",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795436158244,
+      "id": "inline:overview-shows-arcedia-style-lime-metric-card-ha-67406329",
+      "provenBy": {
+        "at": 1795436158398,
+        "grade": "presence",
+        "runId": "drive-df0c9a7fdd720b50",
+        "verdictId": "reticle_assert:1795436158398"
+      },
+      "state": "proved",
+      "statement": "Overview shows Arcedia-style lime metric card, hatched bar chart, and segmented open-performance gauge",
+      "status": "proved",
+      "subject": "overview",
+      "surface": {
+        "route": "/overview"
+      },
+      "updatedAt": 1795436158462
+    },
+    "inline:overview-uses-a-live-open-rate-gauge-and-labeled-8a287b34": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Live",
+            "kind": "text"
+          },
+          {
+            "contains": "Open performance",
+            "kind": "text"
+          },
+          {
+            "contains": "Search here",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Main navigation",
+              "role": "navigation"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "search"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Overview",
+              "role": "link"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795439936670,
+      "id": "inline:overview-uses-a-live-open-rate-gauge-and-labeled-8a287b34",
+      "provenBy": {
+        "at": 1795439978160,
+        "grade": "presence",
+        "runId": "drive-52a50c87db0ec570",
+        "verdictId": "reticle_assert:1795439978160"
+      },
+      "state": "proved",
+      "statement": "Overview uses a live open-rate gauge and labeled header Main navigation with Search here",
+      "status": "proved",
+      "subject": "overview",
+      "surface": {
+        "route": "/overview"
+      },
+      "updatedAt": 1795439978208
+    },
+    "inline:overview-uses-maroon-cream-theme-with-live-insig-17f7b394": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Live",
+            "kind": "text"
+          },
+          {
+            "contains": "Open performance",
+            "kind": "text"
+          },
+          {
+            "contains": "No mail sent yet",
+            "kind": "text"
+          },
+          {
+            "contains": "Meetings ahead",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795437399049,
+      "id": "inline:overview-uses-maroon-cream-theme-with-live-insig-17f7b394",
+      "provenBy": {
+        "at": 1795437399312,
+        "grade": "presence",
+        "runId": "drive-df0c9a7fdd720b50",
+        "verdictId": "reticle_assert:1795437399312"
+      },
+      "state": "proved",
+      "statement": "Overview uses maroon cream theme with live insight strip and open performance gauge",
+      "status": "proved",
+      "subject": "overview",
+      "surface": {
+        "route": "/overview"
+      },
+      "updatedAt": 1795437399405
+    },
+    "inline:shell-shows-icon-rail-with-lime-active-state-liv-283154e7": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Live",
+            "kind": "text"
+          },
+          {
+            "contains": "Realtime",
+            "kind": "text"
+          },
+          {
+            "contains": "Open performance",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "search"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795436584368,
+      "id": "inline:shell-shows-icon-rail-with-lime-active-state-liv-283154e7",
+      "provenBy": {
+        "at": 1795436584470,
+        "grade": "presence",
+        "runId": "drive-df0c9a7fdd720b50",
+        "verdictId": "reticle_assert:1795436584470"
+      },
+      "state": "proved",
+      "statement": "Shell shows icon rail with lime active state, live open-rate gauge, and Search here top bar",
+      "status": "proved",
+      "subject": "overview",
+      "surface": {
+        "route": "/overview"
+      },
+      "updatedAt": 1795436584512
+    }
+  },
+  "subject": "overview",
+  "version": 1
+}

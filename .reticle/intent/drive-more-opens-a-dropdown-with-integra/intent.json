@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-more-opens-a-dropdown-with-integrations-billing": {
+      "declaredAt": 1795440506848,
+      "id": "flow:drive-more-opens-a-dropdown-with-integrations-billing",
+      "state": "declared",
+      "statement": "More opens a dropdown with Integrations Billing and Setup Guide",
+      "status": "proposed",
+      "subject": "drive-more-opens-a-dropdown-with-integra",
+      "surface": {
+        "flow": "drive-more-opens-a-dropdown-with-integrations-billing"
+      },
+      "updatedAt": 1795440506852
+    }
+  },
+  "subject": "drive-more-opens-a-dropdown-with-integra",
+  "version": 1
+}

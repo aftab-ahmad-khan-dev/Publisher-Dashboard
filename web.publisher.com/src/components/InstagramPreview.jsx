@@ -45,7 +45,7 @@ export default function InstagramPreview({
       onToggle={() => setCollapsed((c) => !c)}
     >
       <div className="mx-auto max-w-[280px]">
-        <div className="overflow-hidden rounded-[2rem] border-[3px] border-slate-700 bg-black shadow-2xl">
+        <div className="on-dark overflow-hidden rounded-[2rem] border-[3px] border-slate-700 bg-black shadow-2xl">
           <div className="flex items-center justify-between bg-black px-5 pt-3 pb-1 text-[10px] text-white">
             <span>9:41</span>
             <div className="flex gap-1">
@@ -101,8 +101,8 @@ export default function InstagramPreview({
 function PreviewShell({ title, gradient, collapsed, onToggle, disabled, children }) {
   return (
     <div
-      className={`overflow-hidden rounded-md border border-white/[0.08] bg-[var(--bg-panel)] transition-opacity ${
-        disabled ? 'opacity-40 pointer-events-none' : ''
+      className={`overflow-hidden rounded-md border border-[#757D6F]/30 bg-[#F7F4EA] transition-opacity ${
+        disabled ? 'opacity-55 pointer-events-none' : ''
       }`}
     >
       <button
@@ -114,13 +114,13 @@ function PreviewShell({ title, gradient, collapsed, onToggle, disabled, children
           className={`font-display text-sm font-semibold ${
             gradient
               ? 'bg-gradient-to-r from-[#E1306C] to-[#F77737] bg-clip-text text-transparent'
-              : 'text-white'
+              : 'text-[#2D0000]'
           }`}
         >
           {title}
         </span>
         <svg
-          className={`h-4 w-4 text-slate-400 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+          className={`h-4 w-4 text-[#5a6258] transition-transform ${collapsed ? '' : 'rotate-180'}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -129,7 +129,7 @@ function PreviewShell({ title, gradient, collapsed, onToggle, disabled, children
         </svg>
       </button>
       {!collapsed && !disabled && (
-        <div className="animate-preview-update border-t border-white/5 px-4 pb-4 pt-2">
+        <div className="animate-preview-update border-t border-[#757D6F]/20 px-4 pb-4 pt-2">
           {children}
         </div>
       )}

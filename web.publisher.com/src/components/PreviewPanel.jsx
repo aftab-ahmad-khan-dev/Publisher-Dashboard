@@ -25,9 +25,9 @@ export default function PreviewPanel({ state, compact = false }) {
 
   return (
     <div className={compact ? 'space-y-2' : 'space-y-4'} key={previewKey}>
-      <div className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-        <h2 className="text-sm font-bold text-white">Live Preview</h2>
-        <p className="text-[10px] text-zinc-500">Tap platform to expand</p>
+      <div className="shrink-0 rounded-xl border border-[#757D6F]/30 bg-[#F7F4EA] px-3 py-2">
+        <h2 className="text-sm font-bold text-[#2D0000]">Live Preview</h2>
+        <p className="text-[10px] font-medium text-[#5a6258]">Tap platform to expand</p>
       </div>
 
       <InstagramPreview

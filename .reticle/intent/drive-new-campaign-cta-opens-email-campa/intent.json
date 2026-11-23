@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-new-campaign-cta-opens-email-campaigns-tab": {
+      "declaredAt": 1795438964261,
+      "id": "flow:drive-new-campaign-cta-opens-email-campaigns-tab",
+      "state": "declared",
+      "statement": "New campaign CTA opens email campaigns tab",
+      "status": "proposed",
+      "subject": "drive-new-campaign-cta-opens-email-campa",
+      "surface": {
+        "flow": "drive-new-campaign-cta-opens-email-campaigns-tab"
+      },
+      "updatedAt": 1795438964267
+    }
+  },
+  "subject": "drive-new-campaign-cta-opens-email-campa",
+  "version": 1
+}

@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "name": "drive-active-overview-header-glyph-stays-cream-on-maro",
+  "createdAt": 1795439590699,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "unresolved"
+      },
+      "args": {},
+      "action": "hover",
+      "degraded": true,
+      "expect": {
+        "kind": "settled"
+      },
+      "timeoutMs": 8000,
+      "page": "/overview"
+    }
+  ],
+  "startPath": "/overview",
+  "intent": "Active Overview header glyph stays cream on maroon while hovered",
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/overview"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/overview"
+    }
+  ],
+  "author": {
+    "agent": "Cursor"
+  },
+  "intentId": "flow:drive-active-overview-header-glyph-stays-cream-on-maro"
+}

@@ -56,7 +56,11 @@ export async function apiFetch(path, { method = "GET", body } = {}) {
     if (res.status === 413) {
       throw new Error("Request payload too large (413). Images are sent in smaller batches automatically — retry the schedule.");
     }
-    throw new Error(data.error || data.message || `API error ${res.status}`);
+    const detail = data.error || data.message || data.errors?.[0]?.message;
+    throw new Error(
+      (typeof detail === "string" && detail.trim()) ||
+        `API error ${res.status}`,
+    );
   }
   return data;
 }

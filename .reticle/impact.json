@@ -1,15 +1,15 @@
 {
   "counts": {
-    "calls": 18,
-    "verdicts": 0,
-    "passed": 0,
-    "failed": 0,
-    "unknown": 0,
-    "refusals": 0,
+    "calls": 340,
+    "verdicts": 57,
+    "passed": 37,
+    "failed": 9,
+    "unknown": 11,
+    "refusals": 8,
     "marks": 0,
-    "sessions": 0,
-    "tokensReturned": 2311,
-    "drivingMs": 443
+    "sessions": 7,
+    "tokensReturned": 105403,
+    "drivingMs": 422343
   },
   "days": [
     {
@@ -26,12 +26,27 @@
         "tokensReturned": 2311,
         "drivingMs": 443
       }
+    },
+    {
+      "date": "2026-11-23",
+      "counts": {
+        "calls": 322,
+        "verdicts": 57,
+        "passed": 37,
+        "failed": 9,
+        "unknown": 11,
+        "refusals": 8,
+        "marks": 0,
+        "sessions": 7,
+        "tokensReturned": 103092,
+        "drivingMs": 421900
+      }
     }
   ],
   "records": {
     "longestRunMs": 0,
-    "bestVerdictDay": 0,
-    "bestDefectDay": 0,
+    "bestVerdictDay": 57,
+    "bestDefectDay": 9,
     "streakDays": 1,
     "bestStreakDays": 1
   },
@@ -41,10 +56,47 @@
       "basis": "vs an agent reading the app through screenshots"
     },
     "minutes": {
-      "value": 0,
+      "value": 64.5,
       "basis": "vs checking each consequence by hand, plus one re-prompt cycle per defect caught"
     }
   },
   "since": 1791537336798,
-  "defects": []
+  "defects": [
+    {
+      "at": 1795441357237,
+      "title": "the declared consequence did not hold"
+    },
+    {
+      "at": 1795439807067,
+      "title": "the declared consequence did not hold"
+    },
+    {
+      "at": 1795439806865,
+      "title": "the declared consequence did not hold"
+    },
+    {
+      "at": 1795439379888,
+      "title": "the declared consequence did not hold"
+    },
+    {
+      "at": 1795439379621,
+      "title": "the declared consequence did not hold"
+    },
+    {
+      "at": 1795437581697,
+      "title": "the declared consequence did not hold"
+    },
+    {
+      "at": 1795437581500,
+      "title": "the declared consequence did not hold"
+    },
+    {
+      "at": 1795436536208,
+      "title": "the declared consequence did not hold"
+    },
+    {
+      "at": 1795436536016,
+      "title": "the declared consequence did not hold"
+    }
+  ]
 }

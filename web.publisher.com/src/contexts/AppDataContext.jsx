@@ -213,11 +213,11 @@ export function AppDataProvider({ children }) {
   const [drafts, setDrafts] = useState([])
   const [published, setPublished] = useState([])
   const [apiConfig, setApiConfig] = useState(loadApiConfigLocal)
-  const [subscription, setSubscription] = useState({
-    plan: 'none',
-    status: 'unpaid',
-    isAdmin: false,
-  })
+  const [subscription, setSubscription] = useState(() =>
+    import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
+      ? { plan: 'pro', status: 'active', isAdmin: true }
+      : { plan: 'none', status: 'unpaid', isAdmin: false },
+  )
   const [notifications, setNotifications] = useState(() => loadStoredNotifications())
   const [publishStatus, setPublishStatus] = useState('idle')
   const [uploadProgress, setUploadProgress] = useState(null)

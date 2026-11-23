@@ -45,6 +45,7 @@ import { testGmailConnection } from '../lib/gmailSend.js'
 import { canSendGmail, isSmtpConfigured } from '../lib/platforms.js'
 import { requirePlanFeature } from '../middleware/planGate.js'
 import { broadcastEvent } from '../lib/events.js'
+import { normalizeCampaignTemplateType } from '../lib/campaignTemplateType.js'
 
 const router = Router()
 
@@ -1264,10 +1265,11 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
     const cleanSubject = sanitizePublishedText(
       (subject || templateList?.[0]?.subject || 'Outreach').trim(),
     )
+    const resolvedTemplateType = normalizeCampaignTemplateType(templateType)
     const typeLabel =
-      (templateType || 'custom') === 'product'
+      resolvedTemplateType === 'product'
         ? 'VorksPro'
-        : (templateType || 'custom') === 'outreach'
+        : resolvedTemplateType === 'outreach'
           ? 'Outreach'
           : 'Email'
     const templateName = String(templateList?.[0]?.name || '').trim()
@@ -1324,7 +1326,7 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
       htmlBody: cleanHtmlBody,
       textBody: cleanTextBody,
       templates: cleanTemplates,
-      templateType: templateType || 'custom',
+      templateType: resolvedTemplateType,
       fromEmail:
         config.gmail.fromEmail ||
         process.env.FROM_EMAIL?.trim() ||
@@ -1362,7 +1364,7 @@ router.post('/email/campaigns', requirePlanFeature('email'), async (req, res, ne
           greeting,
           meetingLink: safeBooking,
         }
-        const isProduct = (templateType || 'custom') === 'product'
+        const isProduct = resolvedTemplateType === 'product'
         return {
           workspaceId: req.workspaceId,
           campaignId: campaign._id,

@@ -3,14 +3,27 @@ import { getWorkspaceConfig, saveGmailTokens, saveGmailConfig } from './configSt
 import { logger } from './logger.js'
 import { apiPublicBase, webPublicBase } from './publicUrl.js'
 
-const SCOPES = [
+/**
+ * Default scopes: Gmail send/read + Calendar. Sheets full-edit is opt-in —
+ * lead import uses public export URLs; status write-back to Sheets needs
+ * GMAIL_SHEETS_WRITEBACK=1 (and a Gmail reconnect).
+ */
+const BASE_SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/userinfo.email',
-  'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/calendar.events',
   'https://www.googleapis.com/auth/calendar.readonly',
 ]
+
+const SHEETS_WRITE_SCOPE = 'https://www.googleapis.com/auth/spreadsheets'
+
+function resolveGmailScopes() {
+  const wantSheets = /^(1|true|yes)$/i.test(
+    process.env.GMAIL_SHEETS_WRITEBACK?.trim() || '',
+  )
+  return wantSheets ? [...BASE_SCOPES, SHEETS_WRITE_SCOPE] : BASE_SCOPES
+}
 
 const GMAIL_CALLBACK_PATH = '/api/auth/gmail/callback'
 const OAUTH_STATE_TTL_MS = 15 * 60 * 1000
@@ -170,7 +183,7 @@ export function startGmailAuth(workspaceId) {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: SCOPES.join(' '),
+      scope: resolveGmailScopes().join(' '),
       access_type: 'offline',
       prompt: 'consent',
       state,

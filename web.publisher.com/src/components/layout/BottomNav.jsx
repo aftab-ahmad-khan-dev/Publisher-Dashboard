@@ -23,12 +23,24 @@ const PRIMARY = ['/overview', '/compose', '/email', '/scheduled']
 
 function NavIcon({ icon, count, active }) {
   return (
-    <span className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${active ? 'bg-white/[0.06] text-zinc-200' : ''}`}>
-      <svg className="h-[20px] w-[20px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <span
+      className={`relative flex h-9 w-9 items-center justify-center rounded-full transition ${
+        active
+          ? 'bg-[#6D0808] text-[#EEEAD7] keep-light'
+          : 'text-[#4a3a3a] hover:bg-[#F4F3F0] hover:text-[#2D0000]'
+      }`}
+    >
+      <svg
+        className="h-[18px] w-[18px]"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke={active ? '#EEEAD7' : 'currentColor'}
+        style={active ? { color: '#EEEAD7' } : undefined}
+      >
         {ICONS[icon]}
       </svg>
       {count > 0 && (icon === 'drafts' || icon === 'scheduled') && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-zinc-100 px-1 text-[9px] font-bold text-zinc-950 ring-2 ring-[#0c0d0f]">
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-700 px-1 text-[9px] font-bold text-white ring-2 ring-white">
           {count > 9 ? '9+' : count}
         </span>
       )}
@@ -55,13 +67,15 @@ export default function BottomNav() {
           type="button"
           aria-label="Close menu"
           onClick={() => setMoreOpen(false)}
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-40 bg-[#2D0000]/40 backdrop-blur-sm"
         />
       )}
 
       {moreOpen && (
-        <div className="saas-mobile-sheet fixed inset-x-3 bottom-[4.85rem] z-50 p-2">
-          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">More</p>
+        <div className="saas-mobile-sheet fixed inset-x-3 bottom-[4.85rem] z-50 rounded-md border border-[#757D6F]/30 bg-white p-2">
+          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#5a6258]">
+            More
+          </p>
           <div className="grid grid-cols-2 gap-1.5">
             {overflow.map((item) => (
               <NavLink
@@ -71,8 +85,8 @@ export default function BottomNav() {
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
                     isActive
-                      ? 'bg-white/[0.06] text-white ring-1 ring-white/10'
-                      : 'text-zinc-300 hover:bg-white/[0.04]'
+                      ? 'bg-[#6D0808]/10 text-[#2D0000] ring-1 ring-[#6D0808]/20'
+                      : 'text-[#4a3a3a] hover:bg-[#F4F3F0]'
                   }`
                 }
               >
@@ -81,11 +95,11 @@ export default function BottomNav() {
                 </svg>
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span className="truncate">{item.label}</span>
-                  {item.locked && (
-                    <svg className="h-3 w-3 shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  )}
+                  {item.locked ? (
+                    <span className="rounded bg-emerald-50 px-1 text-[9px] font-bold uppercase text-emerald-700">
+                      Pro
+                    </span>
+                  ) : null}
                 </span>
               </NavLink>
             ))}
@@ -93,7 +107,10 @@ export default function BottomNav() {
         </div>
       )}
 
-      <nav className="saas-bottom-nav fixed inset-x-0 bottom-0 z-50 flex h-[4.35rem] items-stretch justify-around pb-[env(safe-area-inset-bottom)]">
+      <nav
+        className="saas-bottom-nav fixed inset-x-0 bottom-0 z-50 flex h-[4.35rem] items-stretch justify-around border-t border-[#757D6F]/30 bg-white/98 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+        aria-label="Main navigation"
+      >
         {primary.map((item) => (
           <NavLink
             key={item.path}
@@ -101,7 +118,7 @@ export default function BottomNav() {
             onClick={() => setMoreOpen(false)}
             className={({ isActive }) =>
               `flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition ${
-                isActive ? 'text-zinc-200' : 'text-zinc-500'
+                isActive ? 'text-[#2D0000]' : 'text-[#5a6258]'
               }`
             }
           >
@@ -117,15 +134,15 @@ export default function BottomNav() {
           type="button"
           onClick={() => setMoreOpen((o) => !o)}
           className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition ${
-            moreOpen || moreActive ? 'text-zinc-200' : 'text-zinc-500'
+            moreOpen || moreActive ? 'text-[#2D0000]' : 'text-[#5a6258]'
           }`}
         >
           <span
-            className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-              moreOpen || moreActive ? 'bg-zinc-100/15' : ''
+            className={`flex h-9 w-9 items-center justify-center rounded-full ${
+              moreOpen || moreActive ? 'bg-[#6D0808] text-[#EEEAD7]' : ''
             }`}
           >
-            <svg className="h-[20px] w-[20px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+            <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

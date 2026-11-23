@@ -1,0 +1,175 @@
+{
+  "version": 2,
+  "name": "drive-the-address-holds-email-and-the-text-schedule-ma-overview",
+  "createdAt": 1795439015986,
+  "steps": [
+    {
+      "tool": "reticle_act_sequence",
+      "anchor": {
+        "kind": "role",
+        "role": "link",
+        "name": "New campaign"
+      },
+      "steps": [
+        {
+          "tool": "reticle_act",
+          "anchor": {
+            "kind": "role",
+            "role": "link",
+            "name": "New campaign"
+          },
+          "args": {},
+          "action": "click",
+          "expect": {
+            "kind": "allOf",
+            "predicates": [
+              {
+                "kind": "route",
+                "contains": "/email"
+              },
+              {
+                "kind": "text",
+                "contains": "Schedule mailing"
+              }
+            ]
+          }
+        },
+        {
+          "tool": "reticle_act",
+          "anchor": {
+            "kind": "role",
+            "role": "button",
+            "name": "Schedule mailing"
+          },
+          "args": {},
+          "action": "click",
+          "expect": {
+            "kind": "element",
+            "query": {
+              "role": "button",
+              "name": "Schedule mailing"
+            }
+          }
+        },
+        {
+          "tool": "reticle_act",
+          "anchor": {
+            "kind": "role",
+            "role": "link",
+            "name": "Fix mail setup"
+          },
+          "args": {},
+          "action": "click",
+          "expect": {
+            "kind": "route",
+            "contains": "/api-config"
+          }
+        },
+        {
+          "tool": "reticle_act",
+          "anchor": {
+            "kind": "role",
+            "role": "link",
+            "name": "Compose",
+            "nth": 0,
+            "of": 2,
+            "within": [
+              "navigation"
+            ]
+          },
+          "args": {},
+          "action": "click",
+          "expect": {
+            "kind": "allOf",
+            "predicates": [
+              {
+                "kind": "route",
+                "contains": "/compose"
+              },
+              {
+                "kind": "text",
+                "contains": "Platforms"
+              }
+            ]
+          }
+        },
+        {
+          "tool": "reticle_act",
+          "anchor": {
+            "kind": "role",
+            "role": "link",
+            "name": "Sales",
+            "within": [
+              "navigation"
+            ]
+          },
+          "args": {},
+          "action": "click",
+          "expect": {
+            "kind": "route",
+            "contains": "/sales"
+          }
+        },
+        {
+          "tool": "reticle_act",
+          "anchor": {
+            "kind": "role",
+            "role": "link",
+            "name": "Scheduled",
+            "nth": 0,
+            "of": 2,
+            "within": [
+              "navigation"
+            ]
+          },
+          "args": {},
+          "action": "click",
+          "expect": {
+            "kind": "route",
+            "contains": "/scheduled"
+          }
+        },
+        {
+          "tool": "reticle_act",
+          "anchor": {
+            "kind": "role",
+            "role": "link",
+            "name": "Mail Box",
+            "nth": 0,
+            "of": 2,
+            "within": [
+              "navigation"
+            ]
+          },
+          "args": {},
+          "action": "click",
+          "expect": {
+            "kind": "route",
+            "contains": "/email"
+          }
+        }
+      ],
+      "timeoutMs": 12000,
+      "page": "/overview",
+      "endPage": "/email"
+    }
+  ],
+  "startPath": "/overview",
+  "intent": "The address holds \"/email\" and the text \"Schedule mailing\" appears, then the button \"Schedule mailing\" appears",
+  "intentDerived": true,
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/overview"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/email"
+    }
+  ],
+  "author": {
+    "agent": "Cursor"
+  }
+}

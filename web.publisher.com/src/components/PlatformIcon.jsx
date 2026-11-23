@@ -26,11 +26,11 @@ const ICONS = {
 const SIZES = {
   '2xs': { box: 'h-3.5 w-3.5', icon: 'h-2 w-2', ring: 'ring-1' },
   xs: { box: 'h-5 w-5', icon: 'h-2.5 w-2.5', ring: 'ring-1' },
-  sm: { box: 'h-7 w-7', icon: 'h-4 w-4', ring: 'ring-2' },
-  md: { box: 'h-8 w-8', icon: 'h-[18px] w-[18px]', ring: 'ring-2' },
-  lg: { box: 'h-10 w-10', icon: 'h-5 w-5', ring: 'ring-2' },
-  xl: { box: 'h-12 w-12', icon: 'h-6 w-6', ring: 'ring-2' },
-  '2xl': { box: 'h-14 w-14', icon: 'h-7 w-7', ring: 'ring-2' },
+  sm: { box: 'h-7 w-7', icon: 'h-4 w-4', ring: 'ring-1' },
+  md: { box: 'h-8 w-8', icon: 'h-[18px] w-[18px]', ring: 'ring-1' },
+  lg: { box: 'h-10 w-10', icon: 'h-5 w-5', ring: 'ring-1' },
+  xl: { box: 'h-12 w-12', icon: 'h-6 w-6', ring: 'ring-1' },
+  '2xl': { box: 'h-14 w-14', icon: 'h-7 w-7', ring: 'ring-1' },
 }
 
 export default function PlatformIcon({ platform, size = 'sm', shape = 'circle', className = '' }) {
@@ -40,26 +40,26 @@ export default function PlatformIcon({ platform, size = 'sm', shape = 'circle', 
   const s = SIZES[size] || SIZES.sm
   const radius = shape === 'squircle' ? 'rounded-[28%]' : 'rounded-full'
   const BG = {
-    instagram: 'instagram-gradient',
-    facebook: 'bg-[#1877F2]',
-    linkedin: 'bg-[#0A66C2]',
-    reddit: 'bg-[#FF4500]',
-    quora: 'bg-[#B92B27]',
-    pinterest: 'bg-[#E60023]',
-    threads: 'bg-black',
-    gmail: 'bg-white',
+    instagram: 'platform-icon--instagram',
+    facebook: 'platform-icon--facebook',
+    linkedin: 'platform-icon--linkedin',
+    reddit: 'platform-icon--reddit',
+    quora: 'platform-icon--quora',
+    pinterest: 'platform-icon--pinterest',
+    threads: 'platform-icon--threads',
+    gmail: 'platform-icon--gmail bg-white',
   }
-  const bg = BG[platform] || 'bg-[#0A66C2]'
+  const bg = BG[platform] || 'platform-icon--linkedin'
   const quoraText =
     size === '2xs' || size === 'xs' ? 'text-[7px] leading-none' : s.icon === 'h-3.5 w-3.5' ? 'text-sm' : 'text-base'
 
   return (
     <span
       title={meta.label}
-      className={`inline-flex shrink-0 items-center justify-center ${radius} text-white shadow-sm ${s.ring} ring-[#05060a]/80 ${s.box} ${bg} ${className}`}
+      className={`platform-icon keep-light inline-flex shrink-0 items-center justify-center ${radius} ${s.ring} ring-black/10 ${s.box} ${bg} ${className}`}
     >
       {platform === 'quora' ? (
-        <span className={`font-display font-bold ${quoraText}`}>Q</span>
+        <span className={`font-display font-bold keep-light ${quoraText}`}>Q</span>
       ) : platform === 'gmail' ? (
         <svg className={s.icon} viewBox="0 0 24 24" aria-hidden>
           <path fill="#EA4335" d="M5 5h14a1 1 0 0 1 1 1v.4l-8 5.6-8-5.6V6a1 1 0 0 1 1-1Z" />
@@ -68,7 +68,7 @@ export default function PlatformIcon({ platform, size = 'sm', shape = 'circle', 
           <path fill="#4285F4" d="M7 19V10.1l5 3.5 5-3.5V19H7Z" />
         </svg>
       ) : (
-        <svg className={s.icon} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <svg className={`${s.icon} keep-light`} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           {ICONS[platform]}
         </svg>
       )}
@@ -104,7 +104,7 @@ export function PlatformIconGroup({ platforms, size = 'sm', maxVisible, classNam
       ))}
       {extra > 0 && (
         <span
-          className={`relative z-10 inline-flex shrink-0 items-center justify-center rounded-full bg-slate-700 font-bold text-slate-200 ring-1 ring-[#05060a]/80 ${
+          className={`relative z-10 inline-flex shrink-0 items-center justify-center rounded-full bg-[#6D0808] font-bold text-[#EEEAD7] ring-1 ring-black/10 ${
             size === '2xs' || size === 'xs'
               ? 'h-3.5 w-3.5 text-[7px]'
               : 'h-5 w-5 text-[9px]'

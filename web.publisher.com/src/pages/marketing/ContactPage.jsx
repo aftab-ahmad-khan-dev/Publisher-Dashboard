@@ -15,50 +15,50 @@ export default function ContactPage() {
 
   return (
     <section className="mx-auto max-w-2xl px-6 py-24">
-      <p className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">Contact</p>
-      <h1 className="font-display mt-3 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">Get in touch</h1>
-      <p className="mt-4 text-base text-slate-400">
+      <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#6D0808]">Contact</p>
+      <h1 className="font-display mt-3 text-4xl font-extrabold tracking-tight text-[#2D0000] sm:text-5xl">Get in touch</h1>
+      <p className="mt-4 text-base text-[#5a6258]">
         Questions, feedback, or partnership ideas? Send us a message and we’ll get back to you.
       </p>
 
       <form onSubmit={onSubmit} className="mt-10 space-y-5">
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">Name</label>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#5a6258]">Name</label>
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none"
+              className="w-full rounded-xl border border-[#757D6F]/25 bg-[#EEEAD7] px-4 py-3 text-sm text-[#2D0000] placeholder:text-slate-600 focus:border-[#6D0808]/50 focus:outline-none"
               placeholder="Your name"
             />
           </div>
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">Email</label>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#5a6258]">Email</label>
             <input
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               required
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none"
+              className="w-full rounded-xl border border-[#757D6F]/25 bg-[#EEEAD7] px-4 py-3 text-sm text-[#2D0000] placeholder:text-slate-600 focus:border-[#6D0808]/50 focus:outline-none"
               placeholder="you@example.com"
             />
           </div>
         </div>
         <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">Message</label>
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#5a6258]">Message</label>
           <textarea
             value={form.message}
             onChange={(e) => setForm({ ...form, message: e.target.value })}
             required
             rows={5}
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none"
+            className="w-full rounded-xl border border-[#757D6F]/25 bg-[#EEEAD7] px-4 py-3 text-sm text-[#2D0000] placeholder:text-slate-600 focus:border-[#6D0808]/50 focus:outline-none"
             placeholder="How can we help?"
           />
         </div>
         <button
           type="submit"
-          className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-7 py-3 font-display text-sm font-bold text-white transition hover:opacity-90"
+          className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#6D0808] to-[#520606] px-7 py-3 font-display text-sm font-bold text-[#EEEAD7] transition hover:opacity-90"
         >
           Send message
         </button>

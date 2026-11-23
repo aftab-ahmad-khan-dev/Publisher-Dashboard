@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "name": "drive-selecting-a-template-opens-the-edit-form",
+  "createdAt": 1795440903254,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "button",
+        "name": "CEO / founder CEO/CTO",
+        "within": [
+          "listitem",
+          "list"
+        ]
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "text",
+            "contains": "Edit template"
+          },
+          {
+            "kind": "text",
+            "contains": "Subject"
+          },
+          {
+            "kind": "text",
+            "contains": "Loading…",
+            "absent": true
+          }
+        ]
+      },
+      "timeoutMs": 8000,
+      "page": "/email?tab=templates"
+    }
+  ],
+  "startPath": "/email?tab=templates",
+  "intent": "Selecting a template opens the edit form",
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/email?tab=templates"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/email?tab=templates"
+    }
+  ],
+  "author": {
+    "agent": "Cursor"
+  },
+  "intentId": "flow:drive-selecting-a-template-opens-the-edit-form"
+}

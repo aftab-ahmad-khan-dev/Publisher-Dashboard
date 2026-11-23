@@ -5,11 +5,16 @@ let connected = false
 let lastError = null
 let listenersAttached = false
 
+const isServerless = Boolean(process.env.VERCEL) || process.env.AWS_LAMBDA_FUNCTION_NAME
+
+/** Tuned for Vercel cold starts: small pool, reuse across warm invocations, fail before UI hangs. */
 const CONNECT_OPTIONS = {
-  serverSelectionTimeoutMS: 20_000,
-  connectTimeoutMS: 20_000,
+  serverSelectionTimeoutMS: isServerless ? 8_000 : 20_000,
+  connectTimeoutMS: isServerless ? 8_000 : 20_000,
   socketTimeoutMS: 45_000,
-  maxPoolSize: 10,
+  maxPoolSize: isServerless ? 5 : 10,
+  minPoolSize: 0,
+  maxIdleTimeMS: isServerless ? 30_000 : 0,
   /** Prefer IPv4 — fixes some `queryTxt ETIMEOUT` issues on macOS / certain networks */
   family: 4,
 }
@@ -48,7 +53,7 @@ export function isMongoNetworkError(err) {
   )
 }
 
-export async function connectDb(retries = 3) {
+export async function connectDb(retries = isServerless ? 2 : 3) {
   const uri = process.env.DATABASE?.trim()
   if (!uri) {
     const err = new Error('DATABASE is not set in api.publisher.com/.env')
@@ -56,11 +61,19 @@ export async function connectDb(retries = 3) {
     throw err
   }
 
-  if (connected && mongoose.connection.readyState === 1) {
+  // readyState 1 = connected; 2 = connecting (reuse in-flight on warm serverless)
+  if (mongoose.connection.readyState === 1) {
+    connected = true
+    return mongoose.connection
+  }
+  if (mongoose.connection.readyState === 2) {
+    await mongoose.connection.asPromise()
+    connected = true
     return mongoose.connection
   }
 
   mongoose.set('strictQuery', true)
+  mongoose.set('bufferCommands', true)
 
   let attempt = 0
   while (attempt < retries) {

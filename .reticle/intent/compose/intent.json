@@ -1,0 +1,164 @@
+{
+  "intents": {
+    "inline:compose-exposes-publish-now-and-schedule-actions-416c526e": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Platforms",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Publish Now",
+              "role": "button"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Schedule",
+              "role": "button"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795439044704,
+      "id": "inline:compose-exposes-publish-now-and-schedule-actions-416c526e",
+      "provenBy": {
+        "at": 1795439044787,
+        "grade": "presence",
+        "runId": "drive-df0c9a7fdd720b50",
+        "verdictId": "reticle_assert:1795439044787"
+      },
+      "state": "proved",
+      "statement": "Compose exposes Publish Now and Schedule actions",
+      "status": "proved",
+      "subject": "compose",
+      "surface": {
+        "route": "/compose"
+      },
+      "updatedAt": 1795439044837
+    },
+    "inline:compose-page-finishes-transition-and-shows-platf-477e3f2f": {
+      "binding": {
+        "kind": "anyOf",
+        "predicates": [
+          {
+            "contains": "Platforms",
+            "kind": "text"
+          },
+          {
+            "contains": "Write",
+            "kind": "text"
+          },
+          {
+            "contains": "Schedule",
+            "kind": "text"
+          },
+          {
+            "contains": "Preview",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795442128798,
+      "id": "inline:compose-page-finishes-transition-and-shows-platf-477e3f2f",
+      "provenBy": {
+        "at": 1795442128828,
+        "grade": "presence",
+        "runId": "drive-083cb113bad6a4a9",
+        "verdictId": "reticle_wait_for:1795442128828"
+      },
+      "state": "proved",
+      "statement": "Compose page finishes transition and shows platforms or editor",
+      "status": "proved",
+      "subject": "compose",
+      "surface": {
+        "route": "/compose"
+      },
+      "updatedAt": 1795442128866
+    },
+    "inline:compose-platform-labels-and-live-preview-headers-a008801f": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Platforms",
+            "kind": "text"
+          },
+          {
+            "contains": "Live Preview",
+            "kind": "text"
+          },
+          {
+            "contains": "Instagram",
+            "kind": "text"
+          },
+          {
+            "contains": "LinkedIn",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795438570178,
+      "id": "inline:compose-platform-labels-and-live-preview-headers-a008801f",
+      "provenBy": {
+        "at": 1795438570331,
+        "grade": "presence",
+        "runId": "drive-df0c9a7fdd720b50",
+        "verdictId": "reticle_assert:1795438570331"
+      },
+      "state": "proved",
+      "statement": "Compose platform labels and live preview headers are readable ink on cream",
+      "status": "proved",
+      "subject": "compose",
+      "surface": {
+        "route": "/compose"
+      },
+      "updatedAt": 1795438570388
+    },
+    "inline:compose-platforms-show-brand-platformicon-tiles-6599ccaa": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Instagram",
+            "kind": "text"
+          },
+          {
+            "contains": "Facebook",
+            "kind": "text"
+          },
+          {
+            "contains": "LinkedIn",
+            "kind": "text"
+          },
+          {
+            "contains": "Platforms",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795440283850,
+      "id": "inline:compose-platforms-show-brand-platformicon-tiles-6599ccaa",
+      "provenBy": {
+        "at": 1795440283934,
+        "grade": "presence",
+        "runId": "drive-a975270df7c96304",
+        "verdictId": "reticle_assert:1795440283934"
+      },
+      "state": "proved",
+      "statement": "Compose platforms show brand PlatformIcon tiles with Instagram Facebook LinkedIn labels",
+      "status": "proved",
+      "subject": "compose",
+      "surface": {
+        "route": "/compose"
+      },
+      "updatedAt": 1795440283974
+    }
+  },
+  "subject": "compose",
+  "version": 1
+}

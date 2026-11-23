@@ -12,16 +12,16 @@ import {
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-md border border-white/10 bg-[#111113] px-2.5 py-2 shadow-xl">
-      <p className="text-[11px] text-zinc-500">{label}</p>
+    <div className="rounded-2xl border border-slate-200 bg-white px-2.5 py-2 shadow-xl">
+      <p className="text-[11px] text-slate-400">{label}</p>
       <div className="mt-1 space-y-0.5">
         {payload.map((p) => (
-          <p key={p.dataKey} className="text-xs tabular-nums text-zinc-200">
+          <p key={p.dataKey} className="text-xs tabular-nums text-slate-600">
             <span
               className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full"
               style={{ background: p.color }}
             />
-            {p.name}: <span className="font-medium text-white">{p.value}</span>
+            {p.name}: <span className="font-medium text-slate-900">{p.value}</span>
           </p>
         ))}
       </div>
@@ -29,7 +29,7 @@ function ChartTooltip({ active, payload, label }) {
   )
 }
 
-export default function MailActivityChart({ series = [], onDownload }) {
+export default function MailActivityChart({ series = [], onDownload, lifetimeSent = 0 }) {
   const [range, setRange] = useState(10)
   const data = useMemo(() => {
     const rows = Array.isArray(series) ? series : []
@@ -77,9 +77,11 @@ export default function MailActivityChart({ series = [], onDownload }) {
 
       <div className="relative min-h-0 flex-1">
         {empty ? (
-          <div className="flex h-[240px] items-center justify-center rounded-md border border-dashed border-white/[0.08]">
-            <p className="max-w-xs text-center text-xs text-zinc-500">
-              Activity chart fills in after campaigns start sending.
+          <div className="flex h-[240px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60">
+            <p className="max-w-xs text-center text-xs text-slate-400">
+              {lifetimeSent > 0
+                ? 'No sends in this date range. Totals above include earlier campaigns.'
+                : 'Activity chart fills in after campaigns start sending.'}
             </p>
           </div>
         ) : (
@@ -87,23 +89,23 @@ export default function MailActivityChart({ series = [], onDownload }) {
             <AreaChart data={data} margin={{ top: 12, right: 8, left: -12, bottom: 0 }}>
               <defs>
                 <linearGradient id="mail-sent-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#a1a1aa" stopOpacity={0.28} />
-                  <stop offset="100%" stopColor="#a1a1aa" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#22c55e" stopOpacity={0.32} />
+                  <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="mail-opened-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#fafafa" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="#fafafa" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#c8f542" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#c8f542" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+              <CartesianGrid stroke="rgba(15,23,42,0.06)" vertical={false} />
               <XAxis
                 dataKey="label"
-                tick={{ fill: '#71717a', fontSize: 11 }}
+                tick={{ fill: '#94a3b8', fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fill: '#71717a', fontSize: 11 }}
+                tick={{ fill: '#94a3b8', fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -113,37 +115,37 @@ export default function MailActivityChart({ series = [], onDownload }) {
                 type="monotone"
                 dataKey="sent"
                 name="Sent"
-                stroke="#a1a1aa"
+                stroke="#22c55e"
                 strokeWidth={2}
                 fill="url(#mail-sent-fill)"
-                activeDot={{ r: 4, strokeWidth: 0, fill: '#d4d4d8' }}
+                activeDot={{ r: 4, strokeWidth: 0, fill: '#22c55e' }}
               />
               <Area
                 type="monotone"
                 dataKey="opened"
                 name="Opened"
-                stroke="#fafafa"
+                stroke="#84cc16"
                 strokeWidth={2}
                 fill="url(#mail-opened-fill)"
-                activeDot={{ r: 4, strokeWidth: 0, fill: '#fafafa' }}
+                activeDot={{ r: 4, strokeWidth: 0, fill: '#84cc16' }}
               />
             </AreaChart>
           </ResponsiveContainer>
         )}
 
         {peak?.lift > 0 ? (
-          <div className="pointer-events-none absolute right-[14%] top-2 hidden rounded-md border border-white/10 bg-[#111113]/95 px-2 py-1 text-[10px] font-medium text-zinc-300 sm:block">
+          <div className="pointer-events-none absolute right-[14%] top-2 hidden rounded-full border border-slate-200 bg-white/95 px-2 py-1 text-[10px] font-medium text-slate-600 shadow-sm sm:block">
             Peak +{peak.lift}% · {peak.label}
           </div>
         ) : null}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-white/[0.06] pt-3 text-[11px] text-zinc-500">
+      <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-slate-100 pt-3 text-[11px] text-slate-400">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" /> Sent
+          <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" /> Sent
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-zinc-100" /> Opened
+          <span className="h-1.5 w-1.5 rounded-full bg-[#84cc16]" /> Opened
         </span>
       </div>
     </section>

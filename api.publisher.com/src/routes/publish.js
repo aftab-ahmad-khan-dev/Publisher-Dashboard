@@ -51,7 +51,13 @@ router.post("/connections/meta/test", async (req, res, next) => {
     }
     const result = await testMetaConnection(config.meta);
     if (!result.ok) return res.status(400).json(result);
-    res.json({ ...result, saved: true });
+    // Persist long-lived Page token when Graph Explorer short-lived was exchanged.
+    if (result.pageToken) {
+      await saveMetaConfig(req.workspaceId, { pageToken: result.pageToken, connected: true });
+    } else {
+      await saveMetaConfig(req.workspaceId, { connected: true });
+    }
+    res.json({ ...result, saved: true, pageToken: undefined });
   } catch (err) {
     next(err);
   }

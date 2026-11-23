@@ -1,0 +1,319 @@
+{
+  "intents": {
+    "inline:bulk-is-outside-more-in-primary-nav-short-user-a-34f183a2": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "name": "Bulk",
+              "role": "link"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Main navigation",
+              "role": "navigation"
+            }
+          },
+          {
+            "contains": "Bulk",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795441360619,
+      "id": "inline:bulk-is-outside-more-in-primary-nav-short-user-a-34f183a2",
+      "provenBy": {
+        "at": 1795441360695,
+        "grade": "presence",
+        "runId": "drive-78331c4bd841d8de",
+        "verdictId": "reticle_assert:1795441360695"
+      },
+      "state": "proved",
+      "statement": "Bulk is outside More in primary nav; short user account chip is present",
+      "status": "proved",
+      "subject": "email",
+      "surface": {
+        "route": "/email"
+      },
+      "updatedAt": 1795441360756
+    },
+    "inline:bulk-stays-in-primary-header-nav-outside-more-sh-8176f445": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Bulk",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Main navigation",
+              "role": "navigation"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Bulk",
+              "role": "link"
+            }
+          },
+          {
+            "contains": "Your templates",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795441246981,
+      "id": "inline:bulk-stays-in-primary-header-nav-outside-more-sh-8176f445",
+      "provenBy": {
+        "at": 1795441247090,
+        "grade": "presence",
+        "runId": "drive-78331c4bd841d8de",
+        "verdictId": "reticle_assert:1795441247090"
+      },
+      "state": "proved",
+      "statement": "Bulk stays in primary header nav outside More; short account control visible",
+      "status": "proved",
+      "subject": "email",
+      "surface": {
+        "route": "/email"
+      },
+      "updatedAt": 1795441247135
+    },
+    "inline:header-shows-publisher-suite-templates-ui-is-vis-894541ee": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Publisher Suite",
+            "kind": "text"
+          },
+          {
+            "contains": "Your templates",
+            "kind": "text"
+          },
+          {
+            "contains": "Bulk",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Main navigation",
+              "role": "navigation"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795442069516,
+      "id": "inline:header-shows-publisher-suite-templates-ui-is-vis-894541ee",
+      "provenBy": {
+        "at": 1795442069617,
+        "grade": "presence",
+        "runId": "drive-083cb113bad6a4a9",
+        "verdictId": "reticle_assert:1795442069617"
+      },
+      "state": "proved",
+      "statement": "Header shows Publisher Suite; templates UI is visible in daylight shell",
+      "status": "proved",
+      "subject": "email",
+      "surface": {
+        "route": "/email"
+      },
+      "updatedAt": 1795442069664
+    },
+    "inline:mailbox-uses-cream-light-theme-with-visible-fold-4dad12c9": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Inbox",
+            "kind": "text"
+          },
+          {
+            "contains": "Queued",
+            "kind": "text"
+          },
+          {
+            "contains": "Sent",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795437856017,
+      "id": "inline:mailbox-uses-cream-light-theme-with-visible-fold-4dad12c9",
+      "provenBy": {
+        "at": 1795437856140,
+        "grade": "presence",
+        "runId": "drive-df0c9a7fdd720b50",
+        "verdictId": "reticle_assert:1795437856140"
+      },
+      "state": "proved",
+      "statement": "Mailbox uses cream light theme with visible folder labels and Inbox tab",
+      "status": "proved",
+      "subject": "email",
+      "surface": {
+        "route": "/email"
+      },
+      "updatedAt": 1795437856188
+    },
+    "inline:schedule-mailing-reveals-start-datetime-picker-a-0ed844bd": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Send starting at",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Schedule mailing",
+              "role": "button"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795439028175,
+      "id": "inline:schedule-mailing-reveals-start-datetime-picker-a-0ed844bd",
+      "provenBy": {
+        "at": 1795439028408,
+        "grade": "presence",
+        "runId": "drive-df0c9a7fdd720b50",
+        "verdictId": "reticle_act_and_wait:1795439028408"
+      },
+      "state": "proved",
+      "statement": "Schedule mailing reveals start datetime picker and renames primary CTA",
+      "status": "proved",
+      "subject": "email",
+      "surface": {
+        "route": "/email"
+      },
+      "updatedAt": 1795439028462
+    },
+    "inline:selecting-a-template-opens-the-edit-form-dcac5822": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Edit template",
+            "kind": "text"
+          },
+          {
+            "contains": "Subject",
+            "kind": "text"
+          },
+          {
+            "absent": true,
+            "contains": "Loading…",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795440840678,
+      "id": "inline:selecting-a-template-opens-the-edit-form-dcac5822",
+      "provenBy": {
+        "at": 1795440842933,
+        "grade": "presence",
+        "runId": "drive-78331c4bd841d8de",
+        "verdictId": "reticle_act_and_wait:1795440842933"
+      },
+      "state": "proved",
+      "statement": "Selecting a template opens the edit form",
+      "status": "proved",
+      "subject": "email",
+      "surface": {
+        "route": "/email"
+      },
+      "updatedAt": 1795440843019
+    },
+    "inline:templates-tab-remains-stable-after-theme-polish-f45feb9a": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Your templates",
+            "kind": "text"
+          },
+          {
+            "contains": "Template library",
+            "kind": "text"
+          },
+          {
+            "contains": "CEO / founder",
+            "kind": "text"
+          },
+          {
+            "absent": true,
+            "contains": "Loading…",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795440913382,
+      "id": "inline:templates-tab-remains-stable-after-theme-polish-f45feb9a",
+      "provenBy": {
+        "at": 1795440915001,
+        "grade": "presence",
+        "runId": "drive-78331c4bd841d8de",
+        "verdictId": "reticle_wait_for:1795440915001"
+      },
+      "state": "proved",
+      "statement": "Templates tab remains stable after theme polish — list visible without Loading flicker",
+      "status": "proved",
+      "subject": "email",
+      "surface": {
+        "route": "/email"
+      },
+      "updatedAt": 1795440915078
+    },
+    "inline:templates-tab-stays-stable-list-visible-no-loadi-fbf8af69": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Your templates",
+            "kind": "text"
+          },
+          {
+            "contains": "CEO / founder",
+            "kind": "text"
+          },
+          {
+            "contains": "Template library",
+            "kind": "text"
+          },
+          {
+            "absent": true,
+            "contains": "Loading…",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1795440832437,
+      "id": "inline:templates-tab-stays-stable-list-visible-no-loadi-fbf8af69",
+      "provenBy": {
+        "at": 1795440833629,
+        "grade": "presence",
+        "runId": "drive-78331c4bd841d8de",
+        "verdictId": "reticle_wait_for:1795440833629"
+      },
+      "state": "proved",
+      "statement": "Templates tab stays stable — list visible, no Loading flicker",
+      "status": "proved",
+      "subject": "email",
+      "surface": {
+        "route": "/email"
+      },
+      "updatedAt": 1795440833696
+    }
+  },
+  "subject": "email",
+  "version": 1
+}

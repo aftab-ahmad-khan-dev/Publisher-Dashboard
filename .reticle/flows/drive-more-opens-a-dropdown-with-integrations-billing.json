@@ -1,0 +1,75 @@
+{
+  "version": 2,
+  "name": "drive-more-opens-a-dropdown-with-integrations-billing",
+  "createdAt": 1795440506717,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "button",
+        "name": "More",
+        "nth": 0,
+        "of": 2,
+        "within": [
+          "navigation"
+        ]
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "role": "menuitem",
+              "name": "Integrations"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "menuitem",
+              "name": "Billing"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "menuitem",
+              "name": "Bulk Upload"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "link",
+              "name": "Overview"
+            }
+          }
+        ]
+      },
+      "timeoutMs": 8000,
+      "page": "/overview"
+    }
+  ],
+  "startPath": "/overview",
+  "intent": "More opens a dropdown with Integrations Billing and Setup Guide",
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/overview"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/overview"
+    }
+  ],
+  "author": {
+    "agent": "Cursor"
+  },
+  "intentId": "flow:drive-more-opens-a-dropdown-with-integrations-billing"
+}

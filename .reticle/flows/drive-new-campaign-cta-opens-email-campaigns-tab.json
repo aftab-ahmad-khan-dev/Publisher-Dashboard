@@ -1,0 +1,170 @@
+{
+  "version": 2,
+  "name": "drive-new-campaign-cta-opens-email-campaigns-tab",
+  "createdAt": 1795438964254,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "link",
+        "name": "New campaign"
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "route",
+        "contains": "/email"
+      },
+      "timeoutMs": 8000,
+      "page": "/overview",
+      "endPage": "/email?tab=campaigns"
+    },
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "button",
+        "name": "Schedule mailing"
+      },
+      "args": {},
+      "action": "click",
+      "timeoutMs": 5000,
+      "page": "/email?tab=campaigns"
+    },
+    {
+      "tool": "reticle_act_sequence",
+      "anchor": {
+        "kind": "role",
+        "role": "link",
+        "name": "Compose",
+        "nth": 0,
+        "of": 2,
+        "within": [
+          "navigation"
+        ]
+      },
+      "steps": [
+        {
+          "tool": "reticle_act",
+          "anchor": {
+            "kind": "role",
+            "role": "link",
+            "name": "Compose",
+            "nth": 0,
+            "of": 2,
+            "within": [
+              "navigation"
+            ]
+          },
+          "args": {},
+          "action": "click",
+          "expect": {
+            "kind": "route",
+            "contains": "/compose"
+          }
+        },
+        {
+          "tool": "reticle_act",
+          "anchor": {
+            "kind": "role",
+            "role": "link",
+            "name": "Mail Box",
+            "nth": 0,
+            "of": 2,
+            "within": [
+              "navigation"
+            ]
+          },
+          "args": {},
+          "action": "click",
+          "expect": {
+            "kind": "route",
+            "contains": "/email"
+          }
+        },
+        {
+          "tool": "reticle_act",
+          "anchor": {
+            "kind": "role",
+            "role": "link",
+            "name": "Sales",
+            "within": [
+              "navigation"
+            ]
+          },
+          "args": {},
+          "action": "click",
+          "expect": {
+            "kind": "route",
+            "contains": "/sales"
+          }
+        },
+        {
+          "tool": "reticle_act",
+          "anchor": {
+            "kind": "role",
+            "role": "link",
+            "name": "Integrations",
+            "within": [
+              "navigation"
+            ]
+          },
+          "args": {},
+          "action": "click",
+          "expect": {
+            "kind": "route",
+            "contains": "/api-config"
+          }
+        },
+        {
+          "tool": "reticle_act",
+          "anchor": {
+            "kind": "role",
+            "role": "link",
+            "name": "Scheduled",
+            "nth": 0,
+            "of": 2,
+            "within": [
+              "navigation"
+            ]
+          },
+          "args": {},
+          "action": "click",
+          "expect": {
+            "kind": "route",
+            "contains": "/scheduled"
+          }
+        }
+      ],
+      "timeoutMs": 8000,
+      "page": "/email?tab=campaigns",
+      "endPage": "/scheduled"
+    }
+  ],
+  "startPath": "/overview",
+  "intent": "New campaign CTA opens email campaigns tab",
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/overview"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/scheduled"
+    }
+  ],
+  "author": {
+    "agent": "Cursor"
+  },
+  "intentId": "flow:drive-new-campaign-cta-opens-email-campaigns-tab",
+  "learned": [
+    {
+      "kind": "route-rendered-nothing",
+      "step": 0,
+      "state": "open"
+    }
+  ]
+}

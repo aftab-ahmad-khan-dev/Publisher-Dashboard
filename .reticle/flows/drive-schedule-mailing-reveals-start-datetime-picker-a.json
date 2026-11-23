@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "name": "drive-schedule-mailing-reveals-start-datetime-picker-a",
+  "createdAt": 1795439032277,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "button",
+        "name": "Schedule mailing"
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "text",
+            "contains": "Send starting at"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "button",
+              "name": "Schedule mailing"
+            }
+          }
+        ]
+      },
+      "timeoutMs": 6000,
+      "page": "/email?tab=campaigns"
+    }
+  ],
+  "startPath": "/email?tab=campaigns",
+  "intent": "Schedule mailing reveals start datetime picker and renames primary CTA",
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/email?tab=campaigns"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/email?tab=campaigns"
+    }
+  ],
+  "author": {
+    "agent": "Cursor"
+  },
+  "intentId": "flow:drive-schedule-mailing-reveals-start-datetime-picker-a"
+}
