@@ -122,6 +122,30 @@
       "subject": "unsorted",
       "updatedAt": 1795438879030
     },
+    "inline:header-uses-the-og-brand-mark-image-next-to-publ-2ecf664d": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Publisher Suite",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "img"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1795442566580,
+      "id": "inline:header-uses-the-og-brand-mark-image-next-to-publ-2ecf664d",
+      "state": "bound",
+      "statement": "Header uses the OG brand mark image next to Publisher Suite",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1795442566594
+    },
     "inline:hovering-active-overview-header-nav-keeps-icon-a-44c2ff1a": {
       "binding": {
         "contains": "Overview",

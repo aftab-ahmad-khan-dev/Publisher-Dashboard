@@ -204,7 +204,7 @@ export default function TopBar() {
       <div className="orbit-topbar__inner orbit-topbar__inner--nav">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Link to="/overview" className="flex shrink-0 items-center gap-2" title="Overview">
-            <BrandLogo className="h-8 w-8 shrink-0 rounded-[10px]" />
+            <BrandLogo className="h-8 w-8 shrink-0" />
             <span className="hidden font-[family-name:var(--font-display)] text-[15px] font-bold tracking-tight text-[#2D0000] sm:inline">
               Publisher Suite
             </span>

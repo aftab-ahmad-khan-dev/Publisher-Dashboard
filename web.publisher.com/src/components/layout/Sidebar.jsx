@@ -137,7 +137,7 @@ export default function Sidebar({ onNavigate, collapsed = true, onToggleCollapse
     <aside className="saas-sidebar orbit-sidebar-wide flex h-full max-h-dvh w-full flex-col overflow-hidden lg:w-[232px]">
       <div className="saas-sidebar__brand">
         <div className="flex min-w-0 items-center gap-2.5">
-          <BrandLogo className="h-7 w-7 shrink-0 rounded-[10px]" />
+          <BrandLogo className="h-7 w-7 shrink-0" />
           <div className="min-w-0">
             <p className="truncate font-[family-name:var(--font-display)] text-[14px] font-bold tracking-tight text-[#2D0000]">
               Publisher
