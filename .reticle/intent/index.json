@@ -31,6 +31,12 @@
       "subject": "drive-active-overview-header-glyph-stays"
     },
     {
+      "id": "flow:drive-compose-route-loads-after-header-nav-click",
+      "statement": "Compose route loads after header nav click",
+      "status": "proposed",
+      "subject": "drive-compose-route-loads-after-header-n"
+    },
+    {
       "id": "flow:drive-more-opens-a-dropdown-with-integrations-billing",
       "statement": "More opens a dropdown with Integrations Billing and Setup Guide",
       "status": "proposed",

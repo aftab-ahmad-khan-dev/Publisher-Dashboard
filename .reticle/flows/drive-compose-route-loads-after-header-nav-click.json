@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "name": "drive-compose-route-loads-after-header-nav-click",
+  "createdAt": 1795442211126,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "link",
+        "name": "Compose",
+        "nth": 0,
+        "of": 2,
+        "within": [
+          "navigation"
+        ]
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "route",
+        "contains": "/compose"
+      },
+      "timeoutMs": 8000,
+      "page": "/email?tab=templates",
+      "endPage": "/compose"
+    }
+  ],
+  "startPath": "/email?tab=templates",
+  "intent": "Compose route loads after header nav click",
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/email?tab=templates"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/compose"
+    }
+  ],
+  "author": {
+    "agent": "Cursor"
+  },
+  "intentId": "flow:drive-compose-route-loads-after-header-nav-click"
+}

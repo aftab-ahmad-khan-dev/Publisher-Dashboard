@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-compose-route-loads-after-header-nav-click": {
+      "declaredAt": 1795442211291,
+      "id": "flow:drive-compose-route-loads-after-header-nav-click",
+      "state": "declared",
+      "statement": "Compose route loads after header nav click",
+      "status": "proposed",
+      "subject": "drive-compose-route-loads-after-header-n",
+      "surface": {
+        "flow": "drive-compose-route-loads-after-header-nav-click"
+      },
+      "updatedAt": 1795442211296
+    }
+  },
+  "subject": "drive-compose-route-loads-after-header-n",
+  "version": 1
+}
